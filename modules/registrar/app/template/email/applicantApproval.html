@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Enrollment Accepted</title>
+</head>
+
+<body style="
+    margin:0;
+    padding:40px 0;
+    background:#f3f4f6;
+    font-family:Arial, Helvetica, sans-serif;
+">
+
+<table width="100%" cellpadding="0" cellspacing="0">
+<tr>
+<td align="center">
+
+    <!-- Logo -->
+    <img src="cid:school_logo"
+         width="140"
+         style="margin-bottom:25px;">
+
+    <!-- Card -->
+    <table width="600"
+           cellpadding="0"
+           cellspacing="0"
+           style="
+                background:#ffffff;
+                border-radius:8px;
+                padding:45px;
+                box-shadow:0 3px 12px rgba(0,0,0,.08);
+           ">
+
+        <tr>
+            <td>
+
+                <h5 style="
+                    margin:0;
+                    color:#222;
+                    font-size:32px;
+                ">
+                   Dear <strong>{{first_name}}</strong>,
+                </h5>
+
+                <p style="
+                    color:#555;
+                    font-size:17px;
+                    margin-top:30px;
+                    line-height:1.8;
+                ">
+
+                   
+
+                    <br><br>
+
+                    Congratulations on being accepted into
+                    <strong>Bestlink College of the Philippines.</strong>
+
+                    We are delighted to welcome you to our institution.
+
+                    Below are your student portal credentials.
+
+                </p>
+
+                <hr style="
+                    border:none;
+                    border-top:1px solid #e5e5e5;
+                    margin:35px 0;
+                ">
+
+                <table width="100%" style="font-size:16px;">
+
+                    <h2>BASIC INFORMATION</h2>
+                    <tr>
+                        <td style="padding:10px 0;">
+                            <strong>Student Number</strong>
+                        </td>
+
+                        <td style="text-align:right;">
+                            {{student_number}}
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding:10px 0;">
+                            <strong>First Name</strong>
+                        </td>
+
+                        <td style="text-align:right;">
+                            {{first_name}} 
+                        </td>
+                    </tr>
+
+                     <tr>
+                        <td style="padding:10px 0;">
+                            <strong>Last Name</strong>
+                        </td>
+
+                        <td style="text-align:right;">
+                            {{last_name}}
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding:10px 0;">
+                            <strong>Middle Name</strong>
+                        </td>
+
+                        <td style="text-align:right;">
+                            {{middle_name}}
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding:10px 0;">
+                            <strong>Suffix</strong>
+                        </td>
+
+                        <td style="text-align:right;">
+                            {{suffix}}
+                        </td>
+                    </tr>
+
+                </table>
+
+               
+
+                <div style="
+                    margin-top:45px;
+                    color:#555;
+                    line-height:1.8;
+                ">
+                   
+
+                    <p>
+                        We look forward to welcoming you to Bestlink College of the Philippines and assisting you throughout your academic journey. If you have any further questions or require additional information, please feel free to contact the Admission Office at 8442-8601 or 8518-8050.
+                        Best regards,
+                     </p>
+
+                     <p>
+                      The Admission Office
+                      Bestlink College of the Philippines.
+                    </p>
+
+                </div>
+
+                <hr style="
+                    margin:40px 0;
+                    border:none;
+                    border-top:1px solid #e5e5e5;
+                ">
+
+                <p style="
+                    color:#888;
+                    font-size:13px;
+                    text-align:center;
+                    line-height:1.8;
+                ">
+
+                    This is an automated email from the<br>
+
+                    <strong>Bestlink College of the Philippines</strong>
+
+                    <br><br>
+
+                    Please do not reply to this message.
+
+                </p>
+
+            </td>
+        </tr>
+
+    </table>
+
+</td>
+</tr>
+</table>
+
+</body>
+</html>

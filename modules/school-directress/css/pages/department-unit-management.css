@@ -1,0 +1,324 @@
+/* ============================================================
+   School Directress — Department & Unit Management
+   Prefix: dm-
+   (.module-header / .module-content are handled globally.)
+   ============================================================ */
+
+/* ── Toolbar ────────────────────────────────────── */
+.dm-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: var(--color3);
+    border-radius: 10px;
+}
+
+.dm-toolbar h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--color2);
+    margin: 0;
+}
+
+.dm-search {
+    position: relative;
+    flex: 1 1 220px;
+    min-width: 120px;
+}
+
+.dm-search svg {
+    position: absolute;
+    left: 0.8rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    color: var(--color5);
+    pointer-events: none;
+}
+
+.dm-search input {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--color9);
+    border-radius: 7px;
+    padding: 0.6rem 0.8rem 0.6rem 2.4rem;
+    font-size: 0.82rem;
+    color: var(--color2);
+    background: var(--color3);
+}
+
+.dm-search input:focus {
+    outline: none;
+    border-color: var(--color1);
+    box-shadow: 0 0 0 3px rgba(32, 0, 130, 0.08);
+}
+
+.dm-btn-primary {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.6rem 1.1rem;
+    border-radius: 7px;
+    border: 1px solid var(--color1);
+    background: var(--color1);
+    color: #fff;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.15s ease;
+}
+
+.dm-btn-primary:hover {
+    opacity: 0.9;
+}
+
+/* ── Table ──────────────────────────────────────── */
+.dm-table-wrap {
+    background: var(--color3);
+    border: 1px solid var(--color9);
+    border-radius: 10px;
+    overflow-x: auto;
+}
+
+.dm-table {
+    width: 100%;
+    min-width: 560px;
+    border-collapse: collapse;
+}
+
+.dm-table thead th {
+    text-align: left;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color5);
+    padding: 0.85rem 1.1rem;
+    border-bottom: 1px solid var(--color9);
+    white-space: nowrap;
+}
+
+.dm-table tbody td {
+    font-size: 0.85rem;
+    color: var(--color2);
+    padding: 0.8rem 1.1rem;
+    border-bottom: 1px solid var(--color9);
+    vertical-align: middle;
+}
+
+.dm-row {
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.dm-row:hover {
+    background: rgba(32, 0, 130, 0.03);
+}
+
+.dm-empty {
+    text-align: center;
+    color: var(--color5);
+    padding: 1.5rem;
+    font-size: 0.85rem;
+}
+
+/* ── Expand toggle ──────────────────────────────── */
+.dm-toggle {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: 1px solid var(--color9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color5);
+    transition: transform 0.2s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.dm-row.dm-open .dm-toggle {
+    transform: rotate(180deg);
+    color: var(--color1);
+    border-color: var(--color1);
+}
+
+/* ── Department cell ────────────────────────────── */
+.dm-dept {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.dm-avatar {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(32, 0, 130, 0.1);
+    color: var(--color1);
+    font-size: 0.72rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dm-name {
+    font-weight: 600;
+    color: var(--color2);
+    line-height: 1.25;
+}
+
+.dm-meta {
+    font-size: 0.74rem;
+    color: var(--color5);
+    margin-top: 2px;
+}
+
+/* ── Count badge ────────────────────────────────── */
+.dm-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.25rem 0.65rem;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.dm-badge--active { background: rgba(22, 163, 74, 0.12);   color: #15803d; }
+.dm-badge--muted  { background: rgba(100, 116, 139, 0.12); color: var(--color5); }
+
+/* ── Detail row ─────────────────────────────────── */
+.dm-detail-row {
+    display: none;
+}
+
+.dm-detail-row.dm-open {
+    display: table-row;
+}
+
+.dm-detail-cell {
+    background: rgba(32, 0, 130, 0.025);
+    padding: 0 !important;
+}
+
+.dm-detail-inner {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 1rem 1.5rem;
+    padding: 1rem 1.1rem 1.1rem 3.3rem;
+}
+
+.dm-fl__k {
+    font-size: 0.66rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color5);
+    margin-bottom: 3px;
+}
+
+.dm-fl__v {
+    font-size: 0.85rem;
+    color: var(--color2);
+    word-break: break-word;
+}
+
+.dm-fl--wide {
+    grid-column: 1 / -1;
+}
+
+.dm-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.dm-chip {
+    font-size: 0.74rem;
+    font-weight: 600;
+    padding: 0.25rem 0.65rem;
+    border-radius: 999px;
+    background: rgba(32, 0, 130, 0.08);
+    color: var(--color1);
+}
+
+.dm-chip--muted {
+    background: rgba(100, 116, 139, 0.12);
+    color: var(--color5);
+}
+
+/* ── Footer / pagination ────────────────────────── */
+.dm-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.dm-showing {
+    font-size: 0.8rem;
+    color: var(--color5);
+}
+
+.dm-page-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.dm-page-btn {
+    min-width: 32px;
+    height: 32px;
+    padding: 0 0.7rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 7px;
+    border: 1px solid var(--color9);
+    background: var(--color3);
+    color: var(--color2);
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.dm-page-btn:hover:not(:disabled):not(.dm-page-btn--active) {
+    border-color: var(--color1);
+    color: var(--color1);
+}
+
+.dm-page-btn--active {
+    background: var(--color1);
+    border-color: var(--color1);
+    color: #fff;
+    cursor: default;
+}
+
+.dm-page-btn:disabled {
+    color: var(--color9);
+    cursor: not-allowed;
+}
+
+.dm-page-gap {
+    font-size: 0.8rem;
+    color: var(--color5);
+    padding: 0 0.2rem;
+}
+
+/* ── Responsive ─────────────────────────────────── */
+@media (max-width: 900px) {
+    .dm-btn-primary {
+        flex: 1 1 100%;
+    }
+
+    .dm-detail-inner {
+        padding-left: 1.1rem;
+    }
+
+    .dm-footer {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

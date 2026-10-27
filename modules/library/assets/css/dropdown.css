@@ -1,0 +1,263 @@
+/* ═══════════════════════════════════════════════════════════ */
+/* DROPDOWNS — Professional look with soft shadow + polish    */
+/* ═══════════════════════════════════════════════════════════ */
+
+.icon-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.notif-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: #e53e3e;
+    color: white;
+    font-size: 0.65rem;
+    font-weight: bold;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    box-shadow: 0 2px 6px rgba(229, 62, 62, .35);
+    animation: badgePulse 2s ease infinite;
+}
+.notif-badge.hidden { display: none; }
+
+@keyframes badgePulse {
+    0%, 100% { box-shadow: 0 2px 6px rgba(229, 62, 62, .35), 0 0 0 0 rgba(229, 62, 62, .4); }
+    50%      { box-shadow: 0 2px 6px rgba(229, 62, 62, .35), 0 0 0 6px rgba(229, 62, 62, 0); }
+}
+
+/* ── Dropdown Container ────────────────────────────────────── */
+.icon-dropdown {
+    display: none;
+    position: fixed;
+    width: 320px;
+    background: #ffffff;
+    border-radius: 14px;
+    box-shadow:
+        0 20px 40px -8px rgba(15, 23, 42, .18),
+        0 8px 16px -6px rgba(15, 23, 42, .1),
+        0 0 0 1px rgba(15, 23, 42, .04);
+    z-index: 999999 !important;
+    isolation: isolate;
+    overflow: hidden;
+    opacity: 1 !important;
+    filter: none !important;
+    backdrop-filter: none !important;
+    transform-origin: top right;
+}
+
+.icon-dropdown.open {
+    display: block;
+    animation: dropdownOpen .22s cubic-bezier(.4, 0, .2, 1);
+}
+
+@keyframes dropdownOpen {
+    from {
+        opacity: 0;
+        transform: translateY(-6px) scale(.97);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Force solid white on children */
+.icon-dropdown,
+.icon-dropdown * {
+    background-color: #ffffff;
+    opacity: 1;
+}
+
+.icon-dropdown .notif-item:hover,
+.icon-dropdown .user-menu li a:hover {
+    background-color: #f8fafc;
+}
+.icon-dropdown .notif-item.unread {
+    background-color: #f1f5f9;
+}
+
+/* ── Dropdown Header ───────────────────────────────────────── */
+.dropdown-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: linear-gradient(180deg, #fafbfc, #ffffff);
+    border-bottom: 1px solid #eef1f5;
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: #1e293b;
+    letter-spacing: .1px;
+}
+
+.mark-all-read {
+    background: none;
+    border: none;
+    color: #200082;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: .25rem .5rem;
+    border-radius: 6px;
+    transition: all .2s ease;
+}
+.mark-all-read:hover {
+    background: rgba(32, 0, 130, .08);
+    text-decoration: none;
+}
+
+/* ── Notification List ─────────────────────────────────────── */
+.notif-list {
+    list-style: none;
+    margin: 0;
+    padding: .35rem 0;
+    max-height: 300px;
+    overflow-y: auto;
+}
+.notif-list::-webkit-scrollbar { width: 4px; }
+
+.notif-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 12px 18px;
+    transition: background .18s ease;
+    cursor: pointer;
+    position: relative;
+}
+.notif-item:hover {
+    background: #f8fafc !important;
+}
+
+.notif-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: rgba(32, 0, 130, 0.1) !important;
+    color: #200082;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+    transition: transform .2s ease;
+}
+.notif-item:hover .notif-icon { transform: scale(1.05); }
+
+.notif-content p {
+    margin: 0 0 3px;
+    font-size: 0.82rem;
+    color: #1e293b;
+    font-weight: 500;
+    line-height: 1.4;
+}
+.notif-content span {
+    font-size: 0.7rem;
+    color: #94a3b8;
+}
+
+/* ── Footer ────────────────────────────────────────────────── */
+.dropdown-footer {
+    padding: 12px 18px;
+    border-top: 1px solid #eef1f5;
+    text-align: center;
+    background: #fafbfc;
+}
+.dropdown-footer a {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #200082;
+    text-decoration: none;
+    transition: opacity .2s ease;
+}
+.dropdown-footer a:hover { opacity: .75; }
+
+/* ── User Info ─────────────────────────────────────────────── */
+.dropdown-user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.dropdown-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #200082, #5146b7) !important;
+    color: white;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+    box-shadow: 0 3px 8px rgba(32, 0, 130, .25);
+}
+.dropdown-header .dropdown-user-info strong {
+    display: block;
+    font-size: 0.88rem;
+    color: #1e293b;
+    font-weight: 600;
+    margin-bottom: 1px;
+}
+.dropdown-header .dropdown-user-info span {
+    font-size: 0.72rem;
+    color: #64748b;
+    font-weight: normal;
+}
+
+/* ── User Menu ─────────────────────────────────────────────── */
+.user-menu {
+    list-style: none;
+    margin: 0;
+    padding: .35rem 0;
+}
+.user-menu li a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 18px;
+    font-size: 0.83rem;
+    color: #334155;
+    text-decoration: none;
+    transition: all .18s ease;
+    position: relative;
+}
+.user-menu li a:hover {
+    background: #f8fafc !important;
+    color: #200082;
+    padding-left: 22px;
+}
+.user-menu li a i {
+    width: 16px;
+    color: #64748b;
+    font-size: 0.85rem;
+    transition: color .18s ease;
+}
+.user-menu li a:hover i {
+    color: #200082;
+}
+
+.user-menu .divider {
+    border-top: 1px solid #eef1f5;
+    margin: 6px 0;
+}
+
+.signout-link,
+.signout-link i {
+    color: #ef4444 !important;
+}
+.signout-link:hover {
+    background: rgba(239, 68, 68, .06) !important;
+    color: #dc2626 !important;
+    padding-left: 22px;
+}
+.signout-link:hover i { color: #dc2626 !important; }

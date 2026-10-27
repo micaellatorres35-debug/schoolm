@@ -1,0 +1,472 @@
+
+/* =========================================
+   SIDEBAR ICONS
+========================================= */
+
+.icon-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+/* =========================================
+   NOTIFICATION BADGE
+========================================= */
+
+.notif-badge,
+#notifBadge {
+    position: absolute;
+    top: -5px;
+    right: -7px;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 4px;
+    box-sizing: border-box;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: #e53e3e;
+    color: #fff;
+    border: 2px solid var(--color3);
+    border-radius: 999px;
+
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.notif-badge.hidden,
+#notifBadge.hidden {
+    display: none;
+}
+
+/* =========================================
+   SHARED DROPDOWN
+   Preserves the original user/sign-out menu
+========================================= */
+
+.icon-dropdown {
+    display: none;
+    position: fixed;
+    width: 300px;
+    background: var(--color3);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    z-index: 9999;
+    overflow: hidden;
+    animation: dropdownFade 0.15s ease;
+}
+
+.icon-dropdown.open {
+    display: block;
+}
+
+@keyframes dropdownFade {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* =========================================
+   NOTIFICATION DROPDOWN ONLY
+   Requires:
+   class="icon-dropdown notif-dropdown"
+========================================= */
+
+.notif-dropdown {
+    width: 340px;
+    max-width: calc(100vw - 24px);
+    max-height: calc(100vh - 24px);
+
+    border: 1px solid rgba(100, 100, 100, 0.12);
+    border-radius: 14px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.18);
+}
+
+/* Flex layout applies only to notifications */
+.notif-dropdown.open {
+    display: flex;
+    flex-direction: column;
+}
+
+/* =========================================
+   DROPDOWN HEADER
+========================================= */
+
+.dropdown-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    gap: 10px;
+
+    border-bottom: 1px solid var(--color3);
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--color8);
+}
+
+/* Notification header only */
+.notif-dropdown .dropdown-header {
+    flex-shrink: 0;
+    padding: 16px;
+    border-bottom-color: rgba(100, 100, 100, 0.14);
+}
+
+/* =========================================
+   MARK ALL AS READ
+========================================= */
+
+.mark-all-read {
+    flex-shrink: 0;
+    padding: 5px 0;
+
+    background: none;
+    border: none;
+    color: var(--color1);
+
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.mark-all-read:hover {
+    text-decoration: underline;
+}
+
+.mark-all-read:focus-visible {
+    outline: 2px solid var(--color1);
+    outline-offset: 3px;
+    border-radius: 3px;
+}
+
+/* =========================================
+   NOTIFICATION LIST
+========================================= */
+
+.notif-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+/* Notification dropdown scrolling */
+.notif-dropdown .notif-list {
+    flex: 1;
+    min-height: 0;
+    max-height: 340px;
+    padding: 4px 0;
+
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.notif-dropdown .notif-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.notif-dropdown .notif-list::-webkit-scrollbar-thumb {
+    background: rgba(120, 120, 120, 0.35);
+    border-radius: 10px;
+}
+
+.notif-dropdown .notif-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* =========================================
+   NOTIFICATION ITEMS
+========================================= */
+
+.notif-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 12px 16px;
+
+    transition: background-color 0.15s ease;
+    cursor: default;
+    overflow-wrap: anywhere;
+}
+
+.notif-dropdown .notif-item {
+    position: relative;
+    gap: 11px;
+    padding: 13px 16px;
+
+    border-bottom: 1px solid rgba(100, 100, 100, 0.09);
+}
+
+.notif-dropdown .notif-item:last-child {
+    border-bottom: none;
+}
+
+.notif-item:hover {
+    background: var(--color9);
+}
+
+.notif-item.unread {
+    background: var(--color9);
+}
+
+/* Unread indicator */
+.notif-dropdown .notif-item.unread::before {
+    content: "";
+    position: absolute;
+    top: 19px;
+    left: 5px;
+
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color1);
+}
+
+.notif-dropdown .notif-item.unread:hover {
+    background: var(--color9);
+}
+
+/* =========================================
+   NOTIFICATION ICON
+========================================= */
+
+.notif-icon {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+    background: var(--color1-light);
+    color: var(--color1);
+    font-size: 0.8rem;
+}
+
+/* Refined icon styling inside notifications */
+.notif-dropdown .notif-icon {
+    width: 36px;
+    height: 36px;
+    flex-basis: 36px;
+    border-radius: 11px;
+    font-size: 0.9rem;
+}
+
+/* =========================================
+   NOTIFICATION CONTENT
+========================================= */
+
+.notif-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.notif-content p {
+    margin: 0 0 2px;
+    font-size: 0.82rem;
+    color: var(--color8);
+    font-weight: 500;
+}
+
+.notif-content span {
+    font-size: 0.72rem;
+    color: var(--color5);
+}
+
+/* Notification title */
+.notif-content strong {
+    display: block;
+    margin: 0 0 4px;
+
+    color: var(--color8);
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+/* Notification message */
+.notif-content p {
+    margin: 0 0 6px;
+    font-size: 0.78rem;
+    color: var(--color5);
+    font-weight: 400;
+    line-height: 1.5;
+}
+
+/* Notification timestamp */
+.notif-content span {
+    display: block;
+    font-size: 0.69rem;
+    color: var(--color5);
+    line-height: 1.4;
+}
+
+/* Empty, loading, and error states */
+.notif-dropdown .notif-item:only-child {
+    padding: 22px 16px;
+    color: var(--color5);
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+
+/* =========================================
+   NOTIFICATION FOOTER
+========================================= */
+
+.dropdown-footer {
+    padding: 10px 16px;
+    border-top: 1px solid var(--color3);
+    text-align: center;
+}
+
+.dropdown-footer a {
+    font-size: 0.8rem;
+    color: var(--color1);
+    text-decoration: none;
+}
+
+.dropdown-footer a:hover {
+    text-decoration: underline;
+}
+
+/* Notification footer only */
+.notif-dropdown .dropdown-footer {
+    flex-shrink: 0;
+    padding: 12px 16px;
+    border-top-color: rgba(100, 100, 100, 0.14);
+}
+
+.notif-dropdown .dropdown-footer a {
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+/* =========================================
+   USER PROFILE DROPDOWN
+   Preserved from your original CSS
+========================================= */
+
+.dropdown-user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.dropdown-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--color1);
+    color: white;
+    font-weight: bold;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.dropdown-header .dropdown-user-info strong {
+    display: block;
+    font-size: 0.88rem;
+    color: var(--color8);
+}
+
+.dropdown-header .dropdown-user-info span {
+    font-size: 0.75rem;
+    color: #888;
+    font-weight: normal;
+}
+
+/* User menu */
+.user-menu {
+    list-style: none;
+    margin: 0;
+    padding: 8px 0;
+}
+
+.user-menu li a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+
+    font-size: 0.85rem;
+    color: var(--color8);
+    text-decoration: none;
+
+    transition: background-color 0.15s;
+}
+
+.user-menu li a:hover {
+    background: var(--color9);
+}
+
+.user-menu li a i {
+    width: 16px;
+    color: var(--color1);
+}
+
+.user-menu .divider {
+    border-top: 1px solid #f0f0f0;
+    margin: 6px 0;
+}
+
+/* Sign out */
+.signout-link {
+    color: var(--color10) !important;
+}
+
+.signout-link i {
+    color: var(--color10) !important;
+}
+
+/* =========================================
+   RESPONSIVE NOTIFICATIONS
+========================================= */
+
+@media (max-width: 480px) {
+    .notif-dropdown {
+        width: calc(100vw - 24px);
+        max-width: calc(100vw - 24px);
+        max-height: calc(100vh - 24px);
+    }
+
+    .notif-dropdown .notif-list {
+        max-height: 55vh;
+    }
+}
+
+/* =========================================
+   ACCESSIBILITY
+========================================= */
+
+@media (prefers-reduced-motion: reduce) {
+    .icon-dropdown {
+        animation: none;
+    }
+
+    .notif-item {
+        transition: none;
+    }
+}

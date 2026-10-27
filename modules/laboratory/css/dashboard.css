@@ -1,0 +1,325 @@
+/* dashboard */
+.dashboard-title {
+    color: #123f7a;
+    font-size: 32px;
+}
+
+
+/* summary card */
+.summary-card {
+    min-height: 110px;
+    background: #ffffff;
+    border: 1px solid #dce6f2;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: 0.2s ease;
+}
+
+.summary-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+}
+
+.schedule-card {
+    border-left: 4px solid #1677ff;
+}
+
+.laboratory-card {
+    border-left: 4px solid #18a874;
+}
+
+.damage-card {
+    border-left: 4px solid #e63946;
+}
+
+.users-card {
+    border-left: 4px solid #18aeca;
+}
+
+
+.summary-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+    margin-right: 18px;
+}
+
+.summary-icon.blue {
+    background: #1677ff;
+}
+
+.summary-icon.green {
+    background: #18a874;
+}
+
+.summary-icon.red {
+    background: #e63946;
+}
+
+.summary-icon.cyan {
+    background: #18aeca;
+}
+
+
+.summary-label {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.schedule-card .summary-label {
+    color: #1677ff;
+}
+
+.laboratory-card .summary-label {
+    color: #18a874;
+}
+
+.damage-card .summary-label {
+    color: #e63946;
+}
+
+.users-card .summary-label {
+    color: #18aeca;
+}
+
+
+.summary-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: #183b68;
+}
+
+.summary-arrow {
+    margin-left: auto;
+    color: #1677ff;
+}
+
+
+/*  DASHBOARD PANEL */
+.dashboard-panel {
+    background: white;
+    border: 1px solid #dce6f2;
+    border-radius: 7px;
+    overflow: hidden;
+}
+
+.panel-header {
+    min-height: 58px;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5edf5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.panel-header h5 {
+    margin: 0;
+    color: #104687;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.panel-header a {
+    color: #006eff;
+    text-decoration: none;
+    font-size: 12px;
+}
+
+.panel-body {
+    padding: 20px;
+}
+
+
+/* STATUS BOXES */
+.status-box {
+    min-height: 105px;
+    border-radius: 8px;
+    padding: 14px;
+    position: relative;
+}
+
+.status-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    margin-bottom: 8px;
+}
+
+.status-name {
+    font-size: 12px;
+    margin-bottom: 6px;
+}
+
+.status-number {
+    font-size: 23px;
+    font-weight: 700;
+    color: #183b68;
+}
+
+
+/* Available */
+
+.status-box.available {
+    background: #ecfbf4;
+    border: 1px solid #d2f2e3;
+}
+
+.available .status-icon {
+    background: #16a874;
+}
+
+
+/* Working */
+
+.status-box.working {
+    background: #edf5ff;
+    border: 1px solid #d6e7ff;
+}
+
+.working .status-icon {
+    background: #1677ff;
+}
+
+
+/* Damage */
+
+.status-box.damage {
+    background: #fff0f1;
+    border: 1px solid #ffdadd;
+}
+
+.damage .status-icon {
+    background: #e63946;
+}
+
+
+/* Inspection */
+
+.status-box.inspection {
+    background: #fff8e9;
+    border: 1px solid #ffedc2;
+}
+
+.inspection .status-icon {
+    background: #f2a900;
+}
+
+
+/* Unavailable */
+
+.status-box.unavailable {
+    background: #f1f4f7;
+    border: 1px solid #dce3ea;
+}
+
+.unavailable .status-icon {
+    background: #7289a1;
+}
+
+
+
+/* CHART */
+.chart-container {
+    height: 190px;
+    position: relative;
+}
+
+
+
+/* TABLE */
+.dashboard-table {
+    font-size: 12px;
+}
+
+.dashboard-table thead th {
+    background: #f3f7fb;
+    color: #104687;
+    font-weight: 600;
+    border-bottom: 1px solid #dce6f2;
+    white-space: nowrap;
+}
+
+.dashboard-table tbody td {
+    color: #29486e;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.dashboard-table > :not(caption) > * > * {
+    padding: 10px 12px;
+}
+
+
+/* ================================
+   BADGES
+================================ */
+
+.schedule-badge {
+    background: #dcecff;
+    color: #1677ff;
+    border: 1px solid #bcd8ff;
+}
+
+.badge-danger {
+    background: #ffe1e3;
+    color: #e63946;
+    border: 1px solid #ffbfc4;
+}
+
+.badge-warning {
+    background: #fff0c9;
+    color: #d99100;
+    border: 1px solid #ffdc82;
+}
+
+.badge-secondary {
+    background: #e8eef4;
+    color: #536b84;
+    border: 1px solid #ced9e4;
+}
+
+.badge-success {
+    background: #d9f7e9;
+    color: #11945f;
+    border: 1px solid #afe8cd;
+}
+
+
+/* ================================
+   RESPONSIVE
+================================ */
+
+@media (max-width: 1200px) {
+
+    .status-box {
+        min-height: 120px;
+    }
+
+}
+
+@media (max-width: 768px) {
+
+    .summary-card {
+        margin-bottom: 5px;
+    }
+
+    .dashboard-title {
+        font-size: 26px;
+    }
+
+}
+

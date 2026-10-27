@@ -1,0 +1,631 @@
+/* ============================================================
+School Directress — Approval & Decision Support
+============================================================ */
+
+.approval-module {
+    width: 100%;
+}
+
+/* ── Form ──────────────────────────────────────────────── */
+
+.approval-module .approval-form-group {
+    margin-bottom: 1rem;
+}
+
+.approval-module .approval-form-group:last-child {
+    margin-bottom: 0;
+}
+
+.approval-module .approval-form-group label {
+    display: block;
+    margin-bottom: 0.4rem;
+    color: var(--color2);
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.approval-module .approval-form-group input[type="text"],
+.approval-module .approval-form-group textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.6rem 0.85rem;
+    border: 1px solid var(--color9);
+    border-radius: 7px;
+    background: var(--color3);
+    color: var(--color2);
+    font-family: inherit;
+    font-size: 0.85rem;
+}
+
+.approval-module .approval-form-group textarea {
+    resize: vertical;
+    min-height: 70px;
+}
+
+.approval-module .approval-form-group input[type="text"]:focus,
+.approval-module .approval-form-group textarea:focus {
+    outline: none;
+    border-color: var(--color1);
+    box-shadow: 0 0 0 3px rgba(32, 0, 130, 0.08);
+}
+
+.approval-module .approval-error {
+    color: #dc3545;
+    font-size: 0.78rem;
+    margin-top: -0.4rem;
+    margin-bottom: 0.6rem;
+}
+
+.approval-module .approval-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.8rem;
+}
+
+/* ── File Input ────────────────────────────────────────── */
+
+.approval-module .file-btn {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.55rem 0.65rem;
+    border: 1px solid var(--color9);
+    border-radius: 7px;
+    background: var(--color3);
+    color: var(--color5);
+    font-family: inherit;
+    font-size: 0.82rem;
+}
+
+.approval-module .file-btn::file-selector-button {
+    margin-right: 0.5rem;
+    padding: 0.55rem 0.9rem;
+    border: none;
+    border-radius: 7px;
+    background: var(--color1);
+    color: var(--color3);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.approval-module .file-btn::file-selector-button:hover {
+    background: var(--color7);
+}
+
+/* ── Submit / Draft Buttons ────────────────────────────── */
+
+.approval-module .approval-submit-btn,
+.approval-module .approval-draft-btn {
+    padding: 0.65rem 1.3rem;
+    border-radius: 7px;
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.approval-module .approval-submit-btn {
+    border: none;
+    background: var(--color1);
+    color: var(--color3);
+}
+
+.approval-module .approval-submit-btn:hover {
+    background: var(--color7);
+}
+
+.approval-module .approval-draft-btn {
+    border: 1px solid var(--color9);
+    background: var(--color3);
+    color: var(--color5);
+}
+
+.approval-module .approval-draft-btn:hover {
+    border-color: var(--color5);
+    color: var(--color2);
+}
+
+.approval-module .approval-submit-btn:disabled,
+.approval-module .approval-draft-btn:disabled {
+    background: var(--color9);
+    color: var(--color5);
+    cursor: not-allowed;
+}
+
+/* ── Approval Queue Card ──────────────────────────────── */
+
+.approval-module .approval-queue-section {
+    border: 1px solid var(--color9);
+    border-radius: 10px;
+}
+
+/* ── Queue Header ─────────────────────────────────────── */
+
+.approval-module .approval-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    background: var(--color3);
+    padding: 1.1rem 1.6rem;
+    border-radius: 10px;
+}
+
+.approval-module .approval-section-header h3 {
+    margin: 0;
+    color: var(--color2);
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+/* ── Header Actions & Trigger ─────────────────────────── */
+
+.approval-module .approval-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.approval-module .approval-add-btn {
+    padding: 0.6rem 1.1rem;
+    border: none;
+    border-radius: 7px;
+    background: var(--color1);
+    color: var(--color3);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.approval-module .approval-add-btn:hover {
+    background: var(--color7);
+}
+
+/* ── Filters ───────────────────────────────────────────── */
+
+.approval-module .approval-filter {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.approval-module .ads-select {
+    width: 200px;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    padding: 0.6rem 0.85rem;
+    border: 1px solid var(--color9);
+    border-radius: 7px;
+    background: var(--color3);
+    color: var(--color2);
+    font-family: inherit;
+    font-size: 0.82rem;
+    cursor: pointer;
+}
+
+.approval-module .ads-select:focus {
+    outline: none;
+    border-color: var(--color1);
+    box-shadow: 0 0 0 3px rgba(32, 0, 130, 0.08);
+}
+
+/* ── Queue ─────────────────────────────────────────────── */
+
+.approval-module .ads-queue {
+    width: 100%;
+}
+
+.approval-module .ads-queue .table-responsive {
+    width: 100%;
+    border: 1px solid var(--color9);
+    border-radius: 8px;
+    overflow-x: auto;
+}
+
+/* ── Table ─────────────────────────────────────────────── */
+
+.approval-module .ads-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--color3);
+}
+
+.approval-module .ads-table th,
+.approval-module .ads-table td {
+    padding: 0.85rem 1.1rem;
+    border-bottom: 1px solid var(--color9);
+    text-align: left;
+    vertical-align: middle;
+}
+
+.approval-module .ads-table thead th {
+    color: var(--color5);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.approval-module .ads-table tbody td {
+    color: var(--color2);
+    font-size: 0.85rem;
+}
+
+.approval-module .ads-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.approval-module .ads-table tbody tr:hover {
+    background: rgba(32, 0, 130, 0.02);
+}
+
+.approval-module .ads-table tbody td[colspan] {
+    padding: 1.5rem;
+    text-align: center;
+}
+
+/* ── Actions ───────────────────────────────────────────── */
+
+.approval-module .ads-table th.actions-header,
+.approval-module .ads-table td.actions-cell {
+    text-align: center;
+}
+
+.approval-module .actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+}
+
+.approval-module .btn-approve,
+.approval-module .btn-reject {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.65rem 1.2rem;
+    border: none;
+    border-radius: 7px;
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.approval-module .btn-approve {
+    background: var(--color1);
+    color: var(--color3);
+}
+
+.approval-module .btn-reject {
+    background: var(--color10);
+    color: var(--color3);
+}
+
+.approval-module .btn-approve:hover,
+.approval-module .btn-reject:hover {
+    opacity: 0.9;
+}
+
+/* ── Decision Badge ───────────────────────────────────── */
+
+.approval-module .badge {
+    display: inline-block;
+    padding: 0.3rem 0.65rem;
+    border: 1px solid var(--color9);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--color5);
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.approval-module .badge-draft {
+    color: var(--color5);
+    border-color: var(--color9);
+}
+
+.approval-module .badge-submitted {
+    color: var(--color3);
+    background: var(--color1);
+}
+
+.approval-module .badge-reviewed {
+    background: #b8860b;
+    color: var(--color3);
+}
+
+.approval-module .badge-approved {
+    background: #16a34a;
+    color: var(--color3);
+}
+
+.approval-module .badge-rejected {
+    background: var(--color10);
+    color: var(--color3);
+}
+
+/* ── Attachment / inline text links ───────────────────── */
+
+.approval-module .attachment-link {
+    display: inline-block;
+    padding: 0.35rem 0.65rem;
+    border: 1px solid var(--color9);
+    border-radius: 6px;
+    background: var(--color3);
+    color: var(--color2);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.approval-module .attachment-link:hover {
+    border-color: var(--color1);
+    color: var(--color1);
+}
+
+/* Attachment row in the approval detail modal.
+   Paste at the END of your approvals CSS file (approval- prefix, no global overrides). */
+.approval-attachment-info {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;            /* wraps on narrow screens instead of overflowing */
+    gap: 8px;
+    min-width: 0;
+}
+.approval-attachment-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+.approval-link-btn {
+    display: inline-block;
+    text-decoration: none;
+}
+
+/* ── Misc ──────────────────────────────────────────────── */
+
+.approval-module .muted {
+    color: var(--color5);
+    font-size: 0.82rem;
+}
+
+/* ── Modal ─────────────────────────────────────────────── */
+
+.approval-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.approval-modal-overlay.active {
+    display: flex;
+}
+
+.approval-modal {
+    width: 480px;
+    max-width: 92vw;
+    max-height: 82vh;
+    overflow-y: auto;
+    background: var(--color3);
+    border: 1px solid var(--color9);
+    border-radius: 10px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.approval-modal-lg {
+    width: 720px;
+}
+
+.approval-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.2rem 1.6rem;
+    border-bottom: 1px solid var(--color9);
+}
+
+.approval-modal-header h3 {
+    margin: 0;
+    color: var(--color2);
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.approval-modal-close {
+    border: none;
+    background: transparent;
+    font-size: 1.4rem;
+    line-height: 1;
+    color: var(--color5);
+    cursor: pointer;
+}
+
+.approval-modal-close:hover {
+    color: var(--color2);
+}
+
+.approval-modal-body {
+    padding: 1.6rem;
+}
+
+.approval-modal-body h4 {
+    margin: 1.1rem 0 0.4rem;
+    color: var(--color2);
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.approval-modal-body p {
+    margin: 0;
+    color: var(--color2);
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+/* ── Detail rows ───────────────────────────────────────── */
+
+.approval-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--color9);
+    font-size: 0.85rem;
+}
+
+.approval-detail-row:last-of-type {
+    border-bottom: none;
+}
+
+.approval-detail-label {
+    color: var(--color5);
+    font-weight: 600;
+}
+
+/* ── AI summary box ────────────────────────────────────── */
+
+.approval-ai-box {
+    margin-top: 1.2rem;
+    padding: 1rem 1.1rem;
+    border: 1px dashed var(--color9);
+    border-radius: 8px;
+    background: rgba(32, 0, 130, 0.02);
+}
+
+.approval-ai-box-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.approval-ai-box-header strong {
+    color: var(--color2);
+    font-size: 0.82rem;
+}
+
+/* ── Review / decision box ─────────────────────────────── */
+
+.approval-review-box {
+    margin-top: 1.2rem;
+    padding: 1rem 1.1rem;
+    border-radius: 8px;
+    background: var(--color3);
+    border: 1px solid var(--color9);
+}
+
+.approval-review-box label {
+    display: block;
+    margin-bottom: 0.4rem;
+    color: var(--color2);
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.approval-review-box textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.6rem 0.85rem;
+    border: 1px solid var(--color9);
+    border-radius: 7px;
+    background: var(--color3);
+    color: var(--color2);
+    font-size: 0.85rem;
+    font-family: inherit;
+    resize: vertical;
+}
+
+/* ── PDF viewer ────────────────────────────────────────── */
+
+.approval-pdf-body {
+    padding: 0;
+    height: 78vh;
+}
+
+.approval-pdf-frame {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* ── Responsive ───────────────────────────────────────── */
+
+@media (max-width: 900px) {
+    .approval-module .approval-queue-section {
+        padding: 1rem;
+    }
+
+    .approval-module .approval-section-header {
+        gap: 0.75rem;
+    }
+
+    .approval-module .ads-select {
+        width: 180px;
+    }
+
+    .approval-module .ads-queue .table-responsive {
+        overflow-x: auto;
+    }
+
+    .approval-module .ads-table {
+        min-width: 900px;
+    }
+
+    .approval-module .ads-table th,
+    .approval-module .ads-table td {
+        padding: 0.75rem 0.9rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .approval-module .approval-queue-section {
+        padding: 1rem;
+    }
+
+    .approval-module .approval-section-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .approval-module .approval-header-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .approval-module .approval-filter {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .approval-module .ads-select {
+        width: 100%;
+    }
+
+    .approval-module .actions,
+    .approval-module .approval-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .approval-modal,
+    .approval-modal-lg {
+        width: 94vw;
+    }
+
+    .approval-pdf-body {
+        height: 65vh;
+    }
+}

@@ -1,0 +1,34 @@
+tr:has(.dropdown .show) {
+    position: relative;
+    z-index: 1050 !important;
+}
+
+
+.dropdown-menu.show {
+    z-index: 1060 !important;
+}
+
+
+/* for the clock and the current sem */
+
+
+
+.header {
+    position: fixed;
+    /* your existing styles */
+}
+
+.header-status {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color2);
+}

@@ -1,0 +1,1 @@
+<?php echo password_hash('library123', PASSWORD_DEFAULT);
