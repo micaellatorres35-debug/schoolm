@@ -8,122 +8,194 @@ const APPROVAL_STATUS_LABELS = {
     rejected: 'Rejected',
 };
 
-// Attachment rules — keep in sync with FileStorage.php (the server re-checks everything).
+const APPROVAL_ALLOWED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png'];
 const APPROVAL_MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
-const APPROVAL_ALLOWED_EXTENSIONS   = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png'];
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 function initApprovalModule() {
     const moduleRoot = document.querySelector('.approval-module');
     if (!moduleRoot) return;
 
-    // Prevents the same element from getting a listener attached twice when
-    // init() runs more than once on unchanged DOM.
-    function bindOnce(el, event, handler) {
-        if (!el || el.dataset.approvalBound === '1') return;
-        el.addEventListener(event, handler);
-        el.dataset.approvalBound = '1';
+    const queueContainer = document.getElementById('approval-queue-list');
+    const recentContainer = document.getElementById('approval-recent-list');
+    const statusSelect = document.getElementById('approval-status-filter');
+    const deptSelect = document.getElementById('approval-department-filter');
+    const searchInput = document.getElementById('approval-search');
+    const fromInput = document.getElementById('approval-date-from');
+    const toInput = document.getElementById('approval-date-to');
+    const form = document.getElementById('approval-form');
+    const modalOverlay = document.getElementById('approval-modal-overlay');
+    const viewOverlay = document.getElementById('approval-view-modal-overlay');
+    const pdfOverlay = document.getElementById('approval-pdf-modal-overlay');
+
+    if (moduleRoot.dataset.isApprover !== '1') {
+        if (deptSelect) deptSelect.style.display = 'none';
     }
 
-    loadApprovalQueue();
+    if (!window.approvalInitBound) {
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                closeApprovalModal();
+                closeApprovalViewModal();
+                closeApprovalPdfModal();
+            }
+        });
 
-    const approvalForm = document.getElementById('approval-form');
+        document.addEventListener('click', (event) => {
+            const rowButton = event.target.closest('.approval-request-action');
+            if (rowButton) {
+                const approvalId = rowButton.dataset.approvalId;
+                if (approvalId) {
+                    viewApproval(approvalId);
+                }
+            }
 
-    // --- Create modal wiring ---
-    const modalOverlay  = document.getElementById('approval-modal-overlay');
-    const openModalBtn  = document.getElementById('approval-open-modal');
-    const closeModalBtn = document.getElementById('approval-modal-close');
+            const recentItem = event.target.closest('[data-recent-id]');
+            if (recentItem) {
+                const approvalId = recentItem.dataset.recentId;
+                if (approvalId) {
+                    viewApproval(approvalId);
+                }
+            }
 
-    const openCreateModal = () => {
-        approvalForm?.reset();
+            const pdfTrigger = event.target.closest('[data-open-pdf]');
+            if (pdfTrigger) {
+                const approvalId = pdfTrigger.dataset.openPdf;
+                if (approvalId) {
+                    openApprovalDocument(approvalId, 'pdf');
+                }
+            }
+
+            const attachmentTrigger = event.target.closest('[data-open-attachment]');
+            if (attachmentTrigger) {
+                const approvalId = attachmentTrigger.dataset.openAttachment;
+                if (approvalId) {
+                    openApprovalDocument(approvalId, 'attachment');
+                }
+            }
+
+            const summarizeButton = event.target.closest('#approval-summarize-btn');
+            if (summarizeButton) {
+                summarizeApproval(summarizeButton.dataset.approvalId);
+            }
+
+            const markedReviewed = event.target.closest('#approval-mark-reviewed');
+            if (markedReviewed) {
+                const approvalId = markedReviewed.dataset.approvalId;
+                const notes = document.getElementById('approval-review-notes')?.value ?? '';
+                reviewApproval(approvalId, notes);
+            }
+
+            const decisionButtons = event.target.closest('.approval-decide-btn');
+            if (decisionButtons) {
+                const decision = decisionButtons.dataset.decision;
+                const approvalId = decisionButtons.dataset.approvalId;
+                const notes = document.getElementById('approval-decision-notes')?.value ?? '';
+                decideApproval(approvalId, decision, notes);
+            }
+        });
+
+        window.approvalInitBound = true;
+    }
+
+    function bindOnce(element, eventName, handler) {
+        if (!element || element.dataset.bound === '1') return;
+        element.addEventListener(eventName, handler);
+        element.dataset.bound = '1';
+    }
+
+    const closeApprovalModal = () => modalOverlay?.classList.remove('active');
+    const closeApprovalViewModal = () => viewOverlay?.classList.remove('active');
+    const closeApprovalPdfModal = () => {
+        pdfOverlay?.classList.remove('active');
+        const frame = document.getElementById('approval-pdf-frame');
+        if (frame) frame.src = '';
+    };
+
+    bindOnce(document.getElementById('approval-open-modal'), 'click', () => {
+        if (!form) return;
+        form.reset();
         document.getElementById('approval-id').value = '';
+        const errorBox = document.getElementById('approval-form-error');
+        if (errorBox) {
+            errorBox.hidden = true;
+            errorBox.textContent = '';
+        }
         modalOverlay?.classList.add('active');
-    };
-    const closeCreateModal = () => {
-        modalOverlay?.classList.remove('active');
-        const formError = document.getElementById('approval-form-error');
-        if (formError) formError.style.display = 'none';
-    };
-
-    bindOnce(openModalBtn, 'click', openCreateModal);
-    bindOnce(closeModalBtn, 'click', closeCreateModal);
-    bindOnce(modalOverlay, 'click', (e) => {
-        if (e.target === modalOverlay) closeCreateModal();
     });
 
-    // --- Optional attachment: check type/size before the user even submits ---
+    bindOnce(document.getElementById('approval-modal-close'), 'click', closeApprovalModal);
+    bindOnce(modalOverlay, 'click', (event) => {
+        if (event.target === modalOverlay) closeApprovalModal();
+    });
+    bindOnce(document.getElementById('approval-view-modal-close'), 'click', closeApprovalViewModal);
+    bindOnce(viewOverlay, 'click', (event) => {
+        if (event.target === viewOverlay) closeApprovalViewModal();
+    });
+    bindOnce(document.getElementById('approval-pdf-modal-close'), 'click', closeApprovalPdfModal);
+    bindOnce(pdfOverlay, 'click', (event) => {
+        if (event.target === pdfOverlay) closeApprovalPdfModal();
+    });
+
     const attachmentInput = document.getElementById('approval-attachment');
     bindOnce(attachmentInput, 'change', () => {
-        const file  = attachmentInput.files[0];
+        const file = attachmentInput.files && attachmentInput.files[0] ? attachmentInput.files[0] : null;
         const error = file ? validateApprovalAttachment(file) : null;
+        const formError = document.getElementById('approval-form-error');
         if (error) {
             attachmentInput.value = '';
-            const formError = document.getElementById('approval-form-error');
             if (formError) {
-                formError.textContent   = error;
-                formError.style.display = 'block';
+                formError.textContent = error;
+                formError.hidden = false;
             }
+            return;
+        }
+        if (formError) {
+            formError.textContent = '';
+            formError.hidden = true;
         }
     });
 
-    // --- View/PDF modal wiring ---
-    const viewOverlay = document.getElementById('approval-view-modal-overlay');
-    const viewClose   = document.getElementById('approval-view-modal-close');
-    const pdfOverlay  = document.getElementById('approval-pdf-modal-overlay');
-    const pdfClose    = document.getElementById('approval-pdf-modal-close');
-    const pdfFrame    = document.getElementById('approval-pdf-frame');
-
-    const closeViewModal = () => viewOverlay?.classList.remove('active');
-    const closePdfModal  = () => {
-        pdfOverlay?.classList.remove('active');
-        if (pdfFrame) pdfFrame.src = '';
-    };
-
-    bindOnce(viewClose, 'click', closeViewModal);
-    bindOnce(viewOverlay, 'click', (e) => {
-        if (e.target === viewOverlay) closeViewModal();
-    });
-    bindOnce(pdfClose, 'click', closePdfModal);
-    bindOnce(pdfOverlay, 'click', (e) => {
-        if (e.target === pdfOverlay) closePdfModal();
-    });
-
-    if (!window.approvalEscBound) {
-        document.addEventListener('keydown', (e) => {
-            if (e.key !== 'Escape') return;
-            closeCreateModal();
-            closeViewModal();
-            closePdfModal();
-        });
-        window.approvalEscBound = true;
-    }
-
-    // --- Save as Draft ---
-    const draftBtn = document.getElementById('approval-draft-btn');
-    bindOnce(draftBtn, 'click', () => submitApprovalForm('save_draft'));
-
-    // --- Submit ---
-    bindOnce(approvalForm, 'submit', (e) => {
-        e.preventDefault();
+    bindOnce(form, 'submit', (event) => {
+        event.preventDefault();
         submitApprovalForm('submit');
     });
 
-    // --- Table row "View" clicks (delegated, survives re-renders) ---
-    if (!window.approvalViewDelegationBound) {
-        document.addEventListener('click', (e) => {
-            const btn = e.target.closest('.approval-view-btn');
-            if (btn) viewApproval(btn.dataset.approvalId);
+    bindOnce(document.getElementById('approval-draft-btn'), 'click', () => {
+        submitApprovalForm('save_draft');
+    });
+
+    bindOnce(statusSelect, 'change', () => {
+        loadQueue();
+    });
+    bindOnce(deptSelect, 'change', () => {
+        loadQueue();
+    });
+    bindOnce(fromInput, 'change', () => {
+        loadQueue();
+    });
+    bindOnce(toInput, 'change', () => {
+        loadQueue();
+    });
+    bindOnce(document.getElementById('approval-clear-filters'), 'click', () => {
+        if (searchInput) searchInput.value = '';
+        if (deptSelect) deptSelect.value = '';
+        if (statusSelect) statusSelect.value = 'pending';
+        if (fromInput) fromInput.value = '';
+        if (toInput) toInput.value = '';
+        loadQueue();
+    });
+
+    if (searchInput) {
+        let searchTimer = null;
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => loadQueue(), 300);
         });
-        window.approvalViewDelegationBound = true;
     }
 
-    // --- Department filter ---
-    const deptFilter = document.getElementById('department-filter');
-    bindOnce(deptFilter, 'change', () => loadApprovalQueue());
-
-    // --- Status filter ---
-    const statusFilter = document.getElementById('status-filter');
-    bindOnce(statusFilter, 'change', () => loadApprovalQueue());
+    loadOverview();
+    loadQueue();
 }
 
 // Handles both hard refresh and sidebar navigation
@@ -134,221 +206,367 @@ document.addEventListener('DOMContentLoaded', initApprovalModule);
 function validateApprovalAttachment(file) {
     const ext = (file.name.split('.').pop() || '').toLowerCase();
     if (!APPROVAL_ALLOWED_EXTENSIONS.includes(ext)) {
-        return 'This file type is not allowed. Use PDF, Word, Excel, JPG or PNG.';
+        return 'This file type is not allowed. Use PDF, JPG, JPEG or PNG.';
     }
     if (file.size > APPROVAL_MAX_ATTACHMENT_BYTES) {
-        return `That file is ${approvalFormatFileSize(file.size)}. The maximum is 10 MB.`;
+        return 'That file is too large. The maximum is 10 MB.';
     }
     return null;
 }
 
-function approvalFormatFileSize(bytes) {
-    const n = Number(bytes) || 0;
-    if (n >= 1024 * 1024) return (n / (1024 * 1024)).toFixed(1) + ' MB';
-    if (n >= 1024)        return Math.round(n / 1024) + ' KB';
-    return n + ' B';
-}
-
-// Files are never linked by their disk path. They are always requested through the
-// controller, which checks the session/role and streams the bytes.
 function approvalFileUrl(approvalId, kind, download = false) {
-    const params = new URLSearchParams({ action: 'file', approval_id: approvalId, kind });
+    const params = new URLSearchParams({ action: 'file', approval_id: approvalId, kind: kind || 'attachment' });
     if (download) params.set('download', '1');
     return `${ApprovalController}?${params.toString()}`;
 }
 
+function previewDocumentMarkup(url, mime) {
+    const normalizedMime = String(mime || '').toLowerCase();
+    if (normalizedMime === 'application/pdf') {
+        return `<iframe src="${esc(url)}" title="Approval document preview" style="width:100%;min-height:400px;border:0;border-radius:10px;"></iframe>`;
+    }
+    if (normalizedMime.startsWith('image/')) {
+        return `<img src="${esc(url)}" alt="Approval document preview" style="max-width:100%;border-radius:10px;display:block;margin:0 auto;">`;
+    }
+    return '<div class="approval-empty-text">Preview not available.</div>';
+}
+
 // ── SUBMIT / DRAFT ────────────────────────────────────────────────────────────
 async function submitApprovalForm(action) {
-    const approvalForm = document.getElementById('approval-form');
-    const formError     = document.getElementById('approval-form-error');
-    const submitBtn     = document.getElementById('approval-submit-btn');
-    const draftBtn      = document.getElementById('approval-draft-btn');
+    const form = document.getElementById('approval-form');
+    const submitBtn = document.getElementById('approval-submit-btn');
+    const draftBtn = document.getElementById('approval-draft-btn');
+    const errorBox = document.getElementById('approval-form-error');
+    if (!form) return;
 
-    formError.style.display = 'none';
-    submitBtn.disabled = true;
-    draftBtn.disabled  = true;
-    const originalLabel = submitBtn.textContent;
-    submitBtn.textContent = action === 'submit' ? 'Submitting…' : submitBtn.textContent;
+    if (errorBox) {
+        errorBox.hidden = true;
+        errorBox.textContent = '';
+    }
+    if (submitBtn) submitBtn.disabled = true;
+    if (draftBtn) draftBtn.disabled = true;
 
-    // FormData includes the optional "attachment" file input automatically (multipart/form-data).
-    // Do NOT set a Content-Type header manually — the browser adds the multipart boundary.
-    const formData = new FormData(approvalForm);
+    const formData = new FormData(form);
     formData.set('action', action);
 
     try {
-        const res  = await fetch(ApprovalController, { method: 'POST', body: formData });
+        const res = await fetch(ApprovalController, { method: 'POST', body: formData });
         const json = await res.json();
 
-        if (!json.success && json.message?.toLowerCase().includes('session expired')) {
-            setTimeout(() => window.location.href = '/sms/index.php', 1500);
+        if (!json.success && json.message && json.message.toLowerCase().includes('session expired')) {
+            setTimeout(() => {
+                window.location.href = '/schoolm/index.php';
+            }, 250);
             return;
         }
 
         if (json.success) {
-            document.getElementById('approval-modal-overlay')?.classList.remove('active');
-            if (json.debug) console.error('Approval debug:', json.debug);
-            showToast(action === 'submit' ? 'Approval request submitted successfully!' : 'Draft saved.', 'success');
+            closeApprovalModal();
             if (json.warning) showToast(json.warning, 'error');
-            loadApprovalQueue();
+            showToast(action === 'submit' ? 'Approval request submitted successfully.' : 'Draft saved.', 'success');
+            loadOverview();
+            loadQueue();
+            form.reset();
         } else {
-            if (json.debug) console.error('Approval debug:', json.debug);
-            formError.textContent   = json.message;
-            formError.style.display = 'block';
+            if (errorBox) {
+                errorBox.textContent = json.message || 'Something went wrong.';
+                errorBox.hidden = false;
+            }
         }
-    } catch (err) {
-        console.error(err);
-        formError.textContent   = 'A network error occurred. Please try again.';
-        formError.style.display = 'block';
+    } catch (error) {
+        console.error('submitApprovalForm error:', error);
+        if (errorBox) {
+            errorBox.textContent = 'A network error occurred. Please try again.';
+            errorBox.hidden = false;
+        }
     } finally {
-        submitBtn.disabled    = false;
-        draftBtn.disabled     = false;
-        submitBtn.textContent = originalLabel;
+        if (submitBtn) submitBtn.disabled = false;
+        if (draftBtn) draftBtn.disabled = false;
     }
 }
 
-// ── LOAD QUEUE ────────────────────────────────────────────────────────────────
-async function loadApprovalQueue() {
-    const deptFilter    = document.getElementById('department-filter');
-    const statusFilter  = document.getElementById('status-filter');
-    const department_id = deptFilter && deptFilter.value !== '' ? deptFilter.value : '';
-    const status         = statusFilter && statusFilter.value !== '' ? statusFilter.value : '';
-    const tbody          = document.querySelector('.ads-table tbody');
-    if (!tbody) return;
-
-    tbody.innerHTML = `<tr><td colspan="7" class="muted">Loading…</td></tr>`;
-
-    const params = new URLSearchParams({ action: 'list' });
-    if (department_id !== '') params.set('department_id', department_id);
-    if (status !== '') params.set('status', status);
+// ── LOAD OVERVIEW ────────────────────────────────────────────────────────────────
+async function loadOverview() {
+    const params = new URLSearchParams({ action: 'overview' });
+    const isApprover = document.querySelector('.approval-module')?.dataset.isApprover === '1';
+    const deptFilter = document.getElementById('approval-department-filter');
+    if (isApprover && deptFilter && deptFilter.value) {
+        params.set('department_id', deptFilter.value);
+    }
 
     try {
-        const res  = await fetch(`${ApprovalController}?${params.toString()}`);
+        const res = await fetch(`${ApprovalController}?${params.toString()}`);
         const json = await res.json();
+        if (!json.success) return;
+        renderOverview(json.data || { counts: { submitted: 0, reviewed: 0, approved: 0, rejected: 0 }, recent: [] });
+    } catch (error) {
+        console.error('loadOverview error:', error);
+    }
+}
 
+function renderOverview(data) {
+    const counts = data.counts || {};
+    const statKeys = ['submitted', 'reviewed', 'approved', 'rejected'];
+    statKeys.forEach((key) => {
+        const node = document.querySelector(`[data-stat="${key}"]`);
+        if (node) node.textContent = Number(counts[key] ?? 0);
+    });
+
+    const recentList = document.getElementById('approval-recent-list');
+    if (!recentList) return;
+
+    const recent = Array.isArray(data.recent) ? data.recent : [];
+    if (!recent.length) {
+        recentList.innerHTML = `
+            <div class="approval-empty-recent">
+                <div class="approval-empty-title">No decisions yet</div>
+                <div class="approval-empty-text">Approved and rejected requests will appear here.</div>
+            </div>
+        `;
+        return;
+    }
+
+    recentList.innerHTML = recent.map((item) => {
+        const status = (item.status || 'approved').toLowerCase();
+        const label = APPROVAL_STATUS_LABELS[status] || status.charAt(0).toUpperCase() + status.slice(1);
+        const decisionText = item.decided_by_name ? `${item.decided_by_name}` : 'Unknown';
+        const dateText = item.decided_at ? formatDateValue(item.decided_at) : '—';
+        return `
+            <div class="approval-recent-item" data-recent-id="${esc(item.approval_id)}" tabindex="0">
+                <div class="approval-recent-item-header">
+                    <div class="approval-recent-title">${esc(item.title || 'Untitled request')}</div>
+                    <span class="approval-status-pill approval-status-${status}">${label}</span>
+                </div>
+                <div class="approval-recent-meta">${esc(item.department_name || 'Department')}</div>
+                <div class="approval-recent-meta">${esc(decisionText)} • ${esc(dateText)}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+// ── LOAD QUEUE ────────────────────────────────────────────────────────────────
+async function loadQueue() {
+    const loadingState = document.getElementById('approval-queue-loading');
+    const queueList = document.getElementById('approval-queue-list');
+    const emptyState = document.getElementById('approval-queue-empty');
+    const queueCount = document.getElementById('approval-queue-count');
+    const moreState = document.getElementById('approval-queue-more');
+    if (!queueList) return;
+
+    if (loadingState) loadingState.hidden = false;
+    if (queueList) queueList.innerHTML = '';
+    if (emptyState) emptyState.hidden = true;
+    if (moreState) moreState.hidden = true;
+
+    const params = new URLSearchParams({ action: 'queue' });
+    const status = document.getElementById('approval-status-filter')?.value || 'pending';
+    const departmentId = document.getElementById('approval-department-filter')?.value || '';
+    const search = document.getElementById('approval-search')?.value || '';
+    const dateFrom = document.getElementById('approval-date-from')?.value || '';
+    const dateTo = document.getElementById('approval-date-to')?.value || '';
+
+    params.set('status', status);
+    if (departmentId) params.set('department_id', departmentId);
+    if (search) params.set('search', search);
+    if (dateFrom) params.set('date_from', dateFrom);
+    if (dateTo) params.set('date_to', dateTo);
+
+    try {
+        const response = await fetch(`${ApprovalController}?${params.toString()}`);
+        const json = await response.json();
         if (!json.success) {
-            tbody.innerHTML = `<tr><td colspan="7" class="muted">Failed to load approvals.</td></tr>`;
+            queueList.innerHTML = '<div class="approval-empty-state"><p>Failed to load requests.</p></div>';
             return;
         }
 
-        if (!json.data?.length) {
-            tbody.innerHTML = `<tr><td colspan="7" class="muted">No approvals found.</td></tr>`;
-            return;
+        renderQueue(json.data || [], !!json.has_more, status, queueCount, queueList, emptyState, moreState);
+    } catch (error) {
+        console.error('loadQueue error:', error);
+        queueList.innerHTML = '<div class="approval-empty-state"><p>Failed to load requests.</p></div>';
+    } finally {
+        if (loadingState) loadingState.hidden = true;
+    }
+}
+
+function renderQueue(rows, hasMore, status, queueCount, queueList, emptyState, moreState) {
+    const isApprover = document.querySelector('.approval-module')?.dataset.isApprover === '1';
+    if (!rows.length) {
+        queueList.innerHTML = '';
+        if (emptyState) {
+            emptyState.hidden = false;
+            emptyState.innerHTML = '<div class="approval-empty-icon">No requests</div><p>No requests match your filters.</p>';
         }
+        if (queueCount) queueCount.textContent = '0 requests';
+        if (moreState) moreState.hidden = true;
+        return;
+    }
 
-        tbody.innerHTML = json.data.map(row => `
-            <tr data-approval-id="${esc(row.approval_id)}">
-                <td>${esc(row.approval_id)}</td>
-                <td>${esc(row.title)}</td>
-                <td>${esc(row.submit_by)}</td>
-                <td>${esc(row.department_name)}</td>
-                <td><span class="badge badge-${esc(row.status)}">${esc(APPROVAL_STATUS_LABELS[row.status] ?? row.status)}</span></td>
-                <td>${esc(row.submitted_on ?? 'N/A')}</td>
-                <td class="actions-cell">
-                    <button type="button" class="attachment-link approval-view-btn" data-approval-id="${esc(row.approval_id)}">View</button>
-                </td>
-            </tr>
-        `).join('');
+    if (queueCount) queueCount.textContent = `${rows.length} request${rows.length === 1 ? '' : 's'}`;
 
-    } catch (err) {
-        console.error('loadApprovalQueue error:', err);
-        tbody.innerHTML = `<tr><td colspan="7" class="muted">Failed to load approvals.</td></tr>`;
+    queueList.innerHTML = rows.map((item) => {
+        const rowStatus = (item.status || 'submitted').toLowerCase();
+        const actionLabel = isApprover && (rowStatus === 'submitted' || rowStatus === 'reviewed') ? 'Review request' : 'View';
+        const waitingText = item.waiting_days !== null && item.waiting_days !== undefined ? `Waiting ${item.waiting_days} day${Number(item.waiting_days) === 1 ? '' : 's'}` : '';
+        const rowDate = item.submitted_on ? formatDateValue(item.submitted_on, true) : '—';
+        const title = item.title || 'Untitled request';
+        const submittedBy = item.submit_by || 'Unknown';
+        const department = item.department_name || 'Department';
+
+        return `
+            <div class="approval-request-item" data-approval-id="${esc(item.approval_id)}">
+                <div class="approval-request-main">
+                    <div class="approval-request-id">#${esc(item.approval_id)}</div>
+                    <div class="approval-request-title">${esc(title)}</div>
+                    <div class="approval-request-meta">
+                        <span>Department <strong>${esc(department)}</strong></span>
+                        <span>Submitted by <strong>${esc(submittedBy)}</strong></span>
+                        <span>Submitted <strong>${esc(rowDate)}</strong></span>
+                    </div>
+                </div>
+                <div class="approval-request-side">
+                    <span class="approval-status-pill approval-status-${rowStatus}">${esc(APPROVAL_STATUS_LABELS[rowStatus] || rowStatus)}</span>
+                    ${waitingText ? `<span class="approval-waiting-text">${esc(waitingText)}</span>` : ''}
+                    <button type="button" class="approval-primary-btn approval-request-action" data-approval-id="${esc(item.approval_id)}">${actionLabel}</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    if (emptyState) emptyState.hidden = true;
+    if (moreState) {
+        moreState.hidden = !hasMore;
+        if (hasMore) moreState.textContent = 'Showing the first 100 results. Narrow your filters.';
     }
 }
 
 // ── VIEW / REVIEW / DECISION ─────────────────────────────────────────────────
 async function viewApproval(approvalId) {
     const overlay = document.getElementById('approval-view-modal-overlay');
-    const body    = document.getElementById('approval-view-modal-body');
+    const body = document.getElementById('approval-view-modal-body');
     if (!overlay || !body) return;
 
-    body.innerHTML = '<p class="muted">Loading…</p>';
+    body.innerHTML = '<div class="approval-loading-state">Loading…</div>';
     overlay.classList.add('active');
 
     try {
-        const res  = await fetch(`${ApprovalController}?action=get&approval_id=${encodeURIComponent(approvalId)}`);
-        const json = await res.json();
-
+        const response = await fetch(`${ApprovalController}?action=get&approval_id=${encodeURIComponent(approvalId)}`);
+        const json = await response.json();
         if (!json.success) {
-            body.innerHTML = `<p class="muted">${esc(json.message)}</p>`;
+            body.innerHTML = `<div class="approval-empty-state"><p>${esc(json.message || 'Unable to load approval request.')}</p></div>`;
             return;
         }
-
         renderApprovalDetail(json.data);
-    } catch (err) {
-        console.error('viewApproval error:', err);
-        body.innerHTML = '<p class="muted">Failed to load approval request.</p>';
+    } catch (error) {
+        console.error('viewApproval error:', error);
+        body.innerHTML = '<div class="approval-empty-state"><p>Failed to load approval request.</p></div>';
     }
 }
 
 function renderApprovalDetail(approval) {
-    const moduleRoot    = document.querySelector('.approval-module');
-    const isDirectress  = moduleRoot?.dataset.isDirectress === '1';
-    const body          = document.getElementById('approval-view-modal-body');
-    const statusLabel   = APPROVAL_STATUS_LABELS[approval.status] ?? approval.status;
+    const body = document.getElementById('approval-view-modal-body');
+    if (!body) return;
+
+    const isApprover = document.querySelector('.approval-module')?.dataset.isApprover === '1';
+    const status = (approval.status || '').toLowerCase();
+    const statusText = APPROVAL_STATUS_LABELS[status] || status;
+    const attachmentUrl = approval.has_attachment ? approvalFileUrl(approval.approval_id, 'attachment') : '';
+    const documentSection = approval.has_attachment ? `
+        <div class="approval-document-box">
+            <div class="approval-document-header">
+                <span>Request document</span>
+                <div class="approval-document-actions">
+                    <button type="button" class="approval-secondary-btn" data-open-attachment="${esc(approval.approval_id)}">Full screen</button>
+                    <a href="${approvalFileUrl(approval.approval_id, 'attachment', true)}" class="approval-secondary-link" target="_blank" rel="noopener noreferrer">Download</a>
+                </div>
+            </div>
+            <div class="approval-document-preview">
+                ${previewDocumentMarkup(attachmentUrl, approval.attachment_mime || '')}
+            </div>
+        </div>
+    ` : '<div class="approval-empty-text">No request document uploaded.</div>';
 
     let reviewSection = '';
-    if (isDirectress && approval.status === 'submitted') {
+    if (isApprover && status === 'submitted') {
         reviewSection = `
             <div class="approval-review-box">
-                <label for="approval-review-notes">Review Notes (optional)</label>
-                <textarea id="approval-review-notes" rows="2" placeholder="Any notes for this review"></textarea>
-                <div class="approval-actions">
-                    <button type="button" class="approval-submit-btn" id="approval-mark-reviewed" data-approval-id="${esc(approval.approval_id)}">Mark as Reviewed</button>
+                <label for="approval-review-notes">Review notes (optional)</label>
+                <textarea id="approval-review-notes" rows="3" placeholder="Add review notes"></textarea>
+                <div class="approval-inline-error" id="approval-review-error" hidden></div>
+                <div class="approval-modal-actions">
+                    <button type="button" id="approval-mark-reviewed" data-approval-id="${esc(approval.approval_id)}" class="approval-primary-btn">Mark as reviewed</button>
                 </div>
-            </div>`;
-    } else if (isDirectress && approval.status === 'reviewed') {
-        reviewSection = `
-            <div class="approval-review-box">
-                <label for="approval-decision-notes">Decision Notes (optional)</label>
-                <textarea id="approval-decision-notes" rows="2" placeholder="Any notes for this decision"></textarea>
-                <div class="approval-actions">
-                    <button type="button" class="btn-approve approval-decide-btn" data-decision="approved" data-approval-id="${esc(approval.approval_id)}">Approve</button>
-                    <button type="button" class="btn-reject approval-decide-btn" data-decision="rejected" data-approval-id="${esc(approval.approval_id)}">Reject</button>
-                </div>
-            </div>`;
+            </div>
+        `;
     }
 
-    // The server no longer sends file paths — only has_pdf / has_attachment flags.
-    const pdfButton = approval.has_pdf
-        ? `<button type="button" class="attachment-link" id="approval-open-pdf" data-approval-id="${esc(approval.approval_id)}">View PDF</button>`
-        : `<span class="muted">PDF not yet generated</span>`;
-
-    const attachmentLine = approval.has_attachment
-        ? `<span class="approval-attachment-info">
-                <span class="approval-attachment-name">${esc(approval.attachment_name ?? 'Attachment')}${approval.attachment_size ? ` (${esc(approvalFormatFileSize(approval.attachment_size))})` : ''}</span>
-                <button type="button" class="attachment-link" id="approval-open-attachment"
-                        data-approval-id="${esc(approval.approval_id)}" data-mime="${esc(approval.attachment_mime ?? '')}">View</button>
-                <a class="attachment-link approval-link-btn" href="${esc(approvalFileUrl(approval.approval_id, 'attachment', true))}">Download</a>
-           </span>`
-        : `<span class="muted">No attachment</span>`;
-
-    const aiSummaryBox = `
-        <div class="approval-ai-box">
-            <div class="approval-ai-box-header">
-                <strong>AI Summary</strong>
-                <button type="button" class="attachment-link" id="approval-summarize-btn" data-approval-id="${esc(approval.approval_id)}">
-                    ${approval.ai_summary ? 'Regenerate' : 'Generate Summary'}
-                </button>
+    if (isApprover && status === 'reviewed') {
+        reviewSection = `
+            <div class="approval-review-box">
+                <label for="approval-decision-notes">Decision notes</label>
+                <textarea id="approval-decision-notes" rows="3" placeholder="Add a decision note"></textarea>
+                <div class="approval-inline-error" id="approval-decision-error" hidden></div>
+                <div class="approval-modal-actions approval-decision-actions">
+                    <button type="button" class="approval-primary-btn approval-decide-btn" data-decision="approved" data-approval-id="${esc(approval.approval_id)}">Approve</button>
+                    <button type="button" class="approval-danger-btn approval-decide-btn" data-decision="rejected" data-approval-id="${esc(approval.approval_id)}">Reject</button>
+                </div>
             </div>
-            <p id="approval-ai-summary-text" class="muted">${approval.ai_summary ? esc(approval.ai_summary) : 'No AI summary yet.'}</p>
-        </div>`;
+        `;
+    }
+
+    const historyEntries = Array.isArray(approval.history) ? approval.history : [];
+    const historyMarkup = historyEntries.length ? historyEntries.map((entry) => {
+        const when = entry.date ? formatDateValue(entry.date, true) : '—';
+        const notes = entry.notes ? `<div class="approval-history-note">${esc(entry.notes)}</div>` : '';
+        return `
+            <div class="approval-history-item">
+                <div class="approval-history-dot"></div>
+                <div class="approval-history-content">
+                    <div class="approval-history-heading">${esc(entry.event || 'Update')}</div>
+                    <div class="approval-history-meta">${esc(when)}${entry.by ? ` • ${esc(entry.by)}` : ''}</div>
+                    ${notes}
+                </div>
+            </div>
+        `;
+    }).join('') : '<div class="approval-empty-text">No history available.</div>';
+
+    const aiSummary = approval.ai_summary ? esc(approval.ai_summary) : 'No AI summary yet.';
 
     body.innerHTML = `
-        <div class="approval-detail-row"><span class="approval-detail-label">Title</span><span>${esc(approval.title)}</span></div>
-        <div class="approval-detail-row"><span class="approval-detail-label">Department</span><span>${esc(approval.department_name ?? 'N/A')}</span></div>
-        <div class="approval-detail-row"><span class="approval-detail-label">Submitted By</span><span>${esc(approval.submit_by_name ?? 'N/A')}</span></div>
-        <div class="approval-detail-row"><span class="approval-detail-label">Status</span><span class="badge badge-${esc(approval.status)}">${esc(statusLabel)}</span></div>
-        <div class="approval-detail-row"><span class="approval-detail-label">Attachment</span>${attachmentLine}</div>
+        <div class="approval-detail-grid">
+            <div class="approval-detail-row"><span class="approval-detail-label">Request ID</span><span>#${esc(approval.approval_id)}</span></div>
+            <div class="approval-detail-row"><span class="approval-detail-label">Title</span><span>${esc(approval.title || 'Untitled request')}</span></div>
+            <div class="approval-detail-row"><span class="approval-detail-label">Department</span><span>${esc(approval.department_name || 'N/A')}</span></div>
+            <div class="approval-detail-row"><span class="approval-detail-label">Submitted by</span><span>${esc(approval.submit_by_name || 'N/A')}</span></div>
+            <div class="approval-detail-row"><span class="approval-detail-label">Submitted</span><span>${esc(approval.submitted_on ? formatDateValue(approval.submitted_on, true) : 'N/A')}</span></div>
+            <div class="approval-detail-row"><span class="approval-detail-label">Status</span><span class="approval-status-pill approval-status-${status}">${esc(statusText)}</span></div>
+        </div>
 
-        <h4>Description</h4>
-        <p>${esc(approval.description)}</p>
+        <div class="approval-section-block">
+            ${documentSection}
+        </div>
 
-        <h4>Justification</h4>
-        <p>${esc(approval.justification) || '<span class="muted">None provided.</span>'}</p>
+        <div class="approval-section-block">
+            <h4>Description</h4>
+            <div class="approval-text-block">${esc(approval.description || 'No description provided.')}</div>
+        </div>
 
-        ${aiSummaryBox}
+        <div class="approval-section-block">
+            <h4>Justification</h4>
+            <div class="approval-text-block approval-pre-wrap">${esc(approval.justification || 'No justification provided.')}</div>
+        </div>
 
-        <div class="approval-actions">${pdfButton}</div>
+        <div class="approval-section-block">
+            <h4>Decision history and comments</h4>
+            <div class="approval-history-list">${historyMarkup}</div>
+        </div>
+
+        <div class="approval-section-block">
+            <div class="approval-ai-header">
+                <h4>AI summary</h4>
+                <button type="button" class="approval-secondary-btn" id="approval-summarize-btn" data-approval-id="${esc(approval.approval_id)}">${approval.ai_summary ? 'Regenerate' : 'Generate summary'}</button>
+            </div>
+            <div class="approval-ai-summary">${aiSummary}</div>
+        </div>
 
         ${reviewSection}
     `;
@@ -377,7 +595,7 @@ function renderApprovalDetail(approval) {
 // Opens any controller file URL in the in-modal viewer (PDFs and images render in the iframe).
 function openApprovalFileModal(url, title = 'Approval PDF') {
     const overlay = document.getElementById('approval-pdf-modal-overlay');
-    const frame   = document.getElementById('approval-pdf-frame');
+    const frame = document.getElementById('approval-pdf-frame');
     const heading = document.getElementById('approval-pdf-modal-title');
     if (!overlay || !frame || !url) return;
     if (heading) heading.textContent = title;
@@ -400,97 +618,127 @@ async function reviewApproval(approvalId, notes) {
         const formData = new FormData();
         formData.append('action', 'review');
         formData.append('approval_id', approvalId);
-        formData.append('notes', notes);
+        formData.append('notes', notes || '');
 
-        const res  = await fetch(ApprovalController, { method: 'POST', body: formData });
-        const json = await res.json();
-
+        const response = await fetch(ApprovalController, { method: 'POST', body: formData });
+        const json = await response.json();
         if (json.success) {
             showToast('Marked as reviewed.', 'success');
+            loadOverview();
+            loadQueue();
             viewApproval(approvalId);
-            loadApprovalQueue();
         } else {
-            showToast(json.message, 'error');
+            showToast(json.message || 'Unable to review this request.', 'error');
         }
-    } catch (err) {
-        console.error('reviewApproval error:', err);
+    } catch (error) {
+        console.error('reviewApproval error:', error);
         showToast('A network error occurred.', 'error');
     }
 }
 
 async function decideApproval(approvalId, decision, notes) {
+    const trimmedNotes = (notes || '').trim();
+    if (decision === 'rejected' && !trimmedNotes) {
+        const errorBox = document.getElementById('approval-decision-error');
+        if (errorBox) {
+            errorBox.textContent = 'A rejection reason is required.';
+            errorBox.hidden = false;
+        }
+        return;
+    }
+
+    if (!window.confirm(decision === 'approved' ? 'Approve this request?' : 'Reject this request?')) {
+        return;
+    }
+
     try {
         const formData = new FormData();
         formData.append('action', 'decide');
         formData.append('approval_id', approvalId);
         formData.append('decision', decision);
-        formData.append('notes', notes);
+        formData.append('notes', trimmedNotes);
 
-        const res  = await fetch(ApprovalController, { method: 'POST', body: formData });
-        const json = await res.json();
-
+        const response = await fetch(ApprovalController, { method: 'POST', body: formData });
+        const json = await response.json();
         if (json.success) {
-            showToast(`Request ${decision}.`, 'success');
+            showToast(decision === 'approved' ? 'Request approved.' : 'Request rejected.', 'success');
+            loadOverview();
+            loadQueue();
             viewApproval(approvalId);
-            loadApprovalQueue();
         } else {
-            showToast(json.message, 'error');
+            const errorBox = document.getElementById('approval-decision-error');
+            if (errorBox) {
+                errorBox.textContent = json.message || 'Unable to record this decision.';
+                errorBox.hidden = false;
+            }
+            showToast(json.message || 'Unable to record this decision.', 'error');
         }
-    } catch (err) {
-        console.error('decideApproval error:', err);
+    } catch (error) {
+        console.error('decideApproval error:', error);
         showToast('A network error occurred.', 'error');
     }
 }
 
 async function summarizeApproval(approvalId) {
-    const btn  = document.getElementById('approval-summarize-btn');
-    const text = document.getElementById('approval-ai-summary-text');
-    if (btn) { btn.disabled = true; btn.textContent = 'Summarizing…'; }
-
+    const button = document.getElementById('approval-summarize-btn');
+    if (button) {
+        button.disabled = true;
+        button.textContent = 'Summarizing…';
+    }
     try {
-        const res  = await fetch(`${ApprovalController}?action=summarize&approval_id=${encodeURIComponent(approvalId)}`, { method: 'POST' });
-        const json = await res.json();
-
+        const response = await fetch(`${ApprovalController}?action=summarize&approval_id=${encodeURIComponent(approvalId)}`);
+        const json = await response.json();
         if (json.success) {
-            if (text) text.textContent = json.summary;
-            if (btn) btn.textContent = 'Regenerate';
+            const summaryNode = document.querySelector('.approval-ai-summary');
+            if (summaryNode) summaryNode.textContent = json.summary || 'No summary available.';
+            if (button) button.textContent = 'Regenerate';
         } else {
-            showToast(json.message, 'error');
-            if (btn) btn.textContent = 'Generate Summary';
+            showToast(json.message || 'AI summary unavailable.', 'error');
+            if (button) button.textContent = 'Generate summary';
         }
-    } catch (err) {
-        console.error('summarizeApproval error:', err);
-        showToast('A network error occurred.', 'error');
-        if (btn) btn.textContent = 'Generate Summary';
+    } catch (error) {
+        console.error('summarizeApproval error:', error);
+        showToast('A network error occurred while generating the summary.', 'error');
+        if (button) button.textContent = 'Generate summary';
     } finally {
-        if (btn) btn.disabled = false;
+        if (button) button.disabled = false;
     }
 }
 
-// ── TOAST ─────────────────────────────────────────────────────────────────────
-function showToast(message, type = 'info') {
-    const bg = type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#17a2b8';
-
-    // Stack above any toast that is still visible (e.g. "submitted" + a PDF warning).
-    const bottom = 24 + document.querySelectorAll('.approval-toast').length * 64;
-
-    const toast = document.createElement('div');
-    toast.className = 'approval-toast';
-    toast.textContent = message;
-    toast.style.cssText = `
-        position:fixed; bottom:${bottom}px; right:24px; z-index:9999;
-        background:${bg}; color:#fff; padding:12px 20px;
-        border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,.2);
-        font-size:.9rem; max-width:320px;
-    `;
-
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3500);
+function openApprovalDocument(approvalId, kind) {
+    const url = approvalFileUrl(approvalId, kind);
+    const frame = document.getElementById('approval-pdf-frame');
+    const title = document.getElementById('approval-pdf-modal-title');
+    if (frame) {
+        frame.src = url;
+    }
+    if (title) {
+        title.textContent = kind === 'attachment' ? 'Request document' : 'Approval document';
+    }
+    document.getElementById('approval-pdf-modal-overlay')?.classList.add('active');
 }
 
-// ── HELPERS ───────────────────────────────────────────────────────────────────
-function esc(str) {
-    const d = document.createElement('div');
-    d.textContent = String(str ?? '');
-    return d.innerHTML;
+function formatDateValue(value, includeTime = false) {
+    if (!value) return '—';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    const dateOptions = { year: 'numeric', month: 'short', day: 'numeric' };
+    const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: false };
+    const formattedDate = date.toLocaleDateString(undefined, dateOptions);
+    if (!includeTime) return formattedDate;
+    return `${formattedDate} ${date.toLocaleTimeString(undefined, timeOptions)}`;
+}
+
+function esc(value) {
+    const div = document.createElement('div');
+    div.textContent = String(value ?? '');
+    return div.innerHTML;
+}
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = 'approval-toast approval-toast-' + type;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3200);
 }

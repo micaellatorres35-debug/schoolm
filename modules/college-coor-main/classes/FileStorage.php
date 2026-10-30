@@ -126,7 +126,9 @@ class FileStorage {
     }
 
     // Returns null when the upload is fine, otherwise a user-facing error message.
-    public static function validateUpload($file) {
+    public static function validateUpload($file, $allowedExtensions = null) {
+        $allowed = $allowedExtensions ?: array_keys(self::$allowed);
+
         switch ($file['error'] ?? UPLOAD_ERR_NO_FILE) {
             case UPLOAD_ERR_OK:
                 break;
@@ -147,12 +149,12 @@ class FileStorage {
         }
 
         $ext = self::extensionOf($file['name']);
-        if (!isset(self::$allowed[$ext])) {
-            return 'This file type is not allowed. Use PDF, Word, Excel, JPG or PNG.';
+        if (!in_array($ext, $allowed, true)) {
+            return 'This file type is not allowed. Use PDF, JPG, JPEG or PNG.';
         }
 
         $mime = self::detectMime($file['tmp_name']);
-        if ($mime !== '' && !in_array($mime, self::$allowed[$ext], true)) {
+        if ($mime !== '' && isset(self::$allowed[$ext]) && !in_array($mime, self::$allowed[$ext], true)) {
             return 'The file content does not match its file type.';
         }
 
