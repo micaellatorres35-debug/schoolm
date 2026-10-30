@@ -71,7 +71,7 @@ class Page {
         foreach ($sectionOrder as $section) {
             echo '<div class="separator"></div>';
             if ($section === 'academics') {
-                echo '<h3>Academic Affairs</h3>';
+                echo '<h3>Administration</h3>';
             } else {
                 echo '<h3>' . ucwords(str_replace('-', ' ', $section)) . '</h3>';
             }

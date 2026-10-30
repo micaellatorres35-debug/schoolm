@@ -704,7 +704,7 @@ function initFacultyManagementPage() {
                 const department = row.dataset.department || 'Not provided';
                 if (!employeeId) { alert('Invalid faculty selected.'); return; }
 
-                fetch('/modules/college-coor/pages/faculty-management.php', {
+                fetch('/schoolm/modules/college-coor-main/pages/faculty-management.php', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ action: 'get_faculty_shift_schedule', employee_id: employeeId })
@@ -741,7 +741,7 @@ function initFacultyManagementPage() {
                 const engagementId = btn.dataset.engagementId;
                 if (!engagementId) return;
                 const origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
-                const url = origin + '/modules/college-coor/pages/engagement_certificate.php?engagement_id=' + encodeURIComponent(engagementId);
+                const url = origin + '/schoolm/modules/college-coor-main/pages/engagement_certificate.php?engagement_id=' + encodeURIComponent(engagementId);
                 window.open(url, '_blank');
                 return;
             }
@@ -837,7 +837,7 @@ function initFacultyManagementPage() {
 
             if (!confirm('Create this engagement record with status Pending?')) return;
 
-            fetch('/modules/college-coor/pages/faculty-management.php', {
+            fetch('/schoolm/modules/college-coor-main/pages/faculty-management.php', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(payload)
@@ -904,7 +904,7 @@ function initFacultyManagementPage() {
             payload.outcome = outcome || 'Not Applicable';
         }
 
-        fetch('/modules/college-coor/pages/faculty-management.php', {
+        fetch('/schoolm/modules/college-coor-main/pages/faculty-management.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -984,7 +984,7 @@ function initFacultyManagementPage() {
                 return;
             }
 
-            fetch('/modules/college-coor/pages/faculty-management.php', {
+            fetch('/schoolm/modules/college-coor-main/pages/faculty-management.php', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
@@ -1035,7 +1035,7 @@ function initFacultyManagementPage() {
             if (!engagementId) return;
 
             const origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
-            const url = origin + '/modules/college-coor/pages/engagement_certificate.php?engagement_id=' + encodeURIComponent(engagementId);
+            const url = origin + '/schoolm/modules/college-coor-main/pages/engagement_certificate.php?engagement_id=' + encodeURIComponent(engagementId);
             window.open(url, '_blank');
         });
     });

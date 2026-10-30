@@ -91,7 +91,7 @@ function viewCurriculumDetails(programId) {
     '<div class="text-muted">Loading summary...</div>';
 
   fetch(
-    `/schoolm/modules/college-coor/api/get_curriculum.php?course_id=${encodeURIComponent(programId)}`,
+    `/schoolm/modules/college-coor-main/api/get_curriculum.php?course_id=${encodeURIComponent(programId)}`,
   )
     .then(async (response) => {
       const rawText = await response.text();
@@ -604,7 +604,7 @@ function viewFacultyLoadDetails(
     '<div style="color: #6c757d;">Loading assigned subjects...</div>';
 
   fetch(
-    `/schoolm/modules/college-coor/api/get_faculty_sections.php?faculty_id=${facultyId}`,
+    `/schoolm/modules/college-coor-main/api/get_faculty_sections.php?faculty_id=${facultyId}`,
   )
     .then((response) => response.json())
     .then((data) => {
@@ -701,7 +701,7 @@ function viewFacultyLoadDetails(
     });
 
   fetch(
-    `/schoolm/modules/college-coor/api/get_faculty_assignments.php?faculty_id=${facultyId}`,
+    `/schoolm/modules/college-coor-main/api/get_faculty_assignments.php?faculty_id=${facultyId}`,
   )
     .then((response) => response.json())
     .then((data) => {
@@ -801,7 +801,7 @@ function viewFacultyLoadDetails(
       historyContainer.innerHTML =
         '<div style="color: #6c757d;">Loading historical assignments...</div>';
       fetch(
-        `/schoolm/modules/college-coor/api/get_faculty_assignments_history.php?faculty_id=${facultyId}`,
+        `/schoolm/modules/college-coor-main/api/get_faculty_assignments_history.php?faculty_id=${facultyId}`,
       )
         .then((response) => response.json())
         .then((historyData) => {
@@ -954,7 +954,7 @@ function loadSchoolYears() {
   sectionSelect.innerHTML = "";
   sectionSelect.disabled = true;
 
-  fetch("/schoolm/modules/college-coor/api/get_school_years.php")
+  fetch("/schoolm/modules/college-coor-main/api/get_school_years.php")
     .then((response) => response.json())
     .then((data) => {
       if (data.success && data.school_years && data.school_years.length > 0) {
@@ -997,7 +997,7 @@ function loadSemestersForSchoolYear() {
   }
 
   fetch(
-    `/schoolm/modules/college-coor/api/get_semesters.php?school_year_id=${schoolYearId}`,
+    `/schoolm/modules/college-coor-main/api/get_semesters.php?school_year_id=${schoolYearId}`,
   )
     .then((response) => response.json())
     .then((data) => {
@@ -1062,7 +1062,7 @@ function loadSectionsForAssignment() {
   }
 
   fetch(
-    `/schoolm/modules/college-coor/api/get_adviser_sections.php?faculty_id=${facultyId}&school_year_id=${schoolYearId}&semester_id=${semesterId}`,
+    `/schoolm/modules/college-coor-main/api/get_adviser_sections.php?faculty_id=${facultyId}&school_year_id=${schoolYearId}&semester_id=${semesterId}`,
   )
     .then((response) => response.json())
     .then((data) => {
@@ -1113,7 +1113,7 @@ function loadSubjectsForSection() {
   }
 
   fetch(
-    `/schoolm/modules/college-coor/api/get_section_subjects.php?section_id=${sectionId}`,
+    `/schoolm/modules/college-coor-main/api/get_section_subjects.php?section_id=${sectionId}`,
   )
     .then((response) => response.json())
     .then((data) => {
@@ -1206,7 +1206,7 @@ function openAssignFacultySubjectModal(
   subjectSelect.disabled = true;
 
   fetch(
-    `/schoolm/modules/college-coor/api/get_instructor_sections.php?faculty_id=${facultyId}`,
+    `/schoolm/modules/college-coor-main/api/get_instructor_sections.php?faculty_id=${facultyId}`,
   )
     .then((response) => response.json())
     .then((data) => {
@@ -1268,7 +1268,7 @@ function loadSubjectsForAssignedSection() {
   }
 
   fetch(
-    `/schoolm/modules/college-coor/api/get_section_subjects.php?section_id=${sectionId}`,
+    `/schoolm/modules/college-coor-main/api/get_section_subjects.php?section_id=${sectionId}`,
   )
     .then((response) => response.json())
     .then((data) => {
@@ -1745,7 +1745,7 @@ function loadFacultyLoadData() {
   tbody.innerHTML =
     '<tr><td colspan="8" class="text-center text-muted"><i class="fas fa-spinner fa-spin"></i> Loading faculty load...</td></tr>';
 
-  fetch("/schoolm/modules/college-coor/api/get_faculty_load.php")
+  fetch("/schoolm/modules/college-coor-main/api/get_faculty_load.php")
     .then((response) => {
       if (!response.ok) throw new Error("API request failed");
       return response.json();
@@ -1804,7 +1804,7 @@ function updateFacultyLoadValues(facultyId) {
   if (!row) return;
 
   fetch(
-    `/schoolm/modules/college-coor/api/get_faculty_load.php?faculty_id=${facultyId}`,
+    `/schoolm/modules/college-coor-main/api/get_faculty_load.php?faculty_id=${facultyId}`,
   )
     .then((response) => response.json())
     .then((data) => {
@@ -1928,7 +1928,7 @@ function initAcademicsManagementBindings() {
       formData.append("school_year_id", schoolYearId);
       formData.append("semester_id", semesterId);
 
-      fetch("/schoolm/modules/college-coor/api/add_section.php", {
+      fetch("/schoolm/modules/college-coor-main/api/add_section.php", {
         method: "POST",
         body: formData,
       })
@@ -1976,7 +1976,7 @@ function initAcademicsManagementBindings() {
       formData.append("section_id", sectionId);
       formData.append("faculty_id", facultyId);
 
-      fetch("/schoolm/modules/college-coor/api/assign_adviser.php", {
+      fetch("/schoolm/modules/college-coor-main/api/assign_adviser.php", {
         method: "POST",
         body: formData,
       })
@@ -2053,7 +2053,7 @@ function initAcademicsManagementBindings() {
       // TODO: replace with your real endpoint
 
       fetch(
-        "/schoolm/modules/college-coor/api/assign_subject_to_faculty.php",
+        "/schoolm/modules/college-coor-main/api/assign_subject_to_faculty.php",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

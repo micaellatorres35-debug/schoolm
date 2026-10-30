@@ -376,7 +376,7 @@ class FacultyProfileManager {
                 FROM em_employees
                 WHERE is_archived = 0
                   AND employment_status = 'Active'
-                  AND employment_type IN ('Part-time','OJT/Training')
+                  AND employment_type IN ('Part-time')
                 ORDER BY last_name ASC, first_name ASC";
 
         $stmt = $this->conn->prepare($sql);
@@ -413,7 +413,7 @@ class FacultyProfileManager {
     public function addEngagement(array $data) {
         try {
             $engagementType = $data['engagement_type'] ?? '';
-            $allowedTypes = ['Part-time', 'OJT/Training'];
+            $allowedTypes = ['Part-time'];
             if (!in_array($engagementType, $allowedTypes, true)) {
                 error_log('addEngagement: Invalid engagement_type: ' . $engagementType);
                 return false;

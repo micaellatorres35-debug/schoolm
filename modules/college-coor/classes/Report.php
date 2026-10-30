@@ -26,12 +26,12 @@
                         CONCAT(rv.first_name, ' ', rv.last_name) AS reviewed_by_name,
                         CONCAT(dc.first_name, ' ', dc.last_name) AS decided_by_name,
                         rt.report_type AS report_type
-                    FROM `sd_reports` r
+                    FROM `cc_reports` r
                     LEFT JOIN `em_departments` d ON r.department_id = d.department_id
                     LEFT JOIN `em_employees` e  ON r.submitted_by = e.employee_id
                     LEFT JOIN `em_employees` rv ON r.reviewed_by = rv.employee_id
                     LEFT JOIN `em_employees` dc ON r.decided_by = dc.employee_id
-                    LEFT JOIN `sd_report_type` rt ON r.report_type = rt.type_id
+                    LEFT JOIN `cc_report_type` rt ON r.report_type = rt.type_id
                     WHERE 1=1";
 
             $params = [];
@@ -58,12 +58,12 @@
                         CONCAT(rv.first_name, ' ', rv.last_name) AS reviewed_by_name,
                         CONCAT(dc.first_name, ' ', dc.last_name) AS decided_by_name,
                         rt.report_type AS report_type
-                    FROM `sd_reports` r
+                    FROM `cc_reports` r
                     LEFT JOIN `em_departments` d ON r.department_id = d.department_id
                     LEFT JOIN `em_employees` e  ON r.submitted_by = e.employee_id
                     LEFT JOIN `em_employees` rv ON r.reviewed_by = rv.employee_id
                     LEFT JOIN `em_employees` dc ON r.decided_by = dc.employee_id
-                    LEFT JOIN `sd_report_type` rt ON r.report_type = rt.type_id
+                    LEFT JOIN `cc_report_type` rt ON r.report_type = rt.type_id
                     WHERE r.report_id = :report_id
                     LIMIT 1";
             $stmt = $this->conn->prepare($sql);
@@ -74,11 +74,11 @@
 
         public function getReportTypesByDepartment($department_id) {
             if ($department_id === null) {
-                $sql = "SELECT type_id, report_type FROM `sd_report_type` ORDER BY report_type ASC";
+                $sql = "SELECT type_id, report_type FROM `cc_report_type` ORDER BY report_type ASC";
                 $stmt = $this->conn->prepare($sql);
                 $stmt->execute();
             } else {
-                $sql = "SELECT type_id, report_type FROM `sd_report_type` WHERE department_id = :department_id ORDER BY report_type ASC";
+                $sql = "SELECT type_id, report_type FROM `cc_report_type` WHERE department_id = :department_id ORDER BY report_type ASC";
                 $stmt = $this->conn->prepare($sql);
                 $stmt->execute([':department_id' => $department_id]);
             }
@@ -92,7 +92,7 @@
             $department_id = $this->getEmployeeDepartment($submitted_by);
 
             if ($report_id) {
-                $sql = "UPDATE `sd_reports` SET
+                $sql = "UPDATE `cc_reports` SET
                             title = :title, report_type = :report_type,
                             summary = :summary, findings = :findings, recommendations = :recommendations
                         WHERE report_id = :report_id AND submitted_by = :submitted_by AND status = 'draft'";
@@ -109,7 +109,7 @@
                 return $report_id;
             }
 
-            $sql = "INSERT INTO `sd_reports`
+            $sql = "INSERT INTO `cc_reports`
                         (title, report_type, summary, findings, recommendations, department_id, submitted_by, status, created_at)
                     VALUES
                         (:title, :report_type, :summary, :findings, :recommendations, :department_id, :submitted_by, 'draft', NOW())";
@@ -131,7 +131,7 @@
             $report_id = $this->saveDraft($data, $report_id);
 
             $stmt = $this->conn->prepare(
-                "UPDATE `sd_reports` SET status = 'submitted', submitted_at = NOW() WHERE report_id = :report_id"
+                "UPDATE `cc_reports` SET status = 'submitted', submitted_at = NOW() WHERE report_id = :report_id"
             );
             $stmt->execute([':report_id' => $report_id]);
 
@@ -149,7 +149,7 @@
         // Only the person who created the report can attach, and only while it is a draft/submitted.
         // $path is the RELATIVE storage path returned by FileStorage::store().
         public function setAttachment($report_id, $path, $name, $mime, $size) {
-            $sql = "UPDATE `sd_reports` SET
+            $sql = "UPDATE `cc_reports` SET
                         attachment_path = :path, attachment_name = :name,
                         attachment_mime = :mime, attachment_size = :size
                     WHERE report_id = :report_id
@@ -169,7 +169,7 @@
 
         // ── REVIEW / DECISION (School Directress) ────────────────────
         public function markReviewed($report_id, $reviewed_by, $notes = null) {
-            $sql = "UPDATE `sd_reports` SET
+            $sql = "UPDATE `cc_reports` SET
                         status = 'reviewed', reviewed_by = :reviewed_by, reviewed_at = NOW(), review_notes = :notes
                     WHERE report_id = :report_id AND status = 'submitted'";
             $stmt = $this->conn->prepare($sql);
@@ -185,7 +185,7 @@
             if (!in_array($decision, ['approved', 'rejected'], true)) {
                 return false;
             }
-            $sql = "UPDATE `sd_reports` SET
+            $sql = "UPDATE `cc_reports` SET
                         status = :decision, decided_by = :decided_by, decided_at = NOW(), decision_notes = :notes
                     WHERE report_id = :report_id AND status = 'reviewed'";
             $stmt = $this->conn->prepare($sql);
@@ -225,7 +225,7 @@
             $fileName     = 'report_' . $report_id . '_' . time() . '.pdf';
             $relativePath = FileStorage::storeBytes($dompdf->output(), 'reports/pdf', $fileName);
 
-            $stmt = $this->conn->prepare("UPDATE `sd_reports` SET pdf_path = :pdf_path WHERE report_id = :report_id");
+            $stmt = $this->conn->prepare("UPDATE `cc_reports` SET pdf_path = :pdf_path WHERE report_id = :report_id");
             $stmt->execute([':pdf_path' => $relativePath, ':report_id' => $report_id]);
 
             return $relativePath;
@@ -339,7 +339,7 @@
 
             $summaryText = trim($summaryText);
 
-            $stmt = $this->conn->prepare("UPDATE `sd_reports` SET ai_summary = :ai_summary WHERE report_id = :report_id");
+            $stmt = $this->conn->prepare("UPDATE `cc_reports` SET ai_summary = :ai_summary WHERE report_id = :report_id");
             $stmt->execute([':ai_summary' => $summaryText, ':report_id' => $report_id]);
 
             return ['success' => true, 'summary' => $summaryText];

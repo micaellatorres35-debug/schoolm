@@ -5,6 +5,8 @@
     class Approval {
         private $conn;
 
+        const STATUSES = ['draft', 'submitted', 'reviewed', 'approved', 'rejected'];
+
         public function __construct($pdo = null) {
             if ($pdo instanceof PDO) {
                 $this->conn = $pdo;
@@ -15,18 +17,18 @@
         }
 
         // ── LIST / READ ──────────────────────────────────────────────
-        // $department_id filters by the SUBMITTER's department (e1.department), matching the
-        // original join. $status filters by workflow status (draft/submitted/reviewed/approved/rejected).
+        // Kept for backward compatibility with any other caller. The redesigned page
+        // uses getQueue() / getOverview() instead.
         public function getApprovals($department_id = null, $status = null) {
             $sql = "SELECT
                         a.approval_id, a.title, a.description, a.justification,
-                        a.status, a.decision, a.file_path, a.pdf_path, a.ai_summary,
+                        a.status, a.decision, a.file_path, a.ai_summary,
                         a.submitted_on, a.reviewed_at, a.approved_at AS decided_at,
                         CONCAT(e1.first_name, ' ', e1.last_name) AS submit_by,
                         CONCAT(rv.first_name, ' ', rv.last_name) AS reviewed_by_name,
                         CONCAT(e2.first_name, ' ', e2.last_name) AS approver_id,
                         d.department_name
-                    FROM sd_approvals a
+                    FROM cc_approvals a
                     LEFT JOIN em_employees e1 ON a.submit_by   = e1.employee_id
                     LEFT JOIN em_employees rv ON a.reviewed_by = rv.employee_id
                     LEFT JOIN em_employees e2 ON a.approver_id = e2.employee_id
@@ -50,7 +52,6 @@
         }
 
         // NOTE: a.submit_by stays the raw employee_id here (used by the controller's access check).
-        // submitter_department_id mirrors the join used by getApprovals() for department filtering.
         public function getApprovalById($approval_id) {
             $sql = "SELECT
                         a.*,
@@ -59,7 +60,7 @@
                         CONCAT(e2.first_name, ' ', e2.last_name) AS decided_by_name,
                         e1.department_id AS submitter_department_id,
                         d.department_name
-                    FROM sd_approvals a
+                    FROM cc_approvals a
                     LEFT JOIN em_employees e1 ON a.submit_by   = e1.employee_id
                     LEFT JOIN em_employees rv ON a.reviewed_by = rv.employee_id
                     LEFT JOIN em_employees e2 ON a.approver_id = e2.employee_id
@@ -70,6 +71,137 @@
             $stmt->execute([':approval_id' => $approval_id]);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             return $row ?: null;
+        }
+
+        // ── DASHBOARD QUERIES (Decision Command Center) ──────────────
+        // Visibility rules (mirror approval_can_access() in the controller):
+        //  - Nobody sees another person's draft.
+        //  - School Directress sees every submitted+ request in every department.
+        //  - Everyone else sees requests from their own department, plus anything they submitted.
+        // $viewer = ['is_directress' => bool, 'employee_id' => int, 'department_id' => int]
+        private function scopeClause(array $viewer, array &$params) {
+            $emp = (int) ($viewer['employee_id'] ?? 0);
+            $params[':v_emp1'] = $emp;
+
+            if (!empty($viewer['is_directress'])) {
+                return " AND (a.status <> 'draft' OR a.submit_by = :v_emp1)";
+            }
+
+            $params[':v_emp2'] = $emp;
+            $params[':v_dept'] = (int) ($viewer['department_id'] ?? 0);
+            return " AND (a.status <> 'draft' OR a.submit_by = :v_emp1)
+                     AND (e1.department_id = :v_dept OR a.submit_by = :v_emp2)";
+        }
+
+        // $filters: department_id (?int), status ('pending'|'all'|<real status>),
+        //           date_from / date_to ('Y-m-d' on submitted_on), search (title, ID or submitter name)
+        // Returns up to 101 rows; the controller trims to 100 and reports has_more.
+        public function getQueue(array $viewer, array $filters) {
+            $params = [];
+            $sql = "SELECT
+                        a.approval_id, a.title, a.status, a.submitted_on, a.created_at,
+                        (a.file_path IS NOT NULL AND a.file_path <> '') AS has_attachment,
+                        CASE WHEN a.status IN ('submitted','reviewed') AND a.submitted_on IS NOT NULL
+                             THEN DATEDIFF(NOW(), a.submitted_on) END AS waiting_days,
+                        CONCAT(e1.first_name, ' ', e1.last_name) AS submit_by,
+                        d.department_name
+                    FROM cc_approvals a
+                    LEFT JOIN em_employees e1 ON a.submit_by = e1.employee_id
+                    LEFT JOIN em_departments d ON e1.department_id = d.department_id
+                    WHERE 1=1";
+            $sql .= $this->scopeClause($viewer, $params);
+
+            $status = $filters['status'] ?? 'all';
+            if ($status === 'pending') {
+                $sql .= " AND a.status IN ('submitted','reviewed')";
+            } elseif (in_array($status, self::STATUSES, true)) {
+                $sql .= " AND a.status = :f_status";
+                $params[':f_status'] = $status;
+            }
+
+            if (!empty($filters['department_id'])) {
+                $sql .= " AND e1.department_id = :f_dept";
+                $params[':f_dept'] = (int) $filters['department_id'];
+            }
+            if (!empty($filters['date_from'])) {
+                $sql .= " AND a.submitted_on >= :f_from";
+                $params[':f_from'] = $filters['date_from'] . ' 00:00:00';
+            }
+            if (!empty($filters['date_to'])) {
+                $sql .= " AND a.submitted_on < DATE_ADD(:f_to, INTERVAL 1 DAY)";
+                $params[':f_to'] = $filters['date_to'];
+            }
+
+            $search = trim((string) ($filters['search'] ?? ''));
+            if ($search !== '') {
+                $like  = '%' . addcslashes($search, '%_\\') . '%';
+                $parts = [
+                    "a.title LIKE :s_title",
+                    "CONCAT(e1.first_name, ' ', e1.last_name) LIKE :s_name",
+                ];
+                $params[':s_title'] = $like;
+                $params[':s_name']  = $like;
+
+                $idPart = ltrim($search, '#');
+                if ($idPart !== '' && ctype_digit($idPart)) {
+                    $parts[] = "a.approval_id = :s_id";
+                    $params[':s_id'] = (int) $idPart;
+                }
+                $sql .= " AND (" . implode(' OR ', $parts) . ")";
+            }
+
+            // Items waiting on the Directress: oldest first. Everything else: newest first.
+            $sql .= $status === 'pending'
+                ? " ORDER BY a.submitted_on ASC, a.approval_id ASC"
+                : " ORDER BY COALESCE(a.submitted_on, a.created_at) DESC, a.approval_id DESC";
+            $sql .= " LIMIT 101";
+
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        // Summary counts (one per real status) + the most recent decisions.
+        public function getOverview(array $viewer, $departmentId = null) {
+            // Counts
+            $params = [];
+            $sql = "SELECT a.status, COUNT(*) AS total
+                    FROM cc_approvals a
+                    LEFT JOIN em_employees e1 ON a.submit_by = e1.employee_id
+                    WHERE 1=1" . $this->scopeClause($viewer, $params);
+            if ($departmentId) {
+                $sql .= " AND e1.department_id = :f_dept";
+                $params[':f_dept'] = (int) $departmentId;
+            }
+            $sql .= " GROUP BY a.status";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
+
+            $counts = array_fill_keys(self::STATUSES, 0);
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $counts[$row['status']] = (int) $row['total'];
+            }
+
+            // Recent decisions
+            $params = [];
+            $sql = "SELECT
+                        a.approval_id, a.title, a.status, a.decision, a.approved_at AS decided_at,
+                        CONCAT(e2.first_name, ' ', e2.last_name) AS decided_by_name,
+                        d.department_name
+                    FROM cc_approvals a
+                    LEFT JOIN em_employees e1 ON a.submit_by    = e1.employee_id
+                    LEFT JOIN em_employees e2 ON a.approver_id  = e2.employee_id
+                    LEFT JOIN em_departments d ON e1.department_id = d.department_id
+                    WHERE a.status IN ('approved','rejected')" . $this->scopeClause($viewer, $params);
+            if ($departmentId) {
+                $sql .= " AND e1.department_id = :f_dept";
+                $params[':f_dept'] = (int) $departmentId;
+            }
+            $sql .= " ORDER BY a.approved_at DESC, a.approval_id DESC LIMIT 8";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
+
+            return ['counts' => $counts, 'recent' => $stmt->fetchAll(PDO::FETCH_ASSOC)];
         }
 
         // ── CREATE / SAVE ────────────────────────────────────────────
@@ -109,7 +241,7 @@
                 // Update only a draft owned by the current employee.
                 $hasFile = array_key_exists('file_path', $data);
 
-                $sql = "UPDATE sd_approvals SET
+                $sql = "UPDATE cc_approvals SET
                             title = :title,
                             description = :description,
                             justification = :justification,
@@ -144,32 +276,12 @@
             }
 
             // Create a new draft with its department recorded.
-            $sql = "INSERT INTO sd_approvals
-                        (
-                            title,
-                            description,
-                            justification,
-                            department,
-                            file_path,
-                            file_name,
-                            file_size,
-                            submit_by,
-                            status,
-                            created_at
-                        )
+            $sql = "INSERT INTO cc_approvals
+                        (title, description, justification, department,
+                         file_path, file_name, file_size, submit_by, status, created_at)
                     VALUES
-                        (
-                            :title,
-                            :description,
-                            :justification,
-                            :department,
-                            :file_path,
-                            :file_name,
-                            :file_size,
-                            :submit_by,
-                            'draft',
-                            NOW()
-                        )";
+                        (:title, :description, :justification, :department,
+                         :file_path, :file_name, :file_size, :submit_by, 'draft', NOW())";
 
             $stmt = $this->conn->prepare($sql);
 
@@ -187,13 +299,12 @@
             return $this->conn->lastInsertId();
         }
 
-
         // Create (or promote an existing draft belonging to the current user) straight to 'submitted'
         public function submitApproval($data, $approval_id = null) {
             $approval_id = $this->saveDraft($data, $approval_id);
 
             $stmt = $this->conn->prepare(
-                "UPDATE sd_approvals SET status = 'submitted', submitted_on = NOW() WHERE approval_id = :approval_id"
+                "UPDATE cc_approvals SET status = 'submitted', submitted_on = NOW() WHERE approval_id = :approval_id"
             );
             $stmt->execute([':approval_id' => $approval_id]);
 
@@ -201,8 +312,11 @@
         }
 
         // ── REVIEW / DECISION (School Directress) ────────────────────
+        // Workflow is unchanged: submitted -> reviewed -> approved | rejected.
+        // Each UPDATE is guarded by the expected current status, so a stale page can never
+        // skip a step or overwrite a decision that was already recorded.
         public function markReviewed($approval_id, $reviewed_by, $notes = null) {
-            $sql = "UPDATE sd_approvals SET
+            $sql = "UPDATE cc_approvals SET
                         status = 'reviewed', reviewed_by = :reviewed_by, reviewed_at = NOW(), review_notes = :notes
                     WHERE approval_id = :approval_id AND status = 'submitted'";
             $stmt = $this->conn->prepare($sql);
@@ -218,7 +332,11 @@
             if (!in_array($decision, ['approved', 'rejected'], true)) {
                 return false;
             }
-            $sql = "UPDATE sd_approvals SET
+            // A rejection must always carry a reason (also enforced in the controller).
+            if ($decision === 'rejected' && ($notes === null || trim($notes) === '')) {
+                return false;
+            }
+            $sql = "UPDATE cc_approvals SET
                         status = :status, decision = :decision,
                         approver_id = :decided_by, approved_at = NOW(), remarks = :notes
                     WHERE approval_id = :approval_id AND status = 'reviewed'";
@@ -233,77 +351,8 @@
             return $stmt->rowCount() > 0;
         }
 
-        // ── PDF GENERATION (dompdf) ───────────────────────────────────
-        // Saves into FileStorage and stores a RELATIVE path (approvals/pdf/...) in pdf_path.
-        public function generatePdf($approval_id) {
-            $autoload = __DIR__ . '/../../../vendor/autoload.php';
-            if (!file_exists($autoload)) {
-                throw new \RuntimeException('PDF library not installed. Run: composer require dompdf/dompdf');
-            }
-            require_once $autoload;
-
-            $approval = $this->getApprovalById($approval_id);
-            if (!$approval) {
-                return false;
-            }
-
-            $html = $this->buildApprovalHtml($approval);
-
-            $dompdf = new \Dompdf\Dompdf();
-            $dompdf->loadHtml($html);
-            $dompdf->setPaper('A4', 'portrait');
-            $dompdf->render();
-
-            $fileName     = 'approval_' . $approval_id . '_' . time() . '.pdf';
-            $relativePath = FileStorage::storeBytes($dompdf->output(), 'approvals/pdf', $fileName);
-
-            $stmt = $this->conn->prepare("UPDATE sd_approvals SET pdf_path = :pdf_path WHERE approval_id = :approval_id");
-            $stmt->execute([':pdf_path' => $relativePath, ':approval_id' => $approval_id]);
-
-            return $relativePath;
-        }
-
-        private function buildApprovalHtml($approval) {
-            $title         = htmlspecialchars($approval['title'] ?? '');
-            $department    = htmlspecialchars($approval['department_name'] ?? 'N/A');
-            $submittedBy   = htmlspecialchars($approval['submit_by_name'] ?? 'N/A');
-            $submittedOn   = htmlspecialchars($approval['submitted_on'] ?? '');
-            $description   = nl2br(htmlspecialchars($approval['description'] ?? ''));
-            $justification = nl2br(htmlspecialchars($approval['justification'] ?? ''));
-
-            return <<<HTML
-            <html>
-            <head>
-                <style>
-                    body { font-family: DejaVu Sans, sans-serif; font-size: 12px; color: #222; }
-                    h1 { font-size: 18px; margin-bottom: 4px; }
-                    .meta { font-size: 11px; color: #555; margin-bottom: 20px; }
-                    .meta span { display: inline-block; margin-right: 18px; }
-                    h2 { font-size: 13px; margin-top: 22px; margin-bottom: 6px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
-                    p { line-height: 1.5; }
-                </style>
-            </head>
-            <body>
-                <h1>Approval Request: {$title}</h1>
-                <div class="meta">
-                    <span><strong>Department:</strong> {$department}</span>
-                    <span><strong>Submitted by:</strong> {$submittedBy}</span>
-                    <span><strong>Date:</strong> {$submittedOn}</span>
-                </div>
-
-                <h2>Description</h2>
-                <p>{$description}</p>
-
-                <h2>Justification</h2>
-                <p>{$justification}</p>
-            </body>
-            </html>
-            HTML;
-        }
-
         // ── AI SUMMARIZATION (Google Gemini free tier) ────────────────
         // Requires GEMINI_API_KEY in env (or a defined constant of the same name).
-        // Get a free key at https://aistudio.google.com/apikey — no credit card required.
         public function generateAiSummary($approval_id) {
             $approval = $this->getApprovalById($approval_id);
             if (!$approval) {
@@ -347,12 +396,11 @@
 
             if ($httpCode !== 200) {
                 error_log('[Approval::generateAiSummary] Gemini API error (' . $httpCode . '): ' . $response);
-                return [
-                    'success' => false,
-                    'message' => 'AI summarization failed.',
-                    // TEMP debug info — remove once things are stable.
-                    'debug' => 'HTTP ' . $httpCode . ': ' . $response,
-                ];
+                $result = ['success' => false, 'message' => 'AI summarization failed.'];
+                if (defined('APPROVAL_DEBUG') && APPROVAL_DEBUG) {
+                    $result['debug'] = 'HTTP ' . $httpCode . ': ' . $response;
+                }
+                return $result;
             }
 
             $decoded     = json_decode($response, true);
@@ -364,7 +412,7 @@
 
             $summaryText = trim($summaryText);
 
-            $stmt = $this->conn->prepare("UPDATE sd_approvals SET ai_summary = :ai_summary WHERE approval_id = :approval_id");
+            $stmt = $this->conn->prepare("UPDATE cc_approvals SET ai_summary = :ai_summary WHERE approval_id = :approval_id");
             $stmt->execute([':ai_summary' => $summaryText, ':approval_id' => $approval_id]);
 
             return ['success' => true, 'summary' => $summaryText];

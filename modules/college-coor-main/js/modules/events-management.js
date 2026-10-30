@@ -12,7 +12,7 @@ function exposeGlobal(name, value) {
 }
 
 // ===== GLOBAL STATE =====
-const BASE_URL = '/schoolm/modules/college-coor/api';
+const BASE_URL = '/schoolm/modules/college-coor-main/api';
 const eventData = [];
 
 function isEventsManagementPage() {

@@ -1,0 +1,609 @@
+/* Academics Management — Faculty Management-aligned, page-scoped theme */
+.academics-management-page{max-width:1400px;margin:0 auto;padding:20px;color:#1a202c;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,sans-serif}.academics-management-page .page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:30px;padding-bottom:20px;border-bottom:2px solid #dee2e6}.academics-management-page .page-header h1{margin:0 0 5px;color:#1a202c;font-size:32px;font-weight:700}.academics-management-page .page-header h1 i{color:#0d6efd;margin-right:5px}.academics-management-page .page-header p{margin:0;color:#6c757d;font-size:14px}.academics-management-page .stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px;margin-bottom:30px}.academics-management-page .stat-card{min-height:104px;padding:20px;border:0;border-left:4px solid #0d6efd;border-radius:8px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.1)}.academics-management-page .stat-card.subjects{border-left-color:#6f42c1}.academics-management-page .stat-card.sections{border-left-color:#198754}.academics-management-page .stat-card.faculty{border-left-color:#fd7e14}.academics-management-page .stat-card h6{margin:0 0 8px;color:#6c757d;font-size:13px;font-weight:600;text-transform:uppercase}.academics-management-page .stat-card h3{margin:0;color:#1a202c;font-size:28px;font-weight:700}.academics-management-page .academics-tabs{display:flex;gap:10px;margin-bottom:30px;padding-bottom:0;overflow-x:auto;border-bottom:2px solid #dee2e6}.academics-management-page .academics-tab{flex:0 0 auto;padding:12px 20px;border:0;border-bottom:3px solid transparent;background:transparent;color:#6c757d;font-size:14px;font-weight:500;line-height:1.4;white-space:nowrap;cursor:pointer;transition:all .3s ease}.academics-management-page .academics-tab:hover,.academics-management-page .academics-tab.active{color:#0d6efd}.academics-management-page .academics-tab.active{border-bottom-color:#0d6efd}.academics-management-page .academics-panel{display:none;animation:academicsFadeIn .3s ease-in}.academics-management-page .academics-panel.active{display:block}@keyframes academicsFadeIn{from{opacity:0}to{opacity:1}}.academics-management-page .section-header{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:20px}.academics-management-page .section-header h3{margin:0;color:#1a202c;font-size:20px;font-weight:600}.academics-management-page .text-muted{color:#6c757d!important}.academics-management-page .search-filter-container{display:flex;flex-wrap:wrap;gap:15px;margin-bottom:20px}.academics-management-page .search-box{flex:1;min-width:250px}.academics-management-page .search-box input,.academics-management-page .filter-select,.academics-management-page .form-control,.academics-management-page .form-select{width:100%;padding:10px 12px;border:1px solid #ced4da;border-radius:5px;background:#fff;color:#212529;font-family:inherit;font-size:14px}.academics-management-page .search-box input:focus,.academics-management-page .filter-select:focus,.academics-management-page .form-control:focus,.academics-management-page .form-select:focus{outline:none;border-color:#0d6efd;box-shadow:0 0 0 3px rgba(13,110,253,.1)}.academics-management-page .card,.academics-management-page .table-card{overflow:hidden;border:1px solid #e9ecef;border-radius:8px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08)}.academics-management-page .card-body{padding:1rem}.academics-management-page .card-header{padding:.75rem 1rem;border-bottom:1px solid #dee2e6;background:#fff;color:#212529;font-weight:600}.academics-management-page .compact-filter-card{margin-bottom:20px}.academics-management-page .compact-filter-card .card-body{padding:.75rem 1rem}.academics-management-page .compact-filter-card .form-label,.academics-management-page .section-filters-card .form-label{display:block;margin-bottom:.25rem;color:#495057;font-size:.85rem;font-weight:500}.academics-management-page .compact-filter-card .form-control,.academics-management-page .compact-filter-card .form-select{height:auto;padding:.5rem .75rem;font-size:.92rem}.academics-management-page .compact-filter-card .row.g-2{display:flex;flex-wrap:wrap;gap:.75rem}.academics-management-page .compact-filter-card .filter-col{min-width:0}.academics-management-page table{width:100%;border-collapse:collapse;background:#fff}.academics-management-page .table-responsive{overflow-x:auto}.academics-management-page thead{background:#f8f9fa}.academics-management-page th{padding:12px;border-bottom:2px solid #dee2e6;color:#333;font-size:13px;font-weight:600;text-align:left;white-space:nowrap}.academics-management-page td{padding:12px;border-bottom:1px solid #dee2e6;color:#212529;font-size:14px;vertical-align:middle}.academics-management-page tbody tr:hover{background:#f8f9fa}.academics-management-page .actions{display:flex;justify-content:flex-start;gap:8px}.academics-management-page .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border:0;border-radius:5px;font-size:14px;font-weight:500;cursor:pointer;transition:all .3s}.academics-management-page .btn-sm{padding:6px 10px;font-size:12px}.academics-management-page .btn-primary{background:#0d6efd;color:#fff}.academics-management-page .btn-primary:hover{background:#0b5ed7}.academics-management-page .btn-secondary{background:#6c757d;color:#fff}.academics-management-page .btn-secondary:hover{background:#5c636a}.academics-management-page .btn-info{background:#17a2b8;color:#fff}.academics-management-page .btn-info:hover{background:#138496}.academics-management-page .btn-danger{background:#dc3545;color:#fff}.academics-management-page .btn-danger:hover{background:#bb2d3b}.academics-management-page .btn-outline-secondary{border:1px solid #6c757d;background:#fff;color:#6c757d}.academics-management-page .btn-outline-secondary:hover{background:#6c757d;color:#fff}.academics-management-page .badge{display:inline-block;padding:5px 10px;border-radius:12px;font-size:12px;font-weight:600;white-space:nowrap}.academics-management-page .badge-success{background:#d4edda;color:#155724}.academics-management-page .badge-warning{background:#fff3cd;color:#856404}.academics-management-page .badge-danger{background:#f8d7da;color:#721c24}.academics-management-page .badge-info{background:#d1ecf1;color:#0c5460}.academics-management-page .badge-secondary{background:#e9ecef;color:#495057}.academics-management-page .empty-state{padding:40px 20px;color:#6c757d;text-align:center}.academics-management-page .modal{display:none;position:fixed;z-index:1000;inset:0;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.5)}.academics-management-page .modal.show{display:flex}.academics-management-page .modal-dialog{width:90%;max-width:600px;max-height:90vh;overflow-y:auto;border-radius:8px;background:#fff;box-shadow:0 4px 20px rgba(0,0,0,.15)}.academics-management-page .modal-dialog.modal-lg{max-width:900px}.academics-management-page .modal-header{position:relative;display:flex;align-items:center;justify-content:space-between;padding:20px;border-top:3px solid #0d6efd;border-bottom:1px solid #dee2e6;background:#fff}.academics-management-page .modal-title{margin:0;color:#1a202c;font-size:18px;font-weight:600}.academics-management-page .modal-close{border:0;background:transparent;color:#6c757d;font-size:20px;cursor:pointer}.academics-management-page .modal-close:hover{color:#000}.academics-management-page .modal-body{padding:20px}.academics-management-page .modal-footer{display:flex;justify-content:flex-end;gap:10px;padding:15px 20px;border-top:1px solid #dee2e6}.academics-management-page .modal .card{margin-bottom:1rem;box-shadow:none}.academics-management-page .modal .card-header{background:#f8f9fa}.academics-management-page .form-group{margin-bottom:15px}.academics-management-page .form-label{color:#333;font-size:14px;font-weight:500}.academics-management-page .required{color:#dc3545}.academics-management-page .text-center{text-align:center}
+@media (min-width:769px) and (max-width:991px){.academics-management-page .stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:768px){.academics-management-page .page-header,.academics-management-page .section-header{flex-direction:column;align-items:flex-start}.academics-management-page .page-header h1{font-size:28px}.academics-management-page .stats-grid{grid-template-columns:1fr}.academics-management-page .search-filter-container{flex-direction:column}.academics-management-page .search-box{min-width:100%}.academics-management-page .actions{flex-direction:column}.academics-management-page .modal-dialog{width:100%;max-height:95vh}.academics-management-page .modal-footer{flex-wrap:wrap}.academics-management-page .modal-footer .btn{flex:1 1 auto}.academics-management-page .compact-filter-card .filter-col{width:100%}}
+
+    /* Academics Management Styles */
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        background-color: #f8f9fa;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    }
+
+    .academics-page {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    /* Page Header */
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    .page-header h1 {
+        font-size: 32px;
+        font-weight: 700;
+        color: #1a202c;
+        margin-bottom: 5px;
+    }
+
+    .page-header p {
+        color: #6c757d;
+        font-size: 14px;
+    }
+
+    /* Stats Cards */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 15px;
+        margin-bottom: 30px;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid rgba(32, 0, 130, 1); 
+    }
+
+    .stat-card.subjects { border-left-color: #6f42c1; }
+    .stat-card.sections { border-left-color: #198754; }
+    .stat-card.faculty { border-left-color: #fd7e14; }
+    .stat-card.students { border-left-color: #dc3545; }
+
+    .stat-card h6 {
+        font-size: 13px;
+        color: #6c757d;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+        font-weight: 600;
+    }
+
+    .stat-card h3 {
+        font-size: 28px;
+        font-weight: 700;
+        color: #1a202c;
+    }
+
+    /* Tabs */
+    .academics-tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 30px;
+        border-bottom: 2px solid #dee2e6;
+        overflow-x: auto;
+        padding-bottom: 0;
+    }
+
+    .academics-tab {
+        background: none;
+        border: none;
+        padding: 12px 20px;
+        font-size: 14px;
+        font-weight: 500;
+        color: #6c757d;
+        cursor: pointer;
+        border-bottom: 3px solid transparent;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+    }
+
+    .academics-tab:hover {
+        color: rgba(32, 0, 130, 1); 
+    }
+
+    .academics-tab.active {
+        color: rgba(32, 0, 130, 1); 
+        border-bottom-color: rgba(32, 0, 130, 1); 
+    }
+
+    /* Panels */
+    .academics-panel {
+        display: none;
+        animation: fadeIn 0.3s ease-in;
+    }
+
+    .academics-panel.active {
+        display: block;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    /* Search & Filters Section */
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        gap: 15px;
+    }
+
+    .section-header h3 {
+        font-size: 20px;
+        font-weight: 600;
+        color: #1a202c;
+        margin: 0;
+    }
+
+    .search-filter-container {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+
+    .card {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    .card-body {
+        padding: 1rem;
+    }
+
+    .card-header {
+        padding: 0.75rem 1rem;
+        background: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+        font-weight: 600;
+        color: #212529;
+    }
+
+    .badge-secondary {
+        background-color: #e2e3e5;
+        color: #41464b;
+    }
+
+    .section-filters-card .form-label {
+        margin-bottom: 0.4rem;
+        font-weight: 500;
+    }
+
+    .section-filters-card .form-group {
+        margin-bottom: 0.75rem;
+    }
+
+    .section-filters-card .row.g-2 {
+        gap: 0.75rem;
+    }
+
+    .section-filters-card .btn {
+        min-width: 100%;
+    }
+
+    .compact-filter-card .form-label {
+        font-size: 0.85rem;
+        margin-bottom: 0.25rem;
+        color: #495057;
+    }
+
+    .compact-filter-card .form-control,
+    .compact-filter-card .form-select {
+        height: calc(1.5em + 0.75rem);
+        padding: 0.35rem 0.75rem;
+        font-size: 0.92rem;
+        border-radius: 0.45rem;
+    }
+
+    .compact-filter-card .btn {
+        padding: 0.4rem 0.85rem;
+        font-size: 0.92rem;
+    }
+
+    .compact-filter-card .row.g-2 {
+        gap: 0.75rem;
+    }
+
+    .compact-filter-card .filter-col {
+        min-width: 0;
+    }
+
+    .search-box {
+        flex: 1;
+        min-width: 250px;
+    }
+
+    .search-box input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 5px;
+        font-size: 14px;
+    }
+
+    .search-box input:focus {
+        outline: none;
+        border-color: rgba(32, 0, 130, 1); 
+        box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+    }
+
+    .filter-select {
+        padding: 10px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 5px;
+        font-size: 14px;
+        background: white;
+    }
+
+    .filter-select:focus {
+        outline: none;
+        border-color: rgba(32, 0, 130, 1); 
+    }
+
+    .btn {
+        padding: 10px 16px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s;
+    }
+
+    .btn-primary {
+        background-color: rgb(14, 28, 90);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background-color: rgb(14, 28, 90);
+    }
+
+    .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background-color: #5c636a;
+    }
+
+    .btn-sm {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+
+    .btn-info {
+        background-color: rgb(20, 41, 128);
+        color: white;
+    }
+
+    .btn-info:hover {
+        background-color: rgba(24, 0, 98, 1);
+    }
+
+    .btn-danger {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background-color: #bb2d3b;
+    }
+
+    /* Table */
+    .table-card {
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    thead {
+        background-color: #f8f9fa;
+    }
+
+    th {
+        padding: 12px;
+        text-align: left;
+        font-size: 13px;
+        font-weight: 600;
+        color: #333;
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    td {
+        padding: 12px;
+        border-bottom: 1px solid #dee2e6;
+        font-size: 14px;
+    }
+
+    tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    .actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-start;
+    }
+
+    /* Status Badges */
+    .badge {
+        display: inline-block;
+        padding: 5px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .badge-success {
+        background-color: #d4edda;
+        color: #155724;
+    }
+
+    .badge-warning {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+
+    .badge-danger {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+
+    .badge-info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+
+    /* Modal */
+    .modal {
+         display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 70px 20px 20px;
+    overflow-y: auto;
+        
+    }
+
+    .modal.show {
+        display: flex;
+        
+    
+    }
+
+    .modal-dialog {
+       background: white;
+    border-radius: 8px;
+    max-width: 600px;
+    width: 90%;
+    max-height: calc(100vh - 90px);
+    overflow-y: auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    margin: 0 auto;
+    }
+
+    .modal-header {
+        padding: 20px;
+        border-bottom: 1px solid #dee2e6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        
+    }
+
+    .modal-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1a202c;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 20px;
+        cursor: pointer;
+        color: #6c757d;
+    }
+
+    .modal-close:hover {
+        color: #000;
+    }
+
+    .modal-body {
+        padding: 20px;
+    }
+
+    .modal-footer {
+        padding: 15px 20px;
+        border-top: 1px solid #dee2e6;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    /* Forms */
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        color: #333;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 5px;
+        font-size: 14px;
+        font-family: inherit;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color:rgba(32, 0, 130, 1); 
+        box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+    }
+
+    .form-control.required::after {
+        content: ' *';
+        color: #dc3545;
+    }
+
+    .required { color: #dc3545; }
+
+    /* Empty States */
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: #6c757d;
+    }
+
+    .empty-state-icon {
+        font-size: 48px;
+        margin-bottom: 15px;
+        opacity: 0.5;
+    }
+
+    .empty-state h5 {
+        color: #333;
+        margin-bottom: 10px;
+    }
+
+    /* Utilities */
+    .text-muted { color: #6c757d; }
+    .text-center { text-align: center; }
+    .mb-20 { margin-bottom: 20px; }
+    .mt-20 { margin-top: 20px; }
+
+    @media (max-width: 768px) {
+        .section-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .search-filter-container {
+            flex-direction: column;
+        }
+
+        .search-box {
+            min-width: 100%;
+        }
+
+        .table-responsive {
+            font-size: 12px;
+        }
+
+        .actions {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+        }
+    }
+
+    /* ===== Subject Filter Bar Fix — paste at the very end of the file ===== */
+.compact-filter-card .card-body {
+    display: block;
+}
+
+.compact-filter-card .row.g-2 {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: flex-end !important;
+    gap: 12px !important;
+    margin: 0 !important;
+}
+
+.compact-filter-card .filter-col {
+    flex: 1 1 160px !important;
+    min-width: 140px !important;
+    max-width: none !important;
+    width: auto !important;
+}
+
+/* Search box gets more room */
+.compact-filter-card .filter-col:has(#searchSubjects),
+.compact-filter-card .filter-col:has(#searchSections) {
+    flex: 2 1 240px !important;
+}
+
+/* Reset Filters button: don't stretch full width, sits inline at the end */
+.compact-filter-card .filter-col:has(#resetSubjectFilters),
+.compact-filter-card .filter-col:has(#resetSectionFilters) {
+    flex: 0 0 auto !important;
+}
+
+.compact-filter-card #resetSubjectFilters,
+.compact-filter-card #resetSectionFilters {
+    width: auto !important;
+    white-space: nowrap;
+}
+
+.compact-filter-card .form-label {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.compact-filter-card .form-control,
+.compact-filter-card .form-select {
+    width: 100%;
+}
+
+/* Stack vertically only on small screens */
+@media (max-width: 640px) {
+    .compact-filter-card .row.g-2 {
+        flex-direction: column !important;
+    }
+    .compact-filter-card .filter-col,
+    .compact-filter-card .filter-col:has(#resetSubjectFilters),
+    .compact-filter-card .filter-col:has(#resetSectionFilters) {
+        flex: 1 1 100% !important;
+        width: 100% !important;
+    }
+}
+
+/* Modal spacing is now provided by pages/academics-modal-fix.css */
+
+/* Match Faculty Management page background treatment */
+body,
+.main-content,
+.module-content {
+    background: var(--color9, #f8f9fa);
+}
+
+
+
+

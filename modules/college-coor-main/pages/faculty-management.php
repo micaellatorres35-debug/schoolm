@@ -88,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $response = ['success' => false, 'message' => 'Employee not found.'];
             } elseif ((int)($employee['is_archived'] ?? 1) !== 0 || ($employee['employment_status'] ?? '') !== 'Active') {
                 $response = ['success' => false, 'message' => 'Employee is not active.'];
-            } elseif (!in_array(($employee['employment_type'] ?? ''), ['Part-time', 'OJT/Training'], true)) {
+            } elseif (!in_array(($employee['employment_type'] ?? ''), ['Part-time'], true)) {
                 $response = ['success' => false, 'message' => 'Employee is not eligible for engagement.'];
             } else {
                 $response = ['success' => true, 'employment_type' => $employee['employment_type']];
@@ -120,7 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } elseif ((int)($selectedEmployee['is_archived'] ?? 1) !== 0 || ($selectedEmployee['employment_status'] ?? '') !== 'Active') {
                     error_log('add_engagement: Employee not active - is_archived=' . ($selectedEmployee['is_archived'] ?? 1) . ', status=' . ($selectedEmployee['employment_status'] ?? ''));
                     $response = ['success' => false, 'message' => 'Selected employee is not active and cannot be assigned an engagement.'];
-                } elseif (!in_array(($selectedEmployee['employment_type'] ?? ''), ['Part-time', 'OJT/Training'], true)) {
+                } elseif (!in_array(($selectedEmployee['employment_type'] ?? ''), ['Part-time'], true)) {
                     error_log('add_engagement: Employee not eligible - employment_type=' . ($selectedEmployee['employment_type'] ?? ''));
                     $response = ['success' => false, 'message' => 'Selected employee is not eligible for an engagement.'];
                 } elseif ($facultyManager->hasActiveEngagementForEmployee($employeeId)) {
@@ -329,7 +329,6 @@ $requirementStatusSummary = $facultyManager->getFacultyRequirementStatusSummary(
 $employmentTypeStats = [
     'Full-time' => 0,
     'Part-time' => 0,
-    'OJT / Training' => 0,
 ];
 
 foreach ($facultyList as $faculty) {
@@ -339,8 +338,6 @@ foreach ($facultyList as $faculty) {
         $employmentTypeStats['Full-time']++;
     } elseif ($employmentType === 'Part-time') {
         $employmentTypeStats['Part-time']++;
-    } elseif ($employmentType === 'OJT/Training') {
-        $employmentTypeStats['OJT / Training']++;
     }
 }
 

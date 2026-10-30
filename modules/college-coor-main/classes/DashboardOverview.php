@@ -25,11 +25,11 @@ class DashboardOverview {
         ];
 
         try {
-            $summary['total_departments'] = (int) $this->conn->query("SELECT COUNT(*) FROM em_departments")->fetchColumn();
+            $summary['total_departments'] = (int) $this->conn->query("SELECT COUNT(*) FROM em_roles WHERE LOWER(TRIM(role_name)) LIKE '%coordinator%' AND LOWER(TRIM(role_name)) NOT LIKE '%college coordinator%'")->fetchColumn();
         } catch (Throwable $e) {}
 
         try {
-            $summary['active_coordinators'] = (int) $this->conn->query("SELECT COUNT(DISTINCT department_head) FROM em_departments WHERE department_head IS NOT NULL AND department_head <> 0")->fetchColumn();
+            $summary['active_coordinators'] = (int) $this->conn->query("SELECT COUNT(*) FROM em_roles WHERE LOWER(TRIM(role_name)) LIKE '%coordinator%' AND LOWER(TRIM(role_name)) NOT LIKE '%college coordinator%' AND LOWER(TRIM(status)) = 'active'")->fetchColumn();
         } catch (Throwable $e) {}
 
         try {

@@ -42,61 +42,249 @@ $recentActivities = $dashboardOverview->getRecentActivities(8);
 <div class="monitoring-dashboard">
     <div class="module-header dashboard-header">
         <div>
-            <h1>Dashboard Overview</h1>
+            <h1 style="color: black;">Dashboard Overview</h1>
             <p class="text-muted small">Central monitoring for departments, submissions, activities, and operational alerts.</p>
         </div>
     </div>
 
     <div class="module-content dashboard-shell">
-        <section class="summary-cards-section" aria-label="Summary statistics">
-            <div class="summary-cards">
-                <article class="summary-card summary-card-primary">
-                    <div class="summary-meta">
-                        <span class="summary-label">Total Departments</span>
-                        <strong class="summary-value"><?= dashboardEscape($summary['total_departments']) ?></strong>
+        <section class="dashboard-summary" aria-label="Summary statistics">
+            <div class="summary-group">
+                <div class="summary-group-label">Departments &amp; Personnel</div>
+                <div class="summary-card-grid">
+                    <article class="summary-card">
+                        <div class="summary-meta">
+                            <span class="summary-label">Total Coordinators</span>
+                            <strong class="summary-value"><?= dashboardEscape($summary['total_departments'] ?? 0) ?></strong>
+                        </div>
+                    </article>
+
+                    <article class="summary-card">
+                        <div class="summary-meta">
+                            <span class="summary-label">Active Coordinators</span>
+                            <strong class="summary-value"><?= dashboardEscape($summary['active_coordinators'] ?? 0) ?></strong>
+                        </div>
+                    </article>
+
+                    <article class="summary-card">
+                        <div class="summary-meta">
+                            <span class="summary-label">Open Concerns</span>
+                            <strong class="summary-value"><?= dashboardEscape($summary['open_concerns'] ?? 0) ?></strong>
+                        </div>
+                    </article>
+                </div>
+            </div>
+
+            <div class="summary-group">
+                <div class="summary-group-label">Reports &amp; Operations</div>
+                <div class="summary-card-grid">
+                    <article class="summary-card">
+                        <div class="summary-meta">
+                            <span class="summary-label">Pending Reports</span>
+                            <strong class="summary-value"><?= dashboardEscape($summary['pending_reports'] ?? 0) ?></strong>
+                        </div>
+                    </article>
+
+                    <article class="summary-card">
+                        <div class="summary-meta">
+                            <span class="summary-label">Pending Approvals</span>
+                            <strong class="summary-value"><?= dashboardEscape($summary['pending_approvals'] ?? 0) ?></strong>
+                        </div>
+                    </article>
+
+                    <article class="summary-card">
+                        <div class="summary-meta">
+                            <span class="summary-label">Overdue Tasks</span>
+                            <strong class="summary-value"><?= dashboardEscape($summary['overdue_tasks'] ?? 0) ?></strong>
+                        </div>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="dashboard-attention" aria-label="Needs your attention">
+            <div class="attention-header">
+                <span class="attention-label">Needs Your Attention</span>
+            </div>
+
+            <div class="attention-grid">
+                <article class="attention-card">
+                    <div class="attention-card-header">
+                        <div class="attention-card-title">
+                            <span class="attention-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5"></path>
+                                    <path d="M10 20a2 2 0 0 0 4 0"></path>
+                                </svg>
+                            </span>
+                            <h3>Pending Submissions</h3>
+                        </div>
+                        <a href="?page=report-submission" class="view-link">View details</a>
                     </div>
+
+                    <?php if (!empty($pendingSubmissions)): ?>
+                        <?php foreach ($pendingSubmissions as $submission): ?>
+                            <div class="attention-item">
+                                <div class="attention-item-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M7 3h7l5 5v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"></path>
+                                        <path d="M14 3v6h6"></path>
+                                        <path d="M8 13h8"></path>
+                                        <path d="M8 17h8"></path>
+                                    </svg>
+                                </div>
+
+                                <div class="attention-item-body">
+                                    <div class="item-title"><?= dashboardEscape($submission['submission_title'] ?? 'Untitled submission') ?></div>
+                                    <div class="item-subtitle">
+                                        <?= dashboardEscape($submission['department_name'] ?? 'Department') ?>
+                                        •
+                                        <?= dashboardEscape(!empty($submission['submitted_at']) ? date('M d, Y', strtotime($submission['submitted_at'])) : 'N/A') ?>
+                                    </div>
+                                </div>
+
+                                <div class="attention-item-actions">
+                                    <?php if (($submission['source'] ?? '') === 'approval' && !$userCanReviewApprovals): ?>
+                                        <span class="tiny-link">View only</span>
+                                    <?php else: ?>
+                                        <a href="<?= dashboardEscape($submission['action_target'] ?? '?page=report-submission') ?>" class="tiny-link">View</a>
+                                    <?php endif; ?>
+
+                                    <span class="status-badge <?= dashboardStatusClass($submission['status'] ?? 'submitted') ?>">
+                                        <?= dashboardEscape(ucfirst($submission['status'] ?? 'submitted')) ?>
+                                    </span>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="empty-state-panel">No pending submissions found.</div>
+                    <?php endif; ?>
+
+                    <a href="?page=report-submission" class="primary-cta">Go to Reports</a>
                 </article>
 
-                <article class="summary-card summary-card-indigo">
-                    <div class="summary-meta">
-                        <span class="summary-label">Active Coordinators</span>
-                        <strong class="summary-value"><?= dashboardEscape($summary['active_coordinators']) ?></strong>
+                <article class="attention-card">
+                    <div class="attention-card-header">
+                        <div class="attention-card-title">
+                            <span class="attention-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                                    <path d="M16 2v4"></path>
+                                    <path d="M8 2v4"></path>
+                                    <path d="M3 10h18"></path>
+                                </svg>
+                            </span>
+                            <h3>Upcoming Activities</h3>
+                        </div>
                     </div>
+
+                    <?php if (!empty($upcomingActivities)): ?>
+                        <?php foreach ($upcomingActivities as $activity): ?>
+                            <div class="attention-item attention-item-activity">
+                                <div class="attention-item-icon calendar-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                                        <path d="M8 2v4"></path>
+                                        <path d="M16 2v4"></path>
+                                        <path d="M3 10h18"></path>
+                                    </svg>
+                                </div>
+
+                                <div class="attention-item-body">
+                                    <div class="item-title"><?= dashboardEscape($activity['event_title'] ?? 'Activity') ?></div>
+                                    <div class="item-subtitle"><?= dashboardEscape($activity['department_name'] ?? 'College Wide') ?></div>
+                                    <span class="mini-status <?= dashboardStatusClass($activity['status'] ?? 'Upcoming') ?>">
+                                        <?= dashboardEscape(ucfirst($activity['status'] ?? 'Upcoming')) ?>
+                                    </span>
+                                </div>
+
+                                <div class="item-date">
+                                    <span><?= dashboardEscape(!empty($activity['event_date']) ? date('M d', strtotime($activity['event_date'])) : 'N/A') ?></span>
+                                    <small>
+                                        <?= dashboardEscape(trim(($activity['start_time'] ?? '') . (!empty($activity['end_time']) ? ' - ' . $activity['end_time'] : ''))) ?>
+                                    </small>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="empty-state-panel">No upcoming activities found in the event registry.</div>
+                    <?php endif; ?>
                 </article>
 
-                <article class="summary-card summary-card-amber">
-                    <div class="summary-meta">
-                        <span class="summary-label">Pending Reports</span>
-                        <strong class="summary-value"><?= dashboardEscape($summary['pending_reports']) ?></strong>
+                <article class="attention-card">
+                    <div class="attention-card-header">
+                        <div class="attention-card-title">
+                            <span class="attention-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 3v18"></path>
+                                    <path d="M4 7h16"></path>
+                                    <path d="M4 17h16"></path>
+                                </svg>
+                            </span>
+                            <h3>Coordinator Status</h3>
+                        </div>
+                        <a href="?page=report-submission" class="view-link">View details</a>
                     </div>
-                </article>
 
-                <article class="summary-card summary-card-success">
-                    <div class="summary-meta">
-                        <span class="summary-label">Pending Approvals</span>
-                        <strong class="summary-value"><?= dashboardEscape($summary['pending_approvals']) ?></strong>
-                    </div>
-                </article>
+                    <?php if (!empty($departmentOverview)): ?>
+                        <div class="coord-table-wrap">
+                            <table class="coord-status-table">
+                                <thead>
+                                    <tr>
+                                        <th>Department</th>
+                                        <th>Coordinator</th>
+                                        <th>Pending Tasks</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($departmentOverview as $department): ?>
+                                        <tr>
+                                            <td class="department-name">
+                                                <?= dashboardEscape($department['department_name'] ?? 'Department') ?>
+                                            </td>
+                                            <td><?= dashboardEscape($department['assigned_coordinator'] ?? 'Unassigned') ?></td>
+                                            <td>
+                                                <span class="task-pill <?= ((int) ($department['pending_tasks'] ?? 0) > 0) ? 'has-tasks' : 'no-tasks' ?>">
+                                                    <?= dashboardEscape((int) ($department['pending_tasks'] ?? 0)) ?>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="status-badge <?= dashboardStatusClass($department['status'] ?? 'On Track') ?>">
+                                                    <?= dashboardEscape($department['status'] ?? 'On Track') ?>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
 
-                <article class="summary-card summary-card-red">
-                    <div class="summary-meta">
-                        <span class="summary-label">Overdue Tasks</span>
-                        <strong class="summary-value"><?= dashboardEscape($summary['overdue_tasks']) ?></strong>
-                    </div>
-                </article>
-
-                <article class="summary-card summary-card-slate">
-                    <div class="summary-meta">
-                        <span class="summary-label">Open Concerns</span>
-                        <strong class="summary-value"><?= dashboardEscape($summary['open_concerns']) ?></strong>
-                    </div>
+                        <?php
+                        $needsAttentionDepartments = 0;
+                        foreach ($departmentOverview as $department) {
+                            $status = strtolower((string) ($department['status'] ?? ''));
+                            if (in_array($status, ['needs attention', 'overdue'], true)) {
+                                $needsAttentionDepartments++;
+                            }
+                        }
+                        if ($needsAttentionDepartments > 0):
+                        ?>
+                            <div class="inline-alert">
+                                <span class="alert-marker">!</span>
+                                <span><?= dashboardEscape($needsAttentionDepartments) ?> departments need attention.</span>
+                            </div>
+                        <?php endif; ?>
+                    <?php else: ?>
+                        <div class="empty-state-panel">No department records are available yet.</div>
+                    <?php endif; ?>
                 </article>
             </div>
         </section>
 
-        <section class="dashboard-section">
+        <section class="dashboard-section" style="display:none;">
             <div class="section-header">
-                <h2>Department Overview</h2>
+                <h2>Coordinator Status</h2>
             </div>
 
             <div class="table-responsive">
@@ -137,7 +325,7 @@ $recentActivities = $dashboardOverview->getRecentActivities(8);
             </div>
         </section>
 
-        <section class="dashboard-section">
+        <section class="dashboard-section" style="display:none;">
             <div class="section-header">
                 <h2>Pending Submissions</h2>
             </div>
@@ -184,7 +372,7 @@ $recentActivities = $dashboardOverview->getRecentActivities(8);
             </div>
         </section>
 
-        <section class="dashboard-section">
+        <section class="dashboard-section" style="display:none;">
             <div class="section-header">
                 <h2>Upcoming Activities</h2>
             </div>
@@ -204,51 +392,6 @@ $recentActivities = $dashboardOverview->getRecentActivities(8);
                     <?php endforeach; ?>
                 <?php else: ?>
                     <div class="empty-state-card">No upcoming activities found in the event registry.</div>
-                <?php endif; ?>
-            </div>
-        </section>
-
-        <section class="dashboard-section">
-            <div class="section-header">
-                <h2>Alerts & Notifications</h2>
-            </div>
-
-            <div class="alert-list">
-                <?php if (!empty($alertItems)): ?>
-                    <?php foreach (array_slice($alertItems, 0, 8) as $alert): ?>
-                        <a class="alert-item alert-<?= dashboardEscape($alert['level'] ?? 'info') ?>" href="<?= dashboardEscape($alert['href'] ?? '?page=dashboard-overview') ?>">
-                            <div class="alert-tag"><?= dashboardEscape($alert['type'] ?? 'Notification') ?></div>
-                            <div class="alert-copy"><?= dashboardEscape($alert['message'] ?? 'No detail provided') ?></div>
-                            <?php if (!empty($alert['when'])): ?>
-                                <div class="alert-date"><?= dashboardEscape(date('M d, Y', strtotime($alert['when']))) ?></div>
-                            <?php endif; ?>
-                        </a>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <div class="empty-state-card">No active alerts at this time.</div>
-                <?php endif; ?>
-            </div>
-        </section>
-
-        <section class="dashboard-section full-width-section">
-            <div class="section-header">
-                <h2>Recent Activities</h2>
-            </div>
-
-            <div class="activity-list">
-                <?php if (!empty($recentActivities)): ?>
-                    <?php foreach ($recentActivities as $activity): ?>
-                        <div class="activity-item">
-                            <div class="activity-bullet"></div>
-                            <div class="activity-content">
-                                <div class="activity-type"><?= dashboardEscape($activity['type'] ?? 'System activity') ?></div>
-                                <div class="activity-description"><?= dashboardEscape($activity['description'] ?? 'No description available') ?></div>
-                                <div class="activity-meta"><?= dashboardEscape($activity['module'] ?? 'System') ?> • <?= dashboardEscape(isset($activity['timestamp']) ? date('M d, Y h:i A', strtotime($activity['timestamp'])) : 'N/A') ?></div>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <div class="empty-state-card">No recent activity records were found in the existing system logs.</div>
                 <?php endif; ?>
             </div>
         </section>
