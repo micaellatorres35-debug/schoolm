@@ -262,7 +262,7 @@ $chartDataJson = json_encode([
 ?>
 
 <div class="module-header">
-    <h1>Dashboard</h1>
+    <h1>Dashboard Overview</h1>
     <p class="text-muted small">Summary of academic analytics, events, and recent activities</p>
 </div>
 
