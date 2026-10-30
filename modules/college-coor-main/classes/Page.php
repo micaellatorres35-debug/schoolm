@@ -11,9 +11,9 @@ class Page {
         'events-management'  => 'Events Management',
         'faculty-management' => 'Faculty Management',
         'class-scheduling'   => 'Class Scheduling',
-        'report-submission' => 'Report Submission',
-        'concern-submission' => 'Concern Submission',
-        'approval-submission' => 'Approval Submission'
+        'report-submission' => 'Report Submission & Management',
+        'concern-submission' => 'Concern & Issue Tracking',
+        'approval-submission' => 'Approval and Decision Support',
     ];
 
     /*Content Sections*/ 
