@@ -1,5 +1,9 @@
 const ReportController = 'controllers/ReportController.php';
 
+// Local copy of Chart.js (works offline on XAMPP and on the live server, no CDN needed).
+// The path is relative to the page, like ReportController above.
+const RSM_CHART_SRC = 'js/assets/vendor/chart.umd.js';
+
 const STATUS_LABELS = {
     draft: 'Draft',
     submitted: 'Submitted',
@@ -8,20 +12,33 @@ const STATUS_LABELS = {
     rejected: 'Rejected',
 };
 
+// Same colors as the status badges in the stylesheet.
+const RSM_STATUS_ORDER  = ['draft', 'submitted', 'reviewed', 'approved', 'rejected'];
+const RSM_STATUS_COLORS = {
+    draft: '#6c757d',
+    submitted: 'rgba(32, 0, 130, 1)',
+    reviewed: '#b8860b',
+    approved: '#28a745',
+    rejected: '#dc3545',
+};
+
+const RSM_SEARCH_DELAY = 300;
+
 // Attachment rules — keep in sync with FileStorage.php (the server re-checks everything).
 const RSM_MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 const RSM_ALLOWED_EXTENSIONS   = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png'];
+
+let rsmPage = 1;
+let rsmListReq = 0;
+let rsmAnalyticsReq = 0;
+let rsmSearchTimer = null;
+let rsmChartPromise = null;
+let rsmCharts = {};
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 function initReportModule() {
     const page = document.querySelector('.rsm-page');
     if (!page) return;
-
-    const isDirectress = page.dataset.isDirectress === '1';
-
-    loadReports();
-
-    const reportForm = document.getElementById('report-form');
 
     // Prevents the same element from getting a listener attached twice when
     // init() runs more than once on unchanged DOM (e.g. DOMContentLoaded +
@@ -32,6 +49,16 @@ function initReportModule() {
         el.dataset.rsmBound = '1';
     }
 
+    // Initial load once per rendered page
+    if (page.dataset.rsmLoaded !== '1') {
+        page.dataset.rsmLoaded = '1';
+        rsmDestroyCharts();
+        rsmPage = 1;
+        refreshAll();
+    }
+
+    const reportForm = document.getElementById('report-form');
+
     // --- Create modal wiring ---
     const modalOverlay  = document.getElementById('rsm-modal-overlay');
     const openModalBtn  = document.getElementById('rsm-open-modal');
@@ -40,13 +67,13 @@ function initReportModule() {
     const openCreateModal = () => {
         reportForm?.reset();
         document.getElementById('report-id').value = '';
+        hideFormError();
         syncAttachmentLabel();
         modalOverlay?.classList.add('active');
     };
     const closeCreateModal = () => {
         modalOverlay?.classList.remove('active');
-        const formError = document.getElementById('report-form-error');
-        if (formError) formError.style.display = 'none';
+        hideFormError();
     };
 
     bindOnce(openModalBtn, 'click', openCreateModal);
@@ -55,7 +82,7 @@ function initReportModule() {
         if (e.target === modalOverlay) closeCreateModal();
     });
 
-    // --- Optional attachment picker ---
+    // --- Report file picker ---
     const attachmentInput = document.getElementById('report-attachment');
     const attachmentClear = document.getElementById('rsm-file-clear');
 
@@ -64,11 +91,9 @@ function initReportModule() {
         const error = file ? validateAttachmentFile(file) : null;
         if (error) {
             attachmentInput.value = '';
-            const formError = document.getElementById('report-form-error');
-            if (formError) {
-                formError.textContent   = error;
-                formError.style.display = 'block';
-            }
+            showFormError(error);
+        } else {
+            hideFormError();
         }
         syncAttachmentLabel();
     });
@@ -102,16 +127,18 @@ function initReportModule() {
     if (!window.rsmEscBound) {
         document.addEventListener('keydown', (e) => {
             if (e.key !== 'Escape') return;
-            closeCreateModal();
-            closeViewModal();
-            closePdfModal();
+            document.getElementById('rsm-modal-overlay')?.classList.remove('active');
+            document.getElementById('rsm-view-modal-overlay')?.classList.remove('active');
+            const overlay = document.getElementById('rsm-pdf-modal-overlay');
+            overlay?.classList.remove('active');
+            const frame = document.getElementById('rsm-pdf-frame');
+            if (frame) frame.src = '';
         });
         window.rsmEscBound = true;
     }
 
     // --- Save as Draft ---
-    const draftBtn = document.getElementById('draft-btn');
-    bindOnce(draftBtn, 'click', () => submitReportForm('save_draft'));
+    bindOnce(document.getElementById('draft-btn'), 'click', () => submitReportForm('save_draft'));
 
     // --- Submit Report ---
     bindOnce(reportForm, 'submit', (e) => {
@@ -128,22 +155,107 @@ function initReportModule() {
         window.rsmViewDelegationBound = true;
     }
 
-    // --- Department filter ---
-    const deptFilter = document.getElementById('rsm-filter');
-    bindOnce(deptFilter, 'change', () => loadReports());
+    // --- Filters: department, type, status, dates ---
+    bindOnce(document.getElementById('rsm-filter'), 'change', async () => {
+        await refreshTypeOptions(); // the type list depends on the department
+        rsmPage = 1;
+        refreshAll();
+    });
+    ['rsm-type-filter', 'rsm-status-filter', 'rsm-date-from', 'rsm-date-to'].forEach((id) => {
+        bindOnce(document.getElementById(id), 'change', () => {
+            rsmPage = 1;
+            refreshAll();
+        });
+    });
 
-    // --- Status filter ---
-    const statusFilter = document.getElementById('rsm-status-filter');
-    bindOnce(statusFilter, 'change', () => loadReports());
+    // --- Search (server-side, debounced) ---
+    bindOnce(document.getElementById('rsm-search'), 'input', () => {
+        clearTimeout(rsmSearchTimer);
+        rsmSearchTimer = setTimeout(() => { rsmPage = 1; refreshAll(); }, RSM_SEARCH_DELAY);
+    });
 
-    // --- Search ---
-    const search = document.getElementById('rsm-search');
-    bindOnce(search, 'input', applySearchFilter);
+    // --- Clear filters ---
+    bindOnce(document.getElementById('rsm-clear-filters'), 'click', async () => {
+        ['rsm-search', 'rsm-filter', 'rsm-type-filter', 'rsm-status-filter', 'rsm-date-from', 'rsm-date-to'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        await refreshTypeOptions();
+        rsmPage = 1;
+        refreshAll();
+    });
+
+    // --- Pagination ---
+    bindOnce(document.getElementById('rsm-page-nav'), 'click', (e) => {
+        const btn = e.target.closest('.rsm-page-btn');
+        if (!btn || btn.disabled) return;
+        rsmPage = parseInt(btn.dataset.page, 10) || 1;
+        loadReports();
+    });
+
+    // --- Retry buttons rendered inside messages ---
+    if (!window.rsmRetryBound) {
+        document.addEventListener('click', (e) => {
+            const retry = e.target.closest('[data-rsm-retry]');
+            if (!retry) return;
+            if (retry.dataset.rsmRetry === 'list') loadReports();
+            else loadAnalytics();
+        });
+        window.rsmRetryBound = true;
+    }
 }
 
 // Handles both hard refresh and sidebar navigation
 window.addEventListener('page:loaded', initReportModule);
 document.addEventListener('DOMContentLoaded', initReportModule);
+
+// ── FILTERS ───────────────────────────────────────────────────────────────────
+function rsmFilterParams() {
+    const val = (id) => document.getElementById(id)?.value ?? '';
+    const raw = {
+        department_id: val('rsm-filter'),
+        type:          val('rsm-type-filter'),
+        status:        val('rsm-status-filter'),
+        date_from:     val('rsm-date-from'),
+        date_to:       val('rsm-date-to'),
+        search:        val('rsm-search').trim(),
+    };
+    const params = new URLSearchParams();
+    Object.keys(raw).forEach((k) => { if (raw[k] !== '') params.set(k, raw[k]); });
+    return params;
+}
+
+function rsmFiltersActive() {
+    return Array.from(rsmFilterParams().keys()).length > 0;
+}
+
+function refreshAll() {
+    loadReports();
+    loadAnalytics();
+}
+
+// Report types depend on the chosen department; keep the selected type if it still exists.
+async function refreshTypeOptions() {
+    const typeSel = document.getElementById('rsm-type-filter');
+    if (!typeSel) return;
+
+    const params = new URLSearchParams({ action: 'report_types' });
+    const dept = document.getElementById('rsm-filter')?.value ?? '';
+    if (dept !== '') params.set('department_id', dept);
+
+    try {
+        const res  = await fetch(`${ReportController}?${params.toString()}`);
+        const json = await res.json();
+        if (!json.success) return;
+
+        const current = typeSel.value;
+        typeSel.innerHTML = '<option value="">All report types</option>' +
+            json.data.map((name) => `<option value="${esc(name)}">${esc(name)}</option>`).join('');
+        typeSel.value = json.data.includes(current) ? current : '';
+    } catch (err) {
+        console.error('refreshTypeOptions error:', err);
+    }
+}
 
 // ── ATTACHMENT PICKER HELPERS ─────────────────────────────────────────────────
 function validateAttachmentFile(file) {
@@ -178,6 +290,18 @@ function formatFileSize(bytes) {
     return n + ' B';
 }
 
+function showFormError(message) {
+    const el = document.getElementById('report-form-error');
+    if (!el) return;
+    el.textContent = message;
+    el.hidden = false;
+}
+
+function hideFormError() {
+    const el = document.getElementById('report-form-error');
+    if (el) el.hidden = true;
+}
+
 // ── FILE URLS ─────────────────────────────────────────────────────────────────
 // Files are never linked by their disk path. They are always requested through the
 // controller, which checks the session/role and streams the bytes.
@@ -190,17 +314,23 @@ function fileUrl(reportId, kind, download = false) {
 // ── SUBMIT / DRAFT ────────────────────────────────────────────────────────────
 async function submitReportForm(action) {
     const reportForm = document.getElementById('report-form');
-    const formError   = document.getElementById('report-form-error');
-    const submitBtn   = document.getElementById('submit-btn');
-    const draftBtn    = document.getElementById('draft-btn');
+    const submitBtn  = document.getElementById('submit-btn');
+    const draftBtn   = document.getElementById('draft-btn');
 
-    formError.style.display = 'none';
+    hideFormError();
+
+    // A report is a file: it is required to submit (drafts can be saved without one).
+    if (action === 'submit' && !document.getElementById('report-attachment')?.files?.length) {
+        showFormError('Please attach the report file before submitting.');
+        return;
+    }
+
     submitBtn.disabled = true;
     draftBtn.disabled  = true;
     const originalLabel = submitBtn.textContent;
     submitBtn.textContent = action === 'submit' ? 'Submitting…' : submitBtn.textContent;
 
-    // FormData includes the optional "attachment" file input automatically (multipart/form-data).
+    // FormData includes the "attachment" file input automatically (multipart/form-data).
     // Do NOT set a Content-Type header manually — the browser adds the multipart boundary.
     const formData = new FormData(reportForm);
     formData.set('action', action);
@@ -219,15 +349,15 @@ async function submitReportForm(action) {
             if (json.debug) console.error('Report debug:', json.debug);
             showToast(action === 'submit' ? 'Report submitted successfully!' : 'Draft saved.', 'success');
             if (json.warning) showToast(json.warning, 'error');
-            loadReports();
+            rsmPage = 1;
+            refreshAll();
         } else {
-            formError.textContent   = json.message;
-            formError.style.display = 'block';
+            if (json.debug) console.error('Report debug:', json.debug);
+            showFormError(json.message);
         }
     } catch (err) {
         console.error(err);
-        formError.textContent   = 'A network error occurred. Please try again.';
-        formError.style.display = 'block';
+        showFormError('A network error occurred. Please try again.');
     } finally {
         submitBtn.disabled     = false;
         draftBtn.disabled      = false;
@@ -235,55 +365,362 @@ async function submitReportForm(action) {
     }
 }
 
-// ── LOAD REPORTS ──────────────────────────────────────────────────────────────
+// ── LOAD REPORTS (paginated list) ────────────────────────────────────────────
+function rsmFormatDate(s) {
+    if (!s) return '—';
+    const d = new Date(String(s).replace(' ', 'T'));
+    return isNaN(d.getTime())
+        ? '—'
+        : d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
 async function loadReports() {
-    const deptFilter    = document.getElementById('rsm-filter');
-    const statusFilter  = document.getElementById('rsm-status-filter');
-    const department_id = deptFilter && deptFilter.value !== '' ? deptFilter.value : '';
-    const status         = statusFilter && statusFilter.value !== '' ? statusFilter.value : '';
-    const tbody          = document.querySelector('.rsm-table tbody');
+    const tbody = document.querySelector('.rsm-table tbody');
     if (!tbody) return;
 
+    const req = ++rsmListReq; // ignore out-of-order responses
     tbody.innerHTML = `<tr><td colspan="8" class="rsm-muted">Loading…</td></tr>`;
 
-    const params = new URLSearchParams({ action: 'list' });
-    if (department_id !== '') params.set('department_id', department_id);
-    if (status !== '') params.set('status', status);
+    const params = rsmFilterParams();
+    params.set('action', 'list');
+    params.set('page', rsmPage);
 
     try {
         const res  = await fetch(`${ReportController}?${params.toString()}`);
         const json = await res.json();
+        if (req !== rsmListReq) return;
 
         if (!json.success) {
-            tbody.innerHTML = `<tr><td colspan="8" class="rsm-muted">Failed to load reports.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" class="rsm-muted">${esc(json.message || 'Failed to load reports.')}
+                <button type="button" class="rsm-link-btn-text" data-rsm-retry="list">Try again</button></td></tr>`;
+            rsmRenderFooter(null);
             return;
         }
 
+        const meta = json.meta || {};
+        const page = Number(meta.page) || rsmPage;
+        rsmPage = page;
+
         if (!json.data?.length) {
-            tbody.innerHTML = `<tr><td colspan="8" class="rsm-muted">No reports found.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" class="rsm-muted">${rsmFiltersActive()
+                ? 'No reports match your search or filters.'
+                : 'No reports found.'}</td></tr>`;
+            rsmRenderFooter(meta, 0);
             return;
         }
 
         tbody.innerHTML = json.data.map(row => `
             <tr>
                 <td>${esc(row.report_id)}</td>
-                <td>${esc(row.title)}</td>
+                <td class="rsm-cell-title">${esc(row.title)}</td>
                 <td>${esc(row.report_type ?? 'N/A')}</td>
-                <td>${esc(row.department_name)}</td>
-                <td>${esc(row.submitted_by)}</td>
+                <td>${esc(row.department_name ?? 'Unassigned')}</td>
+                <td>${esc(row.submitted_by ?? 'N/A')}</td>
                 <td><span class="rsm-status rsm-status-${esc(row.status)}">${esc(STATUS_LABELS[row.status] ?? row.status)}</span></td>
-                <td>${esc(row.submitted_at ?? 'N/A')}</td>
+                <td>${esc(rsmFormatDate(row.submitted_at))}</td>
                 <td class="rsm-actions-cell">
                     <button type="button" class="rsm-btn-view rsm-view-report" data-report-id="${esc(row.report_id)}">View</button>
                 </td>
             </tr>
         `).join('');
 
-        applySearchFilter();
+        rsmRenderFooter(meta, json.data.length);
     } catch (err) {
+        if (req !== rsmListReq) return;
         console.error('loadReports error:', err);
-        tbody.innerHTML = `<tr><td colspan="8" class="rsm-muted">Failed to load reports.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="rsm-muted">Failed to load reports.
+            <button type="button" class="rsm-link-btn-text" data-rsm-retry="list">Try again</button></td></tr>`;
+        rsmRenderFooter(null);
     }
+}
+
+function rsmRenderFooter(meta, count) {
+    const showing = document.getElementById('rsm-showing');
+    const nav     = document.getElementById('rsm-page-nav');
+    if (!showing || !nav) return;
+
+    if (!meta || !meta.total) {
+        showing.textContent = '';
+        nav.innerHTML = '';
+        return;
+    }
+
+    const from = (meta.page - 1) * meta.per_page + 1;
+    showing.textContent = `Showing ${from}-${from + count - 1} of ${meta.total}`;
+
+    if (meta.pages <= 1) {
+        nav.innerHTML = '';
+        return;
+    }
+
+    const nums = [];
+    for (let p = 1; p <= meta.pages; p++) {
+        if (p === 1 || p === meta.pages || Math.abs(p - meta.page) <= 1) nums.push(p);
+    }
+
+    let html = `<button type="button" class="rsm-page-btn" data-page="${meta.page - 1}"${meta.page === 1 ? ' disabled' : ''}>&laquo; Prev</button>`;
+    let prev = 0;
+    nums.forEach((p) => {
+        if (p - prev > 1) html += '<span class="rsm-page-gap">…</span>';
+        html += `<button type="button" class="rsm-page-btn${p === meta.page ? ' rsm-page-btn--active' : ''}" data-page="${p}"${p === meta.page ? ' aria-current="page"' : ''}>${p}</button>`;
+        prev = p;
+    });
+    html += `<button type="button" class="rsm-page-btn" data-page="${meta.page + 1}"${meta.page === meta.pages ? ' disabled' : ''}>Next &raquo;</button>`;
+    nav.innerHTML = html;
+}
+
+// ── ANALYTICS (stat cards + charts) ──────────────────────────────────────────
+function rsmLoadChartLib() {
+    if (window.Chart) return Promise.resolve(window.Chart);
+    if (!rsmChartPromise) {
+        rsmChartPromise = new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = RSM_CHART_SRC;
+            s.onload  = () => resolve(window.Chart);
+            s.onerror = () => { rsmChartPromise = null; reject(new Error('The chart library could not be loaded.')); };
+            document.head.appendChild(s);
+        });
+    }
+    return rsmChartPromise;
+}
+
+function rsmDestroyCharts() {
+    Object.keys(rsmCharts).forEach((k) => { try { rsmCharts[k]?.destroy(); } catch (e) { /* already gone */ } });
+    rsmCharts = {};
+}
+
+function rsmCssColor(name, fallback) {
+    const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+}
+
+function rsmSetStat(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+}
+
+// Shows a message instead of a chart (loading, empty, or error)
+function rsmChartMessage(key, text, isError) {
+    const box   = document.getElementById(`rsm-${key}-box`);
+    const state = document.getElementById(`rsm-${key}-state`);
+    if (box) box.hidden = true;
+    if (state) {
+        state.textContent = text;
+        state.classList.toggle('rsm-chart-state--error', !!isError);
+        state.hidden = false;
+    }
+}
+
+function rsmShowChart(key) {
+    const box   = document.getElementById(`rsm-${key}-box`);
+    const state = document.getElementById(`rsm-${key}-state`);
+    if (box) box.hidden = false;
+    if (state) state.hidden = true;
+}
+
+// Creates the chart, or updates it in place when it already exists on the current canvas.
+function rsmUpsertChart(key, canvasId, config) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+
+    const existing = rsmCharts[key];
+    if (existing && existing.canvas === canvas) {
+        existing.data = config.data;
+        existing.update();
+        return;
+    }
+    if (existing) existing.destroy();
+    rsmCharts[key] = new window.Chart(canvas.getContext('2d'), config);
+}
+
+async function loadAnalytics() {
+    if (!document.getElementById('rsm-trend-chart')) return;
+
+    const req = ++rsmAnalyticsReq;
+    ['trend', 'status', 'dept'].forEach((k) => rsmChartMessage(k, 'Loading chart…'));
+
+    const params = rsmFilterParams();
+    params.set('action', 'analytics');
+
+    let data;
+    try {
+        const res  = await fetch(`${ReportController}?${params.toString()}`);
+        const json = await res.json();
+        if (req !== rsmAnalyticsReq) return;
+        if (!json.success) throw new Error(json.message || 'Unable to load analytics.');
+        data = json.data;
+    } catch (err) {
+        if (req !== rsmAnalyticsReq) return;
+        ['total', 'pending', 'approved', 'rejected'].forEach((k) => rsmSetStat(`rsm-stat-${k}`, '—'));
+        ['trend', 'status', 'dept'].forEach((k) => rsmChartMessage(k, err.message || 'Unable to load analytics.', true));
+        return;
+    }
+
+    // Stat cards do not need the chart library
+    rsmSetStat('rsm-stat-total', String(data.stats.total));
+    rsmSetStat('rsm-stat-pending', String(data.stats.pending));
+    rsmSetStat('rsm-stat-approved', String(data.stats.approved));
+    rsmSetStat('rsm-stat-rejected', String(data.stats.rejected));
+
+    rsmRenderLegend(data.statuses);
+
+    try {
+        await rsmLoadChartLib();
+    } catch (err) {
+        ['trend', 'status', 'dept'].forEach((k) => rsmChartMessage(k, err.message, true));
+        return;
+    }
+    if (req !== rsmAnalyticsReq) return;
+
+    rsmRenderTrend(data.trend);
+    rsmRenderStatus(data.statuses);
+    rsmRenderDepartments(data.departments);
+}
+
+function rsmMonthLabel(ym) {
+    const [y, m] = ym.split('-').map(Number);
+    return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+}
+
+function rsmChartBase() {
+    return {
+        muted: rsmCssColor('--color5', '#5f5f5f'),
+        grid:  'rgba(0, 0, 0, 0.06)',
+        brand: rsmCssColor('--color1', 'rgba(32, 0, 130, 1)'),
+    };
+}
+
+function rsmRenderTrend(trend) {
+    const sub = document.getElementById('rsm-trend-sub');
+    const hasRange = !!(document.getElementById('rsm-date-from')?.value || document.getElementById('rsm-date-to')?.value);
+    if (sub && trend.labels.length) {
+        sub.textContent = hasRange
+            ? `${rsmMonthLabel(trend.labels[0])} – ${rsmMonthLabel(trend.labels[trend.labels.length - 1])}`
+            : 'Last six months';
+    }
+
+    const total = trend.values.reduce((a, b) => a + b, 0);
+    if (!total) {
+        rsmChartMessage('trend', 'No reports were submitted in this period.');
+        return;
+    }
+
+    rsmShowChart('trend');
+    const c = rsmChartBase();
+
+    rsmUpsertChart('trend', 'rsm-trend-chart', {
+        type: 'line',
+        data: {
+            labels: trend.labels.map(rsmMonthLabel),
+            datasets: [{
+                label: 'Reports submitted',
+                data: trend.values,
+                borderColor: c.brand,
+                backgroundColor: 'rgba(32, 0, 130, 0.08)',
+                pointBackgroundColor: c.brand,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                borderWidth: 2,
+                tension: 0.3,
+                fill: true,
+            }],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: (ctx) => ` ${ctx.parsed.y} report${ctx.parsed.y === 1 ? '' : 's'}` } },
+            },
+            scales: {
+                y: { beginAtZero: true, ticks: { precision: 0, color: c.muted }, grid: { color: c.grid } },
+                x: { ticks: { color: c.muted }, grid: { display: false } },
+            },
+        },
+    });
+}
+
+function rsmRenderLegend(statuses) {
+    const ul = document.getElementById('rsm-status-legend');
+    if (!ul) return;
+    ul.innerHTML = RSM_STATUS_ORDER.map((s) => `
+        <li>
+            <span class="rsm-legend-dot rsm-legend-${s}" aria-hidden="true"></span>
+            <span class="rsm-legend-name">${esc(STATUS_LABELS[s])}</span>
+            <strong>${esc(statuses[s] ?? 0)}</strong>
+        </li>`).join('');
+}
+
+function rsmRenderStatus(statuses) {
+    const total = RSM_STATUS_ORDER.reduce((sum, s) => sum + (statuses[s] || 0), 0);
+    if (!total) {
+        rsmChartMessage('status', 'No reports to chart for this selection.');
+        return;
+    }
+
+    rsmShowChart('status');
+
+    rsmUpsertChart('status', 'rsm-status-chart', {
+        type: 'doughnut',
+        data: {
+            labels: RSM_STATUS_ORDER.map((s) => STATUS_LABELS[s]),
+            datasets: [{
+                data: RSM_STATUS_ORDER.map((s) => statuses[s] || 0),
+                backgroundColor: RSM_STATUS_ORDER.map((s) => RSM_STATUS_COLORS[s]),
+                borderColor: '#ffffff',
+                borderWidth: 2,
+            }],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '65%',
+            plugins: {
+                legend: { display: false }, // the counted legend below the chart is used instead
+                tooltip: { callbacks: { label: (ctx) => ` ${ctx.label}: ${ctx.parsed}` } },
+            },
+        },
+    });
+}
+
+function rsmRenderDepartments(rows) {
+    if (!rows.length) {
+        rsmChartMessage('dept', 'No reports found for this selection.');
+        return;
+    }
+
+    const box = document.getElementById('rsm-dept-box');
+    if (box) box.style.setProperty('--rsm-bar-rows', String(rows.length));
+    rsmShowChart('dept');
+    const c = rsmChartBase();
+
+    rsmUpsertChart('dept', 'rsm-dept-chart', {
+        type: 'bar',
+        data: {
+            labels: rows.map((r) => r.name),
+            datasets: [{
+                label: 'Reports',
+                data: rows.map((r) => r.count),
+                backgroundColor: c.brand,
+                borderRadius: 4,
+                maxBarThickness: 22,
+            }],
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: (ctx) => ` ${ctx.parsed.x} report${ctx.parsed.x === 1 ? '' : 's'}` } },
+            },
+            scales: {
+                x: { beginAtZero: true, ticks: { precision: 0, color: c.muted }, grid: { color: c.grid } },
+                y: { ticks: { color: c.muted, autoSkip: false }, grid: { display: false } },
+            },
+        },
+    });
 }
 
 // ── VIEW / REVIEW / DECISION ─────────────────────────────────────────────────
@@ -317,6 +754,8 @@ function renderReportDetail(report) {
     const body = document.getElementById('rsm-view-modal-body');
 
     const statusLabel = STATUS_LABELS[report.status] ?? report.status;
+    const has = (key) => String(report[key] ?? '').trim() !== '';
+    const hasText = ['description', 'summary', 'findings', 'recommendations'].some(has);
 
     let reviewSection = '';
     if (isDirectress && report.status === 'submitted') {
@@ -340,24 +779,50 @@ function renderReportDetail(report) {
             </div>`;
     }
 
-    // The server no longer sends file paths — only has_pdf / has_attachment flags.
-    const pdfButton = report.has_pdf
-        ? `<button type="button" class="rsm-btn-view" id="rsm-open-pdf" data-report-id="${esc(report.report_id)}">View PDF</button>`
-        : `<span class="rsm-muted">PDF not yet generated</span>`;
+    // The server only sends has_attachment / has_pdf flags, never disk paths.
+    const mime = String(report.attachment_mime ?? '');
+    const previewable = mime === 'application/pdf' || mime.startsWith('image/');
 
-    const attachmentRow = report.has_attachment
+    const fileRow = report.has_attachment
         ? `<div class="rsm-detail-row rsm-attachment-row">
-                <span class="rsm-detail-label">Attachment</span>
+                <span class="rsm-detail-label">Report file</span>
                 <span class="rsm-attachment-info">
-                    <span class="rsm-attachment-name">${esc(report.attachment_name ?? 'Attachment')}${report.attachment_size ? ` (${esc(formatFileSize(report.attachment_size))})` : ''}</span>
+                    <span class="rsm-attachment-name">${esc(report.attachment_name ?? 'Report file')}${report.attachment_size ? ` (${esc(formatFileSize(report.attachment_size))})` : ''}</span>
                     <button type="button" class="rsm-btn-view" id="rsm-open-attachment"
-                            data-report-id="${esc(report.report_id)}" data-mime="${esc(report.attachment_mime ?? '')}">View</button>
+                            data-report-id="${esc(report.report_id)}" data-mime="${esc(mime)}">${previewable ? 'Full screen' : 'Open'}</button>
                     <a class="rsm-btn-view rsm-link-btn" href="${esc(fileUrl(report.report_id, 'attachment', true))}">Download</a>
+                </span>
+           </div>`
+        : `<div class="rsm-detail-row"><span class="rsm-detail-label">Report file</span><span class="rsm-muted">No file attached</span></div>`;
+
+    // Reports created before file submission may have a system-generated PDF
+    const legacyPdfRow = report.has_pdf
+        ? `<div class="rsm-detail-row">
+                <span class="rsm-detail-label">Generated PDF</span>
+                <span class="rsm-attachment-info">
+                    <button type="button" class="rsm-btn-view" id="rsm-open-pdf" data-report-id="${esc(report.report_id)}">View PDF</button>
                 </span>
            </div>`
         : '';
 
-    const aiSummaryBox = `
+    const section = (title, key) => has(key) ? `<h4>${title}</h4><p>${esc(report[key])}</p>` : '';
+
+    // The report itself is shown right inside the details window (no extra click needed).
+    // PDFs and images preview inline; other file types can still be opened or downloaded above.
+    let previewBlock = '';
+    if (report.has_attachment && previewable) {
+        previewBlock = `<div class="rsm-preview">
+                <iframe class="rsm-preview-frame" src="${esc(fileUrl(report.report_id, 'attachment'))}" title="Report file preview"></iframe>
+            </div>`;
+    } else if (!report.has_attachment && report.has_pdf) {
+        previewBlock = `<div class="rsm-preview">
+                <iframe class="rsm-preview-frame" src="${esc(fileUrl(report.report_id, 'pdf'))}" title="Report PDF preview"></iframe>
+            </div>`;
+    } else if (report.has_attachment) {
+        previewBlock = `<p class="rsm-muted rsm-preview-note">This file type can't be previewed here. Use Open or Download above.</p>`;
+    }
+
+    const aiSummaryBox = hasText ? `
         <div class="rsm-ai-box">
             <div class="rsm-ai-box-header">
                 <strong>AI Summary</strong>
@@ -366,28 +831,25 @@ function renderReportDetail(report) {
                 </button>
             </div>
             <p id="rsm-ai-summary-text" class="rsm-muted">${report.ai_summary ? esc(report.ai_summary) : 'No AI summary yet.'}</p>
-        </div>`;
+        </div>` : '';
 
     body.innerHTML = `
         <div class="rsm-detail-row"><span class="rsm-detail-label">Title</span><span>${esc(report.title)}</span></div>
         <div class="rsm-detail-row"><span class="rsm-detail-label">Type</span><span>${esc(report.report_type ?? 'N/A')}</span></div>
         <div class="rsm-detail-row"><span class="rsm-detail-label">Department</span><span>${esc(report.department_name ?? 'N/A')}</span></div>
         <div class="rsm-detail-row"><span class="rsm-detail-label">Submitted By</span><span>${esc(report.submitted_by_name ?? 'N/A')}</span></div>
+        <div class="rsm-detail-row"><span class="rsm-detail-label">Submitted</span><span>${esc(rsmFormatDate(report.submitted_at))}</span></div>
         <div class="rsm-detail-row"><span class="rsm-detail-label">Status</span><span class="rsm-status rsm-status-${esc(report.status)}">${esc(statusLabel)}</span></div>
-        ${attachmentRow}
+        ${fileRow}
+        ${legacyPdfRow}
+        ${previewBlock}
 
-        <h4>Summary</h4>
-        <p>${esc(report.summary)}</p>
-
-        <h4>Findings</h4>
-        <p>${esc(report.findings) || '<span class="rsm-muted">None provided.</span>'}</p>
-
-        <h4>Recommendations</h4>
-        <p>${esc(report.recommendations) || '<span class="rsm-muted">None provided.</span>'}</p>
+        ${section('Description', 'description')}
+        ${section('Summary', 'summary')}
+        ${section('Findings', 'findings')}
+        ${section('Recommendations', 'recommendations')}
 
         ${aiSummaryBox}
-
-        <div class="rsm-actions">${pdfButton}</div>
 
         ${reviewSection}
     `;
@@ -413,8 +875,8 @@ function renderReportDetail(report) {
     });
 }
 
-// Opens any controller file URL in the in-modal viewer (PDFs and images render in the iframe).
-function openFileModal(url, title = 'Report PDF') {
+// Opens any controller file URL in the in-system viewer (PDFs and images render in the iframe).
+function openFileModal(url, title = 'Report file') {
     const overlay = document.getElementById('rsm-pdf-modal-overlay');
     const frame   = document.getElementById('rsm-pdf-frame');
     const heading = document.getElementById('rsm-pdf-modal-title');
@@ -428,7 +890,7 @@ function openFileModal(url, title = 'Report PDF') {
 function openAttachment(reportId, mime) {
     const previewable = mime === 'application/pdf' || String(mime).startsWith('image/');
     if (previewable) {
-        openFileModal(fileUrl(reportId, 'attachment'), 'Attachment');
+        openFileModal(fileUrl(reportId, 'attachment'), 'Report file');
     } else {
         window.location.href = fileUrl(reportId, 'attachment', true);
     }
@@ -447,7 +909,7 @@ async function reviewReport(reportId, notes) {
         if (json.success) {
             showToast('Report marked as reviewed.', 'success');
             viewReport(reportId);
-            loadReports();
+            refreshAll();
         } else {
             showToast(json.message, 'error');
         }
@@ -471,7 +933,7 @@ async function decideReport(reportId, decision, notes) {
         if (json.success) {
             showToast(`Report ${decision}.`, 'success');
             viewReport(reportId);
-            loadReports();
+            refreshAll(); // the stat cards and charts change with the decision
         } else {
             showToast(json.message, 'error');
         }
@@ -507,38 +969,23 @@ async function summarizeReport(reportId) {
     }
 }
 
-// ── SEARCH ────────────────────────────────────────────────────────────────────
-function applySearchFilter() {
-    const search = document.getElementById('rsm-search');
-    const term   = search?.value.toLowerCase().trim() ?? '';
-    const rows   = document.querySelectorAll('.rsm-table tbody tr');
-
-    rows.forEach(row => {
-        if (row.classList.contains('rsm-no-data')) return;
-        const title     = row.cells[1]?.textContent.toLowerCase() ?? '';
-        const submitter = row.cells[4]?.textContent.toLowerCase() ?? '';
-        row.style.display = (title.includes(term) || submitter.includes(term)) ? '' : 'none';
-    });
-}
-
 // ── TOAST ─────────────────────────────────────────────────────────────────────
 function showToast(message, type = 'info') {
-    const bg = type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#17a2b8';
-
-    // Stack above any toast that is still visible (e.g. "submitted" + an attachment warning).
-    const bottom = 24 + document.querySelectorAll('.rsm-toast').length * 64;
+    // One fixed container stacks the toasts, so no inline positioning is needed.
+    let stack = document.getElementById('rsm-toast-stack');
+    if (!stack) {
+        stack = document.createElement('div');
+        stack.id = 'rsm-toast-stack';
+        stack.className = 'rsm-toast-stack';
+        document.body.appendChild(stack);
+    }
 
     const toast = document.createElement('div');
-    toast.className = 'rsm-toast';
+    toast.className = `rsm-toast rsm-toast-${type}`;
+    toast.setAttribute('role', 'status');
     toast.textContent = message;
-    toast.style.cssText = `
-        position:fixed; bottom:${bottom}px; right:24px; z-index:9999;
-        background:${bg}; color:#fff; padding:12px 20px;
-        border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,.2);
-        font-size:.9rem; max-width:320px;
-    `;
+    stack.appendChild(toast);
 
-    document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 3500);
 }
 

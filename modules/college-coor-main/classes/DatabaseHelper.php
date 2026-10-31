@@ -293,7 +293,7 @@ class DatabaseHelper {
             // 9. Requests and Reports / Report Submission
             try {
                 $stmt = $this->conn->prepare("SELECT report_id, title, submitted_at
-                    FROM sd_reports ORDER BY submitted_at DESC LIMIT 10");
+                    FROM cc_reports ORDER BY submitted_at DESC LIMIT 10");
                 $stmt->execute();
                 foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
                     $activities[] = [
@@ -309,7 +309,7 @@ class DatabaseHelper {
             // 10. Concern Submission
             try {
                 $stmt = $this->conn->prepare("SELECT issue_id, title, submitted_on
-                    FROM sd_issues ORDER BY submitted_on DESC LIMIT 10");
+                    FROM cc_issues ORDER BY submitted_on DESC LIMIT 10");
                 $stmt->execute();
                 foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
                     $activities[] = [
@@ -325,7 +325,7 @@ class DatabaseHelper {
             // 11. Approval Submission
             try {
                 $stmt = $this->conn->prepare("SELECT approval_id, title, submitted_on
-                    FROM sd_approvals ORDER BY submitted_on DESC LIMIT 10");
+                    FROM cc_approvals ORDER BY submitted_on DESC LIMIT 10");
                 $stmt->execute();
                 foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
                     $activities[] = [

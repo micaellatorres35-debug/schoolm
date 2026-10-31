@@ -94,17 +94,33 @@ try {
             $status = isset($_GET['status']) && $_GET['status'] !== ''
                 ? $_GET['status']
                 : null;
+            $page = max(1, (int) ($_GET['page'] ?? 1));
 
             if ($isDirectress) {
-                // School Directress can view approvals across all departments.
                 $departmentId = null;
             } elseif ($departmentId === null) {
-                // Other users default to their own department.
                 $departmentId = $userInfo['department_id'] ?? null;
             }
 
             $reports = $reportClass->getReports($departmentId, $status);
-            rsm_respond(['success' => true, 'data' => array_map('rsm_public_report', $reports)]);
+            $publicReports = array_map('rsm_public_report', $reports);
+            $perPage = 25;
+            $total = count($publicReports);
+            $pages = max(1, (int) ceil($total / $perPage));
+            $page = min($page, $pages);
+            $offset = ($page - 1) * $perPage;
+            $pageData = array_slice($publicReports, $offset, $perPage);
+
+            rsm_respond([
+                'success' => true,
+                'data' => $pageData,
+                'meta' => [
+                    'page' => $page,
+                    'per_page' => $perPage,
+                    'pages' => $pages,
+                    'total' => $total,
+                ],
+            ]);
             break;
 
         // ------------------------------------------------------------------

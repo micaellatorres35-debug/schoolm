@@ -33,22 +33,22 @@ class DashboardOverview {
         } catch (Throwable $e) {}
 
         try {
-            $summary['pending_reports'] = (int) $this->conn->query("SELECT COUNT(*) FROM sd_reports WHERE status IN ('submitted', 'reviewed')")->fetchColumn();
+            $summary['pending_reports'] = (int) $this->conn->query("SELECT COUNT(*) FROM cc_reports WHERE status IN ('submitted', 'reviewed')")->fetchColumn();
         } catch (Throwable $e) {}
 
         try {
-            $summary['pending_approvals'] = (int) $this->conn->query("SELECT COUNT(*) FROM sd_approvals WHERE status IN ('submitted', 'reviewed')")->fetchColumn();
+            $summary['pending_approvals'] = (int) $this->conn->query("SELECT COUNT(*) FROM cc_approvals WHERE status IN ('submitted', 'reviewed')")->fetchColumn();
         } catch (Throwable $e) {}
 
         try {
-            $overdueReports = (int) $this->conn->query("SELECT COUNT(*) FROM sd_reports WHERE status IN ('submitted', 'reviewed') AND submitted_at IS NOT NULL AND DATEDIFF(CURDATE(), submitted_at) >= 7")->fetchColumn();
-            $overdueApprovals = (int) $this->conn->query("SELECT COUNT(*) FROM sd_approvals WHERE status IN ('submitted', 'reviewed') AND submitted_on IS NOT NULL AND DATEDIFF(CURDATE(), submitted_on) >= 7")->fetchColumn();
-            $overdueConcerns = (int) $this->conn->query("SELECT COUNT(*) FROM sd_issues WHERE status IN ('submitted', 'reviewed') AND submitted_on IS NOT NULL AND DATEDIFF(CURDATE(), submitted_on) >= 7")->fetchColumn();
+            $overdueReports = (int) $this->conn->query("SELECT COUNT(*) FROM cc_reports WHERE status IN ('submitted', 'reviewed') AND submitted_at IS NOT NULL AND DATEDIFF(CURDATE(), submitted_at) >= 7")->fetchColumn();
+            $overdueApprovals = (int) $this->conn->query("SELECT COUNT(*) FROM cc_approvals WHERE status IN ('submitted', 'reviewed') AND submitted_on IS NOT NULL AND DATEDIFF(CURDATE(), submitted_on) >= 7")->fetchColumn();
+            $overdueConcerns = (int) $this->conn->query("SELECT COUNT(*) FROM cc_issues WHERE status IN ('submitted', 'reviewed') AND submitted_on IS NOT NULL AND DATEDIFF(CURDATE(), submitted_on) >= 7")->fetchColumn();
             $summary['overdue_tasks'] = $overdueReports + $overdueApprovals + $overdueConcerns;
         } catch (Throwable $e) {}
 
         try {
-            $summary['open_concerns'] = (int) $this->conn->query("SELECT COUNT(*) FROM sd_issues WHERE status IN ('submitted', 'reviewed')")->fetchColumn();
+            $summary['open_concerns'] = (int) $this->conn->query("SELECT COUNT(*) FROM cc_issues WHERE status IN ('submitted', 'reviewed')")->fetchColumn();
         } catch (Throwable $e) {}
 
         return $summary;
@@ -64,11 +64,11 @@ class DashboardOverview {
                         d.department_name,
                         CONCAT(e.first_name, ' ', e.last_name) AS assigned_coordinator,
                         (
-                            (SELECT COUNT(*) FROM sd_reports r WHERE r.department_id = d.department_id AND r.status IN ('submitted', 'reviewed'))
-                            + (SELECT COUNT(*) FROM sd_approvals a
+                            (SELECT COUNT(*) FROM cc_reports r WHERE r.department_id = d.department_id AND r.status IN ('submitted', 'reviewed'))
+                            + (SELECT COUNT(*) FROM cc_approvals a
                                LEFT JOIN em_employees ae ON ae.employee_id = a.submit_by
                                WHERE ae.department_id = d.department_id AND a.status IN ('submitted', 'reviewed'))
-                            + (SELECT COUNT(*) FROM sd_issues i WHERE i.department = d.department_id AND i.status IN ('submitted', 'reviewed'))
+                            + (SELECT COUNT(*) FROM cc_issues i WHERE i.department = d.department_id AND i.status IN ('submitted', 'reviewed'))
                         ) AS pending_tasks
                     FROM em_departments d
                     LEFT JOIN em_employees e ON e.employee_id = d.department_head
@@ -109,7 +109,7 @@ class DashboardOverview {
             $query = "
                 SELECT 'report' AS source, r.title AS submission_title, d.department_name AS department_name, r.submitted_at AS submitted_at, r.status AS status,
                        '?page=report-submission' AS action_target
-                FROM sd_reports r
+                FROM cc_reports r
                 LEFT JOIN em_departments d ON d.department_id = r.department_id
                 WHERE r.status IN ('submitted', 'reviewed')
 
@@ -117,7 +117,7 @@ class DashboardOverview {
 
                 SELECT 'approval' AS source, a.title AS submission_title, d.department_name AS department_name, a.submitted_on AS submitted_at, a.status AS status,
                        '?page=approval-submission' AS action_target
-                FROM sd_approvals a
+                FROM cc_approvals a
                 LEFT JOIN em_employees e ON e.employee_id = a.submit_by
                 LEFT JOIN em_departments d ON d.department_id = e.department_id
                 WHERE a.status IN ('submitted', 'reviewed')
@@ -151,7 +151,7 @@ class DashboardOverview {
         $alertItems = [];
 
         try {
-            $reportAlerts = $this->conn->query("SELECT r.title, r.submitted_at, d.department_name FROM sd_reports r LEFT JOIN em_departments d ON d.department_id = r.department_id WHERE r.status IN ('submitted', 'reviewed') AND r.submitted_at IS NOT NULL AND DATEDIFF(CURDATE(), r.submitted_at) >= 7 LIMIT 3")->fetchAll(PDO::FETCH_ASSOC);
+            $reportAlerts = $this->conn->query("SELECT r.title, r.submitted_at, d.department_name FROM cc_reports r LEFT JOIN em_departments d ON d.department_id = r.department_id WHERE r.status IN ('submitted', 'reviewed') AND r.submitted_at IS NOT NULL AND DATEDIFF(CURDATE(), r.submitted_at) >= 7 LIMIT 3")->fetchAll(PDO::FETCH_ASSOC);
             foreach ($reportAlerts as $alert) {
                 $alertItems[] = [
                     'type' => 'Overdue report submission',
@@ -164,7 +164,7 @@ class DashboardOverview {
         } catch (Throwable $e) {}
 
         try {
-            $issueAlerts = $this->conn->query("SELECT i.title, i.submitted_on, d.department_name FROM sd_issues i LEFT JOIN em_departments d ON d.department_id = i.department WHERE i.status IN ('submitted', 'reviewed') AND i.submitted_on IS NOT NULL AND DATEDIFF(CURDATE(), i.submitted_on) >= 7 LIMIT 3")->fetchAll(PDO::FETCH_ASSOC);
+            $issueAlerts = $this->conn->query("SELECT i.title, i.submitted_on, d.department_name FROM cc_issues i LEFT JOIN em_departments d ON d.department_id = i.department WHERE i.status IN ('submitted', 'reviewed') AND i.submitted_on IS NOT NULL AND DATEDIFF(CURDATE(), i.submitted_on) >= 7 LIMIT 3")->fetchAll(PDO::FETCH_ASSOC);
             foreach ($issueAlerts as $alert) {
                 $alertItems[] = [
                     'type' => 'Urgent department concern',
@@ -177,7 +177,7 @@ class DashboardOverview {
         } catch (Throwable $e) {}
 
         try {
-            $approvalAlerts = $this->conn->query("SELECT a.title, a.submitted_on, d.department_name FROM sd_approvals a LEFT JOIN em_employees e ON e.employee_id = a.submit_by LEFT JOIN em_departments d ON d.department_id = e.department_id WHERE a.status IN ('submitted', 'reviewed') LIMIT 3")->fetchAll(PDO::FETCH_ASSOC);
+            $approvalAlerts = $this->conn->query("SELECT a.title, a.submitted_on, d.department_name FROM cc_approvals a LEFT JOIN em_employees e ON e.employee_id = a.submit_by LEFT JOIN em_departments d ON d.department_id = e.department_id WHERE a.status IN ('submitted', 'reviewed') LIMIT 3")->fetchAll(PDO::FETCH_ASSOC);
             foreach ($approvalAlerts as $alert) {
                 $alertItems[] = [
                     'type' => 'Pending approval',

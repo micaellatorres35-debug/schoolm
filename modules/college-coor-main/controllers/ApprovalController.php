@@ -77,8 +77,7 @@ try {
     }
 
     $approvalClass = new Approval();
-    $roleName = $_SESSION['role_name'] ?? ($userInfo['role'] ?? '');
-    $isApprover = trim((string) $roleName) === 'College Coordinator';
+$isApprover = (int) ($_SESSION['role'] ?? 0) === 27; // Admin College Coordinator
     $viewer = [
         'is_approver' => $isApprover,
         'employee_id' => (int) ($userInfo['employee_id'] ?? $_SESSION['employee_id'] ?? 0),
@@ -421,7 +420,7 @@ function approval_public($approval) {
 
     $approval['history'] = [];
     if (!empty($approval['created_at'])) {
-        $approval['history'][] = ['event' => 'Created', 'date' => $approval['created_at'], 'by' => null, 'notes' => null];
+        $approval['history'][] = ['event' => 'Created', 'date' => $approval['created_at'], 'by' => $approval['submit_by_name'] ?? null, 'notes' => null];
     }
     if (!empty($approval['submitted_on'])) {
         $approval['history'][] = ['event' => 'Submitted', 'date' => $approval['submitted_on'], 'by' => $approval['submit_by_name'] ?? null, 'notes' => null];

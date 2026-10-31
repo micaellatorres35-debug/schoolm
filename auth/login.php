@@ -105,6 +105,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         20 => 'modules/library/index.php',
         21 => 'modules/laboratory/',
         22 => 'modules/college-coor/index.php',
+        27 => 'modules/college-coor-main/index.php',
+
     ];
 
         $role = (int) $user['role'];

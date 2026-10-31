@@ -470,31 +470,28 @@ function renderApprovalDetail(approval) {
     const status = (approval.status || '').toLowerCase();
     const statusText = APPROVAL_STATUS_LABELS[status] || status;
     const attachmentUrl = approval.has_attachment ? approvalFileUrl(approval.approval_id, 'attachment') : '';
-    const documentSection = approval.has_attachment ? `
-        <div class="approval-document-box">
-            <div class="approval-document-header">
-                <span>Request document</span>
-                <div class="approval-document-actions">
-                    <button type="button" class="approval-secondary-btn" data-open-attachment="${esc(approval.approval_id)}">Full screen</button>
-                    <a href="${approvalFileUrl(approval.approval_id, 'attachment', true)}" class="approval-secondary-link" target="_blank" rel="noopener noreferrer">Download</a>
-                </div>
-            </div>
-            <div class="approval-document-preview">
-                ${previewDocumentMarkup(attachmentUrl, approval.attachment_mime || '')}
-            </div>
+    const documentName = approval.has_attachment ? (approval.attachment_name || 'Document') : '';
+    const documentSize = approval.has_attachment && approval.attachment_size != null ? formatFileSize(Number(approval.attachment_size) || 0) : '';
+
+    const documentValue = approval.has_attachment ? `
+        <span class="approval-document-file-name">${esc(documentName)}${documentSize ? ` (${esc(documentSize)})` : ''}</span>
+        <div class="approval-document-actions">
+            <button type="button" class="approval-secondary-btn" data-open-attachment="${esc(approval.approval_id)}">Full screen</button>
+            <a href="${approvalFileUrl(approval.approval_id, 'attachment', true)}" class="approval-secondary-link" target="_blank" rel="noopener noreferrer">Download</a>
         </div>
-    ` : '<div class="approval-empty-text">No request document uploaded.</div>';
+    ` : 'No document uploaded';
 
     let reviewSection = '';
     if (isApprover && status === 'submitted') {
         reviewSection = `
             <div class="approval-review-box">
                 <label for="approval-review-notes">Review notes (optional)</label>
-                <textarea id="approval-review-notes" rows="3" placeholder="Add review notes"></textarea>
+                <textarea id="approval-review-notes" rows="3" placeholder="Anything the decision should take into account"></textarea>
                 <div class="approval-inline-error" id="approval-review-error" hidden></div>
                 <div class="approval-modal-actions">
                     <button type="button" id="approval-mark-reviewed" data-approval-id="${esc(approval.approval_id)}" class="approval-primary-btn">Mark as reviewed</button>
                 </div>
+                <div class="approval-review-helper">Reviewing moves this request to the decision step.</div>
             </div>
         `;
     }
@@ -503,7 +500,7 @@ function renderApprovalDetail(approval) {
         reviewSection = `
             <div class="approval-review-box">
                 <label for="approval-decision-notes">Decision notes</label>
-                <textarea id="approval-decision-notes" rows="3" placeholder="Add a decision note"></textarea>
+                <textarea id="approval-decision-notes" rows="3" placeholder="Anything the decision should take into account"></textarea>
                 <div class="approval-inline-error" id="approval-decision-error" hidden></div>
                 <div class="approval-modal-actions approval-decision-actions">
                     <button type="button" class="approval-primary-btn approval-decide-btn" data-decision="approved" data-approval-id="${esc(approval.approval_id)}">Approve</button>
@@ -516,34 +513,67 @@ function renderApprovalDetail(approval) {
     const historyEntries = Array.isArray(approval.history) ? approval.history : [];
     const historyMarkup = historyEntries.length ? historyEntries.map((entry) => {
         const when = entry.date ? formatDateValue(entry.date, true) : '—';
+        const eventLabel = {
+            Created: 'Request created',
+            Submitted: 'Submitted for approval',
+            Reviewed: 'Reviewed',
+            Approved: 'Approved',
+            Rejected: 'Rejected',
+        }[(entry.event || '').trim()] || (entry.event || 'Update');
         const notes = entry.notes ? `<div class="approval-history-note">${esc(entry.notes)}</div>` : '';
+        const personLine = entry.by ? `<div class="approval-history-user">${esc(entry.by)}</div>` : '';
         return `
             <div class="approval-history-item">
-                <div class="approval-history-dot"></div>
-                <div class="approval-history-content">
-                    <div class="approval-history-heading">${esc(entry.event || 'Update')}</div>
-                    <div class="approval-history-meta">${esc(when)}${entry.by ? ` • ${esc(entry.by)}` : ''}</div>
+                <div class="approval-history-main">
+                    <div class="approval-history-heading">${esc(eventLabel)}</div>
+                    ${personLine}
                     ${notes}
                 </div>
+                <div class="approval-history-date">${esc(when)}</div>
             </div>
         `;
     }).join('') : '<div class="approval-empty-text">No history available.</div>';
 
-    const aiSummary = approval.ai_summary ? esc(approval.ai_summary) : 'No AI summary yet.';
+    const aiSummary = approval.ai_summary ? esc(approval.ai_summary) : 'No summary yet.';
+    const documentPreview = approval.has_attachment ? `
+        <div class="approval-document-preview">
+            ${previewDocumentMarkup(attachmentUrl, approval.attachment_mime || '')}
+        </div>
+    ` : '';
 
     body.innerHTML = `
-        <div class="approval-detail-grid">
-            <div class="approval-detail-row"><span class="approval-detail-label">Request ID</span><span>#${esc(approval.approval_id)}</span></div>
-            <div class="approval-detail-row"><span class="approval-detail-label">Title</span><span>${esc(approval.title || 'Untitled request')}</span></div>
-            <div class="approval-detail-row"><span class="approval-detail-label">Department</span><span>${esc(approval.department_name || 'N/A')}</span></div>
-            <div class="approval-detail-row"><span class="approval-detail-label">Submitted by</span><span>${esc(approval.submit_by_name || 'N/A')}</span></div>
-            <div class="approval-detail-row"><span class="approval-detail-label">Submitted</span><span>${esc(approval.submitted_on ? formatDateValue(approval.submitted_on, true) : 'N/A')}</span></div>
-            <div class="approval-detail-row"><span class="approval-detail-label">Status</span><span class="approval-status-pill approval-status-${status}">${esc(statusText)}</span></div>
+        <div class="approval-detail-list">
+            <div class="approval-detail-row">
+                <div class="approval-detail-label">Request ID</div>
+                <div class="approval-detail-value">#${esc(approval.approval_id)}</div>
+            </div>
+            <div class="approval-detail-row">
+                <div class="approval-detail-label">Title</div>
+                <div class="approval-detail-value">${esc(approval.title || 'Untitled request')}</div>
+            </div>
+            <div class="approval-detail-row">
+                <div class="approval-detail-label">Department</div>
+                <div class="approval-detail-value">${esc(approval.department_name || 'N/A')}</div>
+            </div>
+            <div class="approval-detail-row">
+                <div class="approval-detail-label">Submitted By</div>
+                <div class="approval-detail-value">${esc(approval.submit_by_name || 'N/A')}</div>
+            </div>
+            <div class="approval-detail-row">
+                <div class="approval-detail-label">Submitted</div>
+                <div class="approval-detail-value">${esc(approval.submitted_on ? formatDateValue(approval.submitted_on, true) : 'N/A')}</div>
+            </div>
+            <div class="approval-detail-row">
+                <div class="approval-detail-label">Status</div>
+                <div class="approval-detail-value"><span class="approval-status-pill approval-status-${status}">${esc(statusText.toUpperCase())}</span></div>
+            </div>
+            <div class="approval-detail-row approval-detail-row-document">
+                <div class="approval-detail-label">Request document</div>
+                <div class="approval-detail-value approval-detail-document-value">${documentValue}</div>
+            </div>
         </div>
 
-        <div class="approval-section-block">
-            ${documentSection}
-        </div>
+        ${documentPreview}
 
         <div class="approval-section-block">
             <h4>Description</h4>
@@ -727,6 +757,16 @@ function formatDateValue(value, includeTime = false) {
     const formattedDate = date.toLocaleDateString(undefined, dateOptions);
     if (!includeTime) return formattedDate;
     return `${formattedDate} ${date.toLocaleTimeString(undefined, timeOptions)}`;
+}
+
+function formatFileSize(sizeInBytes) {
+    if (typeof sizeInBytes !== 'number' || Number.isNaN(sizeInBytes) || sizeInBytes < 0) return '';
+
+    const units = ['bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(sizeInBytes) / Math.log(1024));
+    const size = (sizeInBytes / Math.pow(1024, i)).toFixed(2);
+
+    return `${size} ${units[i]}`;
 }
 
 function esc(value) {

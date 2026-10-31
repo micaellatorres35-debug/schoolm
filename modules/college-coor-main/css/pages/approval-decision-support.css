@@ -607,46 +607,101 @@ School Directress — Approval & Decision Support
     margin-bottom: 18px;
 }
 
-.approval-detail-row {
+.approval-detail-list {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: 10px 12px;
-    border: 1px solid var(--approval-border);
-    border-radius: 10px;
-    background: #fafbfd;
+    margin-bottom: 18px;
+}
+
+.approval-detail-row {
+    display: grid;
+    grid-template-columns: minmax(110px, 170px) minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+    border: 0;
+    border-bottom: 1px solid var(--approval-border);
+    background: transparent;
+    padding: 12px 0;
+    margin: 0;
+    border-radius: 0;
+}
+
+.approval-detail-row:last-child {
+    border-bottom: 0;
 }
 
 .approval-detail-label {
-    font-size: 0.72rem;
+    font-size: 0.74rem;
     font-weight: 700;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--approval-muted);
+    line-height: 1.5;
+}
+
+.approval-detail-value {
+    color: var(--approval-text);
+    font-weight: 600;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.approval-detail-row-document {
+    align-items: center;
+}
+
+.approval-detail-document-value {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+.approval-document-file-name {
+    display: inline-block;
+    color: var(--approval-text);
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.approval-document-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.approval-document-preview {
+    margin-top: 14px;
+    border: 1px solid var(--approval-border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: #fff;
 }
 
 /* ── Section Blocks ────────────────────────────────────── */
 
 .approval-section-block {
-    margin-top: 18px;
+    margin-top: 22px;
 }
 
 .approval-section-block h4 {
     margin: 0 0 10px;
-    font-size: 1rem;
+    font-size: 0.97rem;
     font-weight: 800;
     color: var(--approval-text);
+    letter-spacing: -0.01em;
 }
 
 /* ── Text Blocks ───────────────────────────────────────── */
 
 .approval-text-block {
-    background: #fafbfd;
-    border: 1px solid var(--approval-border);
-    border-radius: 10px;
-    padding: 12px 14px;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
     color: var(--approval-text);
-    line-height: 1.6;
+    line-height: 1.7;
 }
 
 .approval-pre-wrap {
@@ -703,52 +758,63 @@ School Directress — Approval & Decision Support
     gap: 12px;
     border-left: 2px solid var(--approval-border);
     padding-left: 18px;
+    margin-top: 4px;
 }
 
 .approval-history-item {
-    position: relative;
     display: flex;
-    gap: 10px;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    position: relative;
+    padding: 0;
+    background: transparent;
+    border: 0;
 }
 
-.approval-history-dot {
+.approval-history-item::before {
+    content: "";
     position: absolute;
-    left: -23px;
-    top: 5px;
+    left: -22px;
+    top: 7px;
     width: 10px;
     height: 10px;
     border-radius: 50%;
     background: var(--approval-primary);
+    box-shadow: 0 0 0 4px rgba(32, 0, 130, 0.08);
 }
 
-.approval-history-content {
-    flex: 1;
-    background: #fafbfd;
-    border: 1px solid var(--approval-border);
-    border-radius: 10px;
-    padding: 12px 14px;
+.approval-history-main {
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 .approval-history-heading {
+    font-size: 0.94rem;
     font-weight: 800;
     color: var(--approval-text);
     margin-bottom: 4px;
 }
 
-.approval-history-meta {
-    font-size: 0.78rem;
+.approval-history-user,
+.approval-history-note {
     color: var(--approval-muted);
-    margin-bottom: 6px;
+    font-size: 0.82rem;
+    line-height: 1.5;
 }
 
 .approval-history-note {
-    font-size: 0.85rem;
+    margin-top: 4px;
     color: var(--approval-text);
-    line-height: 1.5;
-    white-space: pre-wrap;
 }
 
-/* ── AI Summary / Review Box ───────────────────────────── */
+.approval-history-date {
+    flex-shrink: 0;
+    font-size: 0.76rem;
+    color: var(--approval-muted);
+    font-weight: 700;
+    padding-top: 2px;
+}
 
 .approval-ai-header {
     display: flex;
@@ -763,69 +829,87 @@ School Directress — Approval & Decision Support
 }
 
 .approval-ai-summary {
-    background: #fafbfd;
-    border: 1px solid var(--approval-border);
-    border-radius: 10px;
-    padding: 12px 14px;
+    background: #f5f5fa;
+    border: 1px solid #e8e8f0;
+    border-radius: 12px;
+    padding: 16px 18px;
     color: var(--approval-text);
-    line-height: 1.6;
+    line-height: 1.7;
     white-space: pre-wrap;
 }
 
 .approval-review-box {
-    margin-top: 20px;
-    padding-top: 18px;
-    border-top: 1px solid var(--approval-border);
+    margin-top: 22px;
+    padding: 18px 18px 16px;
+    border: 1px solid var(--approval-border);
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.04);
 }
 
 .approval-review-box label {
     display: block;
-    font-size: 0.82rem;
-    font-weight: 700;
-    color: var(--approval-text);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--approval-muted);
     margin-bottom: 8px;
 }
 
 .approval-review-box textarea {
     width: 100%;
-    min-height: 84px;
+    min-height: 90px;
     border: 1px solid var(--approval-border);
     border-radius: 10px;
     padding: 10px 12px;
     resize: vertical;
     font-size: 0.94rem;
+    background: #fff;
 }
 
-/* ── Decision Actions ──────────────────────────────────── */
-
-.approval-decision-actions {
-    justify-content: flex-start;
+.approval-review-helper {
+    margin-top: 10px;
+    color: var(--approval-muted);
+    font-size: 0.78rem;
 }
 
-/* ── Toast Notifications ───────────────────────────────── */
-
-.approval-toast {
-    position: fixed;
-    right: 24px;
-    bottom: 24px;
-    z-index: 1000;
-    padding: 12px 16px;
-    border-radius: 10px;
-    color: white;
-    font-size: 0.9rem;
-    font-weight: 700;
-    box-shadow: 0 10px 28px rgba(17, 24, 39, 0.2);
+.approval-status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
 }
 
-.approval-toast-success {
-    background: #1e8f52;
+.approval-status-submitted {
+    background: rgba(32, 0, 130, 0.1);
+    color: var(--approval-primary);
 }
 
-.approval-toast-error {
-    background: #b42318;
+.approval-status-reviewed {
+    background: rgba(244, 193, 75, 0.2);
+    color: #835c00;
 }
 
-/* ── Responsive ───────────────────────────────────────── */
+.approval-status-approved {
+    background: rgba(18, 122, 69, 0.1);
+    color: #127a45;
+}
+
+.approval-status-rejected {
+    background: rgba(163, 58, 58, 0.1);
+    color: #a33a3a;
+}
+
+.approval-status-draft {
+    background: rgba(109, 115, 128, 0.1);
+    color: var(--approval-muted);
+}
 
 @media (max-width: 1000px) {
     .approval-board {
@@ -864,5 +948,19 @@ School Directress — Approval & Decision Support
 
     .approval-detail-grid {
         grid-template-columns: 1fr;
+    }
+
+    .approval-detail-row {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+
+    .approval-history-item {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .approval-history-date {
+        padding-top: 0;
     }
 }

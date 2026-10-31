@@ -3,6 +3,10 @@
     include_once __DIR__ . '/FileStorage.php';
 
     class Report {
+        const STATUSES      = ['draft', 'submitted', 'reviewed', 'approved', 'rejected'];
+        const TREND_DEFAULT = 6;    // months shown when no date range is chosen
+        const TREND_MAX     = 36;   // longest range the trend chart will plot
+
         private $conn;
 
         public function __construct($pdo = null) {
@@ -15,6 +19,8 @@
         }
 
         // ── LIST / READ ──────────────────────────────────────────────
+
+        // Original list query, kept for any caller that still uses it.
         public function getReports($department_id = null, $status = null) {
             $sql = "SELECT
                         r.report_id, r.title, r.summary, r.findings, r.recommendations,
@@ -85,57 +91,255 @@
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
+        // Distinct type NAMES (several departments can have a type with the same name),
+        // optionally limited to one department. Used by the type filter.
+        public function getReportTypeNames($department_id = null) {
+            if ($department_id === null) {
+                $stmt = $this->conn->prepare(
+                    "SELECT DISTINCT report_type FROM `cc_report_type`
+                     WHERE report_type IS NOT NULL AND report_type <> '' ORDER BY report_type ASC"
+                );
+                $stmt->execute();
+            } else {
+                $stmt = $this->conn->prepare(
+                    "SELECT DISTINCT report_type FROM `cc_report_type`
+                     WHERE department_id = :d AND report_type IS NOT NULL AND report_type <> '' ORDER BY report_type ASC"
+                );
+                $stmt->execute([':d' => (int) $department_id]);
+            }
+            return array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'report_type');
+        }
+
+        public function reportTypeExists($type_id) {
+            $stmt = $this->conn->prepare("SELECT 1 FROM `cc_report_type` WHERE type_id = :id");
+            $stmt->execute([':id' => (int) $type_id]);
+            return (bool) $stmt->fetchColumn();
+        }
+
+        /* ── Filtering shared by the list and the analytics ───────────
+           $f keys (all optional, already validated by the controller):
+             department_id (int, -1 = "matches nothing"), type (name), status,
+             date_from / date_to (Y-m-d, applied to submitted_at), search.
+           Every query using this must alias: cc_reports r, em_employees e (submitter). */
+        private function buildFilter(array $f, $includeStatus = true) {
+            $where  = ['1=1'];
+            $params = [];
+
+            if (isset($f['department_id']) && $f['department_id'] !== null && $f['department_id'] !== '') {
+                $where[] = 'r.department_id = :dept';
+                $params[':dept'] = (int) $f['department_id'];
+            }
+
+            $type = trim((string) ($f['type'] ?? ''));
+            if ($type !== '') {
+                $where[] = 'r.report_type IN (SELECT t.type_id FROM `cc_report_type` t WHERE t.report_type = :tname)';
+                $params[':tname'] = $type;
+            }
+
+            $status = (string) ($f['status'] ?? '');
+            if ($includeStatus && in_array($status, self::STATUSES, true)) {
+                $where[] = 'r.status = :status';
+                $params[':status'] = $status;
+            }
+
+            if (!empty($f['date_from'])) {
+                $where[] = 'r.submitted_at >= :df';
+                $params[':df'] = $f['date_from'] . ' 00:00:00';
+            }
+            if (!empty($f['date_to'])) {
+                $next = (new DateTime($f['date_to']))->modify('+1 day')->format('Y-m-d');
+                $where[] = 'r.submitted_at < :dt';
+                $params[':dt'] = $next . ' 00:00:00';
+            }
+
+            $search = trim((string) ($f['search'] ?? ''));
+            if ($search !== '') {
+                $like = '%' . addcslashes($search, '%_\\') . '%';
+                $where[] = "(r.title LIKE :s1
+                             OR CONCAT_WS(' ', e.first_name, e.last_name) LIKE :s2
+                             OR r.report_id = :sid)";
+                $params[':s1']  = $like;
+                $params[':s2']  = $like;
+                $params[':sid'] = ctype_digit($search) ? (int) $search : 0;
+            }
+
+            return [implode(' AND ', $where), $params];
+        }
+
+        private function fromJoins() {
+            return " FROM `cc_reports` r
+                     LEFT JOIN `em_departments` d ON r.department_id = d.department_id
+                     LEFT JOIN `em_employees` e   ON r.submitted_by = e.employee_id ";
+        }
+
+        public function countReports(array $f) {
+            list($where, $params) = $this->buildFilter($f);
+            $stmt = $this->conn->prepare('SELECT COUNT(*)' . $this->fromJoins() . 'WHERE ' . $where);
+            $stmt->execute($params);
+            return (int) $stmt->fetchColumn();
+        }
+
+        public function listReports(array $f, $limit, $offset) {
+            list($where, $params) = $this->buildFilter($f);
+
+            $sql = "SELECT r.report_id, r.title, r.status, r.submitted_at, r.created_at,
+                           d.department_name,
+                           CONCAT(e.first_name, ' ', e.last_name) AS submitted_by,
+                           rt.report_type AS report_type
+                    " . $this->fromJoins() . "
+                    LEFT JOIN `cc_report_type` rt ON r.report_type = rt.type_id
+                    WHERE $where
+                    ORDER BY r.submitted_at DESC, r.created_at DESC, r.report_id DESC
+                    LIMIT :limit OFFSET :offset";
+
+            $stmt = $this->conn->prepare($sql);
+            foreach ($params as $k => $v) {
+                $stmt->bindValue($k, $v);
+            }
+            $stmt->bindValue(':limit', (int) $limit, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', (int) $offset, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        /* ── Analytics ────────────────────────────────────────────── */
+
+        // Count per status. The status filter is ignored on purpose, so the
+        // distribution shows every status inside the current scope.
+        public function getStatusCounts(array $f) {
+            list($where, $params) = $this->buildFilter($f, false);
+            $stmt = $this->conn->prepare(
+                'SELECT r.status, COUNT(*) AS c' . $this->fromJoins() . 'WHERE ' . $where . ' GROUP BY r.status'
+            );
+            $stmt->execute($params);
+
+            $out = array_fill_keys(self::STATUSES, 0);
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $out[$row['status']] = (int) $row['c'];
+            }
+            return $out;
+        }
+
+        // Months shown on the trend chart: the chosen range, otherwise the last six months.
+        public function resolveTrendRange(array $f) {
+            $today = new DateTime('today');
+            $from  = !empty($f['date_from']) ? new DateTime($f['date_from']) : null;
+            $to    = !empty($f['date_to'])   ? new DateTime($f['date_to'])   : null;
+
+            if (!$to) {
+                $to = ($from && $from > $today) ? clone $from : clone $today;
+            }
+            if (!$from) {
+                $from = (clone $to)->modify('first day of this month')->modify('-' . (self::TREND_DEFAULT - 1) . ' months');
+            }
+            if ($from > $to) {
+                $from = clone $to;
+            }
+
+            $start = (clone $from)->modify('first day of this month');
+            $end   = (clone $to)->modify('last day of this month');
+
+            // Never plot more than TREND_MAX months
+            $earliest = (clone $end)->modify('first day of this month')->modify('-' . (self::TREND_MAX - 1) . ' months');
+            if ($start < $earliest) {
+                $start = $earliest;
+            }
+            return [$start, $end];
+        }
+
+        // Submissions per month (by submitted_at), zero-filled so quiet months still appear.
+        public function getMonthlyTrend(array $f) {
+            list($start, $end) = $this->resolveTrendRange($f);
+
+            $f['date_from'] = $start->format('Y-m-d');
+            $f['date_to']   = $end->format('Y-m-d');
+            list($where, $params) = $this->buildFilter($f);
+
+            $stmt = $this->conn->prepare(
+                "SELECT DATE_FORMAT(r.submitted_at, '%Y-%m') AS ym, COUNT(*) AS c"
+                . $this->fromJoins() . "WHERE $where AND r.submitted_at IS NOT NULL GROUP BY ym"
+            );
+            $stmt->execute($params);
+            $byMonth = [];
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $byMonth[$row['ym']] = (int) $row['c'];
+            }
+
+            $labels = [];
+            $values = [];
+            $cursor = (clone $start)->modify('first day of this month');
+            while ($cursor <= $end) {
+                $key      = $cursor->format('Y-m');
+                $labels[] = $key;
+                $values[] = $byMonth[$key] ?? 0;
+                $cursor->modify('+1 month');
+            }
+            return ['labels' => $labels, 'values' => $values];
+        }
+
+        // Reports per department; reports without a department are grouped as "Unassigned".
+        public function getDepartmentCounts(array $f) {
+            list($where, $params) = $this->buildFilter($f);
+            $stmt = $this->conn->prepare(
+                "SELECT COALESCE(d.department_name, 'Unassigned') AS name, COUNT(*) AS c"
+                . $this->fromJoins() . "WHERE $where
+                 GROUP BY r.department_id, d.department_name
+                 ORDER BY c DESC, name ASC"
+            );
+            $stmt->execute($params);
+
+            $rows = [];
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $rows[] = ['name' => $row['name'], 'count' => (int) $row['c']];
+            }
+            return $rows;
+        }
+
         // ── CREATE / SAVE ────────────────────────────────────────────
-        // $data keys: title, report_type, summary, findings, recommendations
+        // $data keys: title, report_type, description
         public function saveDraft($data, $report_id = null) {
             $submitted_by  = $_SESSION['employee_id'];
             $department_id = $this->getEmployeeDepartment($submitted_by);
 
             if ($report_id) {
                 $sql = "UPDATE `cc_reports` SET
-                            title = :title, report_type = :report_type,
-                            summary = :summary, findings = :findings, recommendations = :recommendations
+                            title = :title, report_type = :report_type, description = :description
                         WHERE report_id = :report_id AND submitted_by = :submitted_by AND status = 'draft'";
                 $stmt = $this->conn->prepare($sql);
                 $stmt->execute([
-                    ':title'           => $data['title'],
-                    ':report_type'     => $data['report_type'],
-                    ':summary'         => $data['summary'],
-                    ':findings'        => $data['findings'],
-                    ':recommendations' => $data['recommendations'],
-                    ':report_id'       => $report_id,
-                    ':submitted_by'    => $submitted_by,
+                    ':title'        => $data['title'],
+                    ':report_type'  => $data['report_type'],
+                    ':description'  => $data['description'],
+                    ':report_id'    => $report_id,
+                    ':submitted_by' => $submitted_by,
                 ]);
                 return $report_id;
             }
 
             $sql = "INSERT INTO `cc_reports`
-                        (title, report_type, summary, findings, recommendations, department_id, submitted_by, status, created_at)
+                        (title, report_type, description, department_id, submitted_by, status, created_at)
                     VALUES
-                        (:title, :report_type, :summary, :findings, :recommendations, :department_id, :submitted_by, 'draft', NOW())";
+                        (:title, :report_type, :description, :department_id, :submitted_by, 'draft', NOW())";
             $stmt = $this->conn->prepare($sql);
             $stmt->execute([
-                ':title'           => $data['title'],
-                ':report_type'     => $data['report_type'],
-                ':summary'         => $data['summary'],
-                ':findings'        => $data['findings'],
-                ':recommendations' => $data['recommendations'],
-                ':department_id'   => $department_id,
-                ':submitted_by'    => $submitted_by,
+                ':title'         => $data['title'],
+                ':report_type'   => $data['report_type'],
+                ':description'   => $data['description'],
+                ':department_id' => $department_id,
+                ':submitted_by'  => $submitted_by,
             ]);
             return $this->conn->lastInsertId();
         }
 
-        // Create (or promote an existing draft belonging to the current user) straight to 'submitted'
-        public function submitReport($data, $report_id = null) {
-            $report_id = $this->saveDraft($data, $report_id);
-
+        // Promotes the CURRENT USER'S own draft to 'submitted'. Returns false if nothing changed
+        // (not the owner, or not a draft), so one user can't submit someone else's report.
+        public function submitDraft($report_id) {
             $stmt = $this->conn->prepare(
-                "UPDATE `cc_reports` SET status = 'submitted', submitted_at = NOW() WHERE report_id = :report_id"
+                "UPDATE `cc_reports` SET status = 'submitted', submitted_at = NOW()
+                 WHERE report_id = :report_id AND submitted_by = :submitted_by AND status = 'draft'"
             );
-            $stmt->execute([':report_id' => $report_id]);
-
-            return $report_id;
+            $stmt->execute([':report_id' => $report_id, ':submitted_by' => $_SESSION['employee_id']]);
+            return $stmt->rowCount() > 0;
         }
 
         private function getEmployeeDepartment($employee_id) {
@@ -145,7 +349,7 @@
             return $employee['department_id'] ?? null;
         }
 
-        // ── OPTIONAL ATTACHMENT ──────────────────────────────────────
+        // ── REPORT FILE (stored in the attachment_* columns) ─────────
         // Only the person who created the report can attach, and only while it is a draft/submitted.
         // $path is the RELATIVE storage path returned by FileStorage::store().
         public function setAttachment($report_id, $path, $name, $mime, $size) {
@@ -198,90 +402,24 @@
             return $stmt->rowCount() > 0;
         }
 
-        // ── PDF GENERATION (dompdf) ───────────────────────────────────
-        // composer require dompdf/dompdf
-        // Saves into FileStorage and stores a RELATIVE path (reports/pdf/...) in pdf_path.
-        public function generatePdf($report_id) {
-            $autoload = __DIR__ . '/../../../vendor/autoload.php';
-            if (!file_exists($autoload)) {
-                // Thrown as a normal Exception (not a fatal require error) so callers
-                // can catch it and still return a valid JSON response.
-                throw new \RuntimeException('PDF library not installed. Run: composer require dompdf/dompdf');
-            }
-            require_once $autoload;
-
-            $report = $this->getReportById($report_id);
-            if (!$report) {
-                return false;
-            }
-
-            $html = $this->buildReportHtml($report);
-
-            $dompdf = new \Dompdf\Dompdf();
-            $dompdf->loadHtml($html);
-            $dompdf->setPaper('A4', 'portrait');
-            $dompdf->render();
-
-            $fileName     = 'report_' . $report_id . '_' . time() . '.pdf';
-            $relativePath = FileStorage::storeBytes($dompdf->output(), 'reports/pdf', $fileName);
-
-            $stmt = $this->conn->prepare("UPDATE `cc_reports` SET pdf_path = :pdf_path WHERE report_id = :report_id");
-            $stmt->execute([':pdf_path' => $relativePath, ':report_id' => $report_id]);
-
-            return $relativePath;
-        }
-
-        private function buildReportHtml($report) {
-            $title           = htmlspecialchars($report['title'] ?? '');
-            $reportType      = htmlspecialchars($report['report_type'] ?? 'N/A');
-            $department      = htmlspecialchars($report['department_name'] ?? 'N/A');
-            $submittedBy     = htmlspecialchars($report['submitted_by_name'] ?? 'N/A');
-            $submittedAt     = htmlspecialchars($report['submitted_at'] ?? '');
-            $summary         = nl2br(htmlspecialchars($report['summary'] ?? ''));
-            $findings        = nl2br(htmlspecialchars($report['findings'] ?? ''));
-            $recommendations = nl2br(htmlspecialchars($report['recommendations'] ?? ''));
-
-            return <<<HTML
-            <html>
-            <head>
-                <style>
-                    body { font-family: DejaVu Sans, sans-serif; font-size: 12px; color: #222; }
-                    h1 { font-size: 18px; margin-bottom: 4px; }
-                    .meta { font-size: 11px; color: #555; margin-bottom: 20px; }
-                    .meta span { display: inline-block; margin-right: 18px; }
-                    h2 { font-size: 13px; margin-top: 22px; margin-bottom: 6px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
-                    p { line-height: 1.5; }
-                </style>
-            </head>
-            <body>
-                <h1>{$title}</h1>
-                <div class="meta">
-                    <span><strong>Type:</strong> {$reportType}</span>
-                    <span><strong>Department:</strong> {$department}</span>
-                    <span><strong>Submitted by:</strong> {$submittedBy}</span>
-                    <span><strong>Date:</strong> {$submittedAt}</span>
-                </div>
-
-                <h2>Summary</h2>
-                <p>{$summary}</p>
-
-                <h2>Findings</h2>
-                <p>{$findings}</p>
-
-                <h2>Recommendations</h2>
-                <p>{$recommendations}</p>
-            </body>
-            </html>
-            HTML;
-        }
-
         // ── AI SUMMARIZATION (Google Gemini free tier) ────────────────
+        // Summarizes whatever text the report has (description, plus the older
+        // summary/findings/recommendations on reports written before file submission).
         // Requires GEMINI_API_KEY in env (or a defined constant of the same name).
-        // Get a free key at https://aistudio.google.com/apikey — no credit card required.
         public function generateAiSummary($report_id) {
             $report = $this->getReportById($report_id);
             if (!$report) {
                 return ['success' => false, 'message' => 'Report not found.'];
+            }
+
+            $parts = [];
+            foreach (['description' => 'Description', 'summary' => 'Summary', 'findings' => 'Findings', 'recommendations' => 'Recommendations'] as $key => $label) {
+                if (trim((string) ($report[$key] ?? '')) !== '') {
+                    $parts[] = $label . ': ' . $report[$key];
+                }
+            }
+            if (!$parts) {
+                return ['success' => false, 'message' => 'This report has no text to summarize.'];
             }
 
             $apiKey = getenv('GEMINI_API_KEY') ?: (defined('GEMINI_API_KEY') ? GEMINI_API_KEY : null);
@@ -291,10 +429,7 @@
 
             $prompt = "Summarize the following school report in 3-4 concise sentences for a school directress reviewing it. "
                      . "Focus on the key takeaway, the findings, and the recommendation.\n\n"
-                     . "Title: {$report['title']}\n"
-                     . "Summary: {$report['summary']}\n"
-                     . "Findings: {$report['findings']}\n"
-                     . "Recommendations: {$report['recommendations']}";
+                     . "Title: {$report['title']}\n" . implode("\n", $parts);
 
             $payload = json_encode([
                 'contents' => [

@@ -1,113 +1,431 @@
 /* ============================================================
    School Directress — Report Submission & Management
-   Independent styles
+   Prefix: rsm-  (kept from the existing module so nothing else is affected)
+   Uses the global --color1 … --color10 tokens.
    ============================================================ */
 
 .rsm-page {
     width: 100%;
 }
 
-.rsm-list-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: var(--color3);
-    padding: 1.1rem 1.6rem;
-    border-radius: 10px;
-    margin-bottom: 1.75rem;
+.rsm-page *,
+.rsm-page *::before,
+.rsm-page *::after {
+    box-sizing: border-box;
 }
 
-.rsm-list-header h3 {
-    margin: 0;
+.rsm-page [hidden] {
+    display: none !important;
+}
+
+.rsm-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.rsm-muted {
+    color: var(--color5);
+}
+
+/* ── Summary cards ──────────────────────────────── */
+.rsm-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.rsm-stat-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+    padding: 18px;
+    background: var(--color3);
+    border: 1px solid var(--color9);
+    border-radius: 14px;
+}
+
+.rsm-stat-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    color: var(--color1);
+    background: rgba(32, 0, 130, 0.08);
+}
+
+.rsm-stat-icon svg {
+    width: 22px;
+    height: 22px;
+}
+
+.rsm-stat-card strong {
+    display: block;
     color: var(--color2);
-    font-size: 0.95rem;
+    font-size: 1.7rem;
+    line-height: 1.15;
+}
+
+.rsm-stat-label,
+.rsm-stat-note {
+    display: block;
+    color: var(--color5);
+    font-size: 0.78rem;
+}
+
+.rsm-stat-label {
+    font-weight: 600;
+}
+
+/* ── Analytics ──────────────────────────────────── */
+.rsm-analytics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.rsm-card {
+    min-width: 0;
+    padding: 18px 20px;
+    background: var(--color3);
+    border: 1px solid var(--color9);
+    border-radius: 14px;
+}
+
+.rsm-card-trend  { grid-column: 1 / -1; }
+.rsm-card-status { grid-column: span 1; }
+.rsm-card-dept   { grid-column: span 2; }
+
+.rsm-card-head {
+    margin-bottom: 14px;
+}
+
+.rsm-card-head h3 {
+    margin: 0 0 3px;
+    color: var(--color2);
+    font-size: 0.98rem;
     font-weight: 700;
 }
 
-.rsm-header-actions {
+.rsm-card-head p {
+    margin: 0;
+    color: var(--color5);
+    font-size: 0.78rem;
+}
+
+/* Charts live in fixed-size boxes, so they resize with the card and never overflow it */
+.rsm-chart-box {
+    position: relative;
+    width: 100%;
+    height: 300px;
+}
+
+.rsm-chart-box-donut {
+    height: 220px;
+}
+
+.rsm-card-dept .rsm-chart-box {
+    min-height: 240px;
+    height: calc(var(--rsm-bar-rows, 6) * 34px + 60px);
+}
+
+.rsm-chart-box canvas {
+    max-width: 100%;
+}
+
+.rsm-chart-state {
+    margin: 0;
+    padding: 56px 12px;
+    color: var(--color5);
+    text-align: center;
+    font-size: 0.86rem;
+}
+
+.rsm-chart-state--error {
+    color: var(--color10);
+}
+
+/* Status legend with counts (text, so status is never shown by color alone) */
+.rsm-legend {
+    display: grid;
+    gap: 8px;
+    padding: 0;
+    margin: 14px 0 0;
+    list-style: none;
+}
+
+.rsm-legend li {
     display: flex;
     align-items: center;
+    gap: 9px;
+    font-size: 0.82rem;
+    color: var(--color2);
+}
+
+.rsm-legend-name {
+    flex: 1;
+}
+
+.rsm-legend-dot {
+    flex: 0 0 auto;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.rsm-legend-draft     { background: #6c757d; }
+.rsm-legend-submitted { background: var(--color1); }
+.rsm-legend-reviewed  { background: #b8860b; }
+.rsm-legend-approved  { background: #28a745; }
+.rsm-legend-rejected  { background: #dc3545; }
+
+/* ── Controls panel (title + create button + filters) ── */
+.rsm-panel {
+    padding: 20px;
+    background: var(--color3);
+    border: 1px solid var(--color9);
+    border-radius: 14px;
+}
+
+.rsm-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.rsm-toolbar h2 {
+    margin: 0 0 4px;
+    color: var(--color2);
+    font-size: 1.1rem;
+}
+
+.rsm-toolbar p {
+    margin: 0;
+    color: var(--color5);
+    font-size: 0.85rem;
 }
 
 .rsm-add-btn {
+    min-height: 44px;
     padding: 0.6rem 1.1rem;
     border: none;
-    border-radius: 7px;
+    border-radius: 8px;
     background: var(--color1);
     color: var(--color3);
     font-size: 0.82rem;
     font-weight: 600;
     cursor: pointer;
     white-space: nowrap;
-    margin-left: 0.5rem;
 }
 
 .rsm-add-btn:hover {
     background: var(--color7);
 }
 
-.rsm-form {
-    width: 100%;
+.rsm-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 10px;
 }
 
-.rsm-form-group {
-    margin-bottom: 0.9rem;
+.rsm-search-wrap {
+    flex: 1 1 260px;
+    min-width: 0;
 }
 
-.rsm-form-group label {
-    display: block;
-    margin-bottom: 0.4rem;
-    color: var(--color2);
-    font-size: 0.78rem;
+.rsm-field {
+    flex: 1 1 150px;
+    min-width: 0;
+}
+
+.rsm-date-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.rsm-date-label {
+    color: var(--color5);
+    font-size: 0.7rem;
     font-weight: 600;
 }
 
-.rsm-form-group input[type="text"],
-.rsm-form-group select,
-.rsm-form-group textarea {
+.rsm-select,
+.rsm-search {
     width: 100%;
-    box-sizing: border-box;
+    height: 44px;
     padding: 0.6rem 0.85rem;
     border: 1px solid var(--color9);
-    border-radius: 7px;
+    border-radius: 8px;
     background: var(--color3);
     color: var(--color2);
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     font-family: inherit;
 }
 
-.rsm-form-group input[type="text"],
-.rsm-form-group select {
-    height: 40px;
-}
-
-.rsm-form-group textarea {
-    resize: vertical;
-    min-height: 70px;
-}
-
-.rsm-form-group input[type="text"]:focus,
-.rsm-form-group select:focus,
-.rsm-form-group textarea:focus {
+.rsm-select:focus,
+.rsm-search:focus {
     outline: none;
     border-color: var(--color1);
     box-shadow: 0 0 0 3px rgba(32, 0, 130, 0.08);
 }
 
-.rsm-actions {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 0.8rem;
-    flex-wrap: wrap;
+.rsm-search::placeholder {
+    color: var(--color5);
 }
 
+/* ── Results (separate from the controls) ───────── */
+.rsm-results {
+    margin-top: 16px;
+}
+
+.rsm-table-wrapper {
+    border: 1px solid var(--color9);
+    border-radius: 12px;
+    overflow: hidden;
+    overflow-x: auto;
+    background: var(--color3);
+}
+
+.rsm-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--color3);
+}
+
+.rsm-table th,
+.rsm-table td {
+    padding: 0.85rem 1.1rem;
+    border-bottom: 1px solid var(--color9);
+    text-align: left;
+    font-size: 0.85rem;
+    color: var(--color2);
+}
+
+.rsm-table thead th {
+    color: var(--color5);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+}
+
+.rsm-table tbody td[colspan] {
+    padding: 1.5rem;
+    text-align: center;
+    color: var(--color5);
+}
+
+.rsm-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.rsm-table tbody tr:hover {
+    background: rgba(32, 0, 130, 0.02);
+}
+
+.rsm-cell-title {
+    min-width: 180px;
+    overflow-wrap: anywhere;
+}
+
+.rsm-actions-cell {
+    text-align: center;
+}
+
+.rsm-link-btn-text {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--color1);
+    font: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* ── Footer / pagination ────────────────────────── */
+.rsm-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.rsm-showing {
+    font-size: 0.8rem;
+    color: var(--color5);
+}
+
+.rsm-page-nav {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.rsm-page-btn {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 0.7rem;
+    border: 1px solid var(--color9);
+    border-radius: 7px;
+    background: var(--color3);
+    color: var(--color2);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.rsm-page-btn:hover:not(:disabled):not(.rsm-page-btn--active) {
+    border-color: var(--color1);
+    color: var(--color1);
+}
+
+.rsm-page-btn--active {
+    background: var(--color1);
+    border-color: var(--color1);
+    color: #fff;
+    cursor: default;
+}
+
+.rsm-page-btn:disabled {
+    color: var(--color4);
+    cursor: not-allowed;
+}
+
+.rsm-page-gap {
+    padding: 0 0.2rem;
+    color: var(--color5);
+    font-size: 0.8rem;
+}
+
+/* ── Buttons ────────────────────────────────────── */
 .rsm-btn-submit,
 .rsm-btn-cancel,
 .rsm-btn-view {
     display: inline-block;
-    box-sizing: border-box;
+    min-height: 44px;
     padding: 0.65rem 1.3rem;
-    border-radius: 7px;
+    border-radius: 8px;
     font-size: 0.82rem;
     font-weight: 600;
     text-decoration: none;
@@ -141,107 +459,8 @@
     color: var(--color2);
 }
 
-.rsm-file-error {
-    color: #dc3545;
-    font-size: 0.78rem;
-    margin-top: 0.4rem;
-}
-
-.rsm-filters {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.rsm-select,
-.rsm-search {
-    height: 40px;
-    box-sizing: border-box;
-    padding: 0.6rem 0.85rem;
-    border: 1px solid var(--color9);
-    border-radius: 7px;
-    background: var(--color3);
-    color: var(--color2);
-    font-size: 0.82rem;
-}
-
-.rsm-select {
-    width: 200px;
-    flex: 0 0 auto;
-}
-
-.rsm-search {
-    width: 280px;
-}
-
-.rsm-select:focus,
-.rsm-search:focus {
-    outline: none;
-    border-color: var(--color1);
-    box-shadow: 0 0 0 3px rgba(32, 0, 130, 0.08);
-}
-
-.rsm-search::placeholder {
-    color: var(--color5);
-}
-
-.rsm-table-wrapper {
-    border: 1px solid var(--color9);
-    border-radius: 8px;
-    overflow: hidden;
-    overflow-x: auto;
-}
-
-.rsm-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: var(--color3);
-}
-
-.rsm-table tbody td[colspan] {
-    padding: 1.5rem;
-    text-align: center;
-    color: var(--color5);
-}
-
-.rsm-table th {
-    padding: 0.85rem 1.1rem;
-    border-bottom: 1px solid var(--color9);
-    text-align: left;
-    font-size: 0.85rem;
-    color: var(--color2);
-}
-
-.rsm-table td {
-    padding: 0.85rem 1.1rem;
-    border-bottom: 1px solid var(--color9);
-    text-align: left;
-    font-size: 0.85rem;
-    color: var(--color2);
-}
-
-.rsm-table thead th {
-    color: var(--color5);
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    white-space: nowrap;
-}
-
-.rsm-table tbody tr:last-child td {
-    border-bottom: none;
-}
-
-.rsm-table tbody tr:hover {
-    background: rgba(32, 0, 130, 0.02);
-}
-
-.rsm-actions-cell {
-    text-align: center;
-}
-
 .rsm-btn-view {
+    min-height: 36px;
     padding: 0.45rem 0.75rem;
     border: 1px solid var(--color9);
     background: var(--color3);
@@ -253,13 +472,17 @@
     color: var(--color1);
 }
 
-.rsm-no-data td {
-    padding: 1.5rem;
-    text-align: center;
-    color: var(--color5);
+.rsm-btn-submit:focus-visible,
+.rsm-btn-cancel:focus-visible,
+.rsm-btn-view:focus-visible,
+.rsm-add-btn:focus-visible,
+.rsm-page-btn:focus-visible,
+.rsm-link-btn-text:focus-visible {
+    outline: 3px solid rgba(32, 0, 130, 0.35);
+    outline-offset: 2px;
 }
-/* ── Status badges ─────────────────────────────────────── */
 
+/* ── Status badges ─────────────────────────────── */
 .rsm-status {
     display: inline-block;
     padding: 0.3rem 0.65rem;
@@ -271,33 +494,13 @@
     white-space: nowrap;
 }
 
-.rsm-status-draft {
-    background: rgba(108, 117, 125, 0.12);
-    color: #6c757d;
-}
+.rsm-status-draft     { background: rgba(108, 117, 125, 0.12); color: #6c757d; }
+.rsm-status-submitted { background: var(--color1); color: var(--color3); }
+.rsm-status-reviewed  { background: #b8860b; color: var(--color3); }
+.rsm-status-approved  { background: #28a745; color: var(--color3); }
+.rsm-status-rejected  { background: #dc3545; color: var(--color3); }
 
-.rsm-status-submitted {
-    background: var(--color1);
-    color: var(--color3);
-}
-
-.rsm-status-reviewed {
-    background: #b8860b;
-    color: var(--color3);
-}
-
-.rsm-status-approved {
-    background: #28a745;
-    color: var(--color3);
-}
-
-.rsm-status-rejected {
-    background: #dc3545;
-    color: var(--color3);
-}
-
-/* ── Modal ─────────────────────────────────────────────── */
-
+/* ── Modal ─────────────────────────────────────── */
 .rsm-modal-overlay {
     display: none;
     position: fixed;
@@ -343,6 +546,8 @@
 }
 
 .rsm-modal-close {
+    min-width: 44px;
+    min-height: 44px;
     border: none;
     background: transparent;
     font-size: 1.4rem;
@@ -371,16 +576,197 @@
     color: var(--color2);
     font-size: 0.85rem;
     line-height: 1.5;
+    overflow-wrap: anywhere;
 }
 
-/* ── Detail rows ───────────────────────────────────────── */
+.rsm-modal-body p.rsm-muted {
+    color: var(--color5);
+}
 
+/* ── Forms ─────────────────────────────────────── */
+.rsm-form {
+    width: 100%;
+}
+
+.rsm-form-group {
+    margin-bottom: 0.9rem;
+}
+
+.rsm-form-group label,
+.rsm-field-label {
+    display: block;
+    margin-bottom: 0.4rem;
+    color: var(--color2);
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.rsm-optional {
+    font-weight: 400;
+    opacity: 0.65;
+}
+
+.rsm-req {
+    color: var(--color10);
+}
+
+.rsm-form-group input[type="text"],
+.rsm-form-group select,
+.rsm-form-group textarea {
+    width: 100%;
+    padding: 0.6rem 0.85rem;
+    border: 1px solid var(--color9);
+    border-radius: 8px;
+    background: var(--color3);
+    color: var(--color2);
+    font-size: 0.85rem;
+    font-family: inherit;
+}
+
+.rsm-form-group input[type="text"],
+.rsm-form-group select {
+    height: 44px;
+}
+
+.rsm-form-group textarea {
+    resize: vertical;
+    min-height: 70px;
+}
+
+.rsm-form-group input[type="text"]:focus,
+.rsm-form-group select:focus,
+.rsm-form-group textarea:focus {
+    outline: none;
+    border-color: var(--color1);
+    box-shadow: 0 0 0 3px rgba(32, 0, 130, 0.08);
+}
+
+.rsm-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.8rem;
+    flex-wrap: wrap;
+}
+
+.rsm-file-error {
+    margin-top: 0.4rem;
+    color: #dc3545;
+    font-size: 0.78rem;
+}
+
+/* ── Report file picker + attachment row ───────── */
+.rsm-file-picker {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    position: relative;
+}
+
+/* Visually hidden but still keyboard-focusable (don't use display:none) */
+.rsm-file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+}
+
+.rsm-form-group .rsm-file-btn {
+    display: inline-block;
+    min-height: 44px;
+    margin: 0;
+    padding: 12px 16px;
+    border: none;
+    border-radius: 8px;
+    background: var(--color1);
+    color: var(--color3);
+    font-size: 0.85rem;
+    line-height: 1.2;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.rsm-file-btn:hover {
+    opacity: 0.9;
+}
+
+.rsm-file-input:focus-visible + .rsm-file-btn {
+    outline: 2px solid var(--color1);
+    outline-offset: 2px;
+}
+
+.rsm-file-name {
+    flex: 1 1 140px;
+    min-width: 0;
+    font-size: 0.85rem;
+    opacity: 0.65;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rsm-file-name.rsm-file-name-set {
+    opacity: 1;
+}
+
+.rsm-file-clear {
+    min-width: 44px;
+    min-height: 44px;
+    border: none;
+    background: transparent;
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.6;
+}
+
+.rsm-file-clear:hover {
+    opacity: 1;
+}
+
+.rsm-file-hint {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.75rem;
+    opacity: 0.65;
+}
+
+.rsm-attachment-info {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 0;
+}
+
+.rsm-attachment-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.rsm-link-btn {
+    display: inline-block;
+    text-decoration: none;
+}
+
+/* ── Detail rows ───────────────────────────────── */
 .rsm-detail-row {
     display: flex;
     justify-content: space-between;
+    gap: 12px;
     padding: 0.5rem 0;
     border-bottom: 1px solid var(--color9);
     font-size: 0.85rem;
+    color: var(--color2);
+}
+
+.rsm-detail-row > span:last-child {
+    min-width: 0;
+    text-align: right;
+    overflow-wrap: anywhere;
 }
 
 .rsm-detail-row:last-of-type {
@@ -388,12 +774,12 @@
 }
 
 .rsm-detail-label {
+    flex: 0 0 auto;
     color: var(--color5);
     font-weight: 600;
 }
 
-/* ── AI summary box ────────────────────────────────────── */
-
+/* ── AI summary + review boxes ─────────────────── */
 .rsm-ai-box {
     margin-top: 1.2rem;
     padding: 1rem 1.1rem;
@@ -406,6 +792,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 10px;
     margin-bottom: 0.5rem;
 }
 
@@ -413,8 +800,6 @@
     color: var(--color2);
     font-size: 0.82rem;
 }
-
-/* ── Review / decision box ─────────────────────────────── */
 
 .rsm-review-box {
     margin-top: 1.2rem;
@@ -434,7 +819,6 @@
 
 .rsm-review-box textarea {
     width: 100%;
-    box-sizing: border-box;
     padding: 0.6rem 0.85rem;
     border: 1px solid var(--color9);
     border-radius: 7px;
@@ -445,110 +829,28 @@
     resize: vertical;
 }
 
-/* ── Report attachment picker + attachment row ────────────────────────────
-   Paste at the END of your reports CSS file. Everything is rsm- prefixed and
-   uses the global --color variables (solid --color1 buttons, white text). */
-
-.rsm-field-label {
-    display: block;
-    margin-bottom: 0.4rem;
-    color: var(--color2);
-    font-size: 0.78rem;
-    font-weight: 600;
-}
-.rsm-optional {
-    font-weight: 400;
-    opacity: .65;
-}
-
-.rsm-file-picker {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;            /* wraps on narrow screens instead of overflowing */
-    gap: 10px;
-    position: relative;
-}
-
-/* Visually hidden but still keyboard-focusable (don't use display:none) */
-.rsm-file-input {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
+/* ── Inline file preview inside the details window ── */
+.rsm-preview {
+    margin-top: 1rem;
+    border: 1px solid var(--color9);
+    border-radius: 8px;
     overflow: hidden;
-    clip: rect(0 0 0 0);
+    background: rgba(0, 0, 0, 0.03);
 }
 
-.rsm-file-btn {
-    display: inline-block;
-    padding: 8px 16px;
-    border: none;
-    border-radius: 6px;
-    background: var(--color1);
-    color: var(--color3);
-    font-size: .85rem;
-    cursor: pointer;
-    white-space: nowrap;
-}
-.rsm-file-btn:hover { opacity: .9; }
-.rsm-file-input:focus-visible + .rsm-file-btn {
-    outline: 2px solid var(--color1);
-    outline-offset: 2px;
-}
-
-.rsm-file-picker label {
-    color: var(--color3);
-}
-
-.rsm-file-name {
-    flex: 1 1 140px;
-    min-width: 0;
-    font-size: .85rem;
-    opacity: .65;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.rsm-file-name.rsm-file-name-set { opacity: 1; }
-
-.rsm-file-clear {
-    border: none;
-    background: transparent;
-    font-size: 1.25rem;
-    line-height: 1;
-    cursor: pointer;
-    color: inherit;
-    opacity: .6;
-}
-.rsm-file-clear:hover { opacity: 1; }
-.rsm-file-clear[hidden] { display: none; }
-
-.rsm-file-hint {
+.rsm-preview-frame {
     display: block;
-    margin-top: 6px;
-    font-size: .75rem;
-    opacity: .65;
+    width: 100%;
+    height: 60vh;
+    min-height: 320px;
+    border: 0;
 }
 
-/* Attachment row in the report detail modal */
-.rsm-attachment-info {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    min-width: 0;
-}
-.rsm-attachment-name {
-    min-width: 0;
-    overflow-wrap: anywhere;
-}
-.rsm-link-btn {
-    display: inline-block;
-    text-decoration: none;
+.rsm-preview-note {
+    margin-top: 1rem;
 }
 
-/* ── PDF viewer ────────────────────────────────────────── */
-
+/* ── File viewer ───────────────────────────────── */
 .rsm-pdf-body {
     padding: 0;
     height: 78vh;
@@ -560,37 +862,89 @@
     border: none;
 }
 
+/* ── Toasts ────────────────────────────────────── */
+.rsm-toast-stack {
+    position: fixed;
+    z-index: 9999;
+    right: 24px;
+    bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: min(320px, calc(100vw - 32px));
+}
+
+.rsm-toast {
+    padding: 12px 20px;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    color: #fff;
+    background: #17a2b8;
+    font-size: 0.9rem;
+    overflow-wrap: anywhere;
+}
+
+.rsm-toast-success { background: #28a745; }
+.rsm-toast-error   { background: #dc3545; }
+
+/* ── Responsive ────────────────────────────────── */
+@media (max-width: 1100px) {
+    .rsm-stat-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .rsm-analytics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .rsm-card-status,
+    .rsm-card-dept {
+        grid-column: span 1;
+    }
+}
+
 @media (max-width: 900px) {
-    .rsm-list-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .rsm-header-actions {
-        width: 100%;
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .rsm-filters {
-        width: 100%;
-        flex-wrap: wrap;
-    }
-
-    .rsm-select,
-    .rsm-search {
-        flex: 1;
-        min-width: 180px;
-    }
-
     .rsm-table {
         min-width: 900px;
     }
 }
 
-@media (max-width: 600px) {
-    .rsm-list {
-        padding: 1.1rem;
+@media (max-width: 720px) {
+    .rsm-stat-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .rsm-stat-card {
+        padding: 14px;
+    }
+
+    .rsm-analytics {
+        grid-template-columns: 1fr;
+    }
+
+    .rsm-card-trend,
+    .rsm-card-status,
+    .rsm-card-dept {
+        grid-column: 1 / -1;
+    }
+
+    .rsm-card {
+        padding: 14px;
+    }
+
+    .rsm-chart-box {
+        height: 240px;
+    }
+
+    .rsm-panel {
+        padding: 14px;
+    }
+
+    .rsm-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 12px;
     }
 
     .rsm-filters {
@@ -598,8 +952,9 @@
         align-items: stretch;
     }
 
-    .rsm-select,
-    .rsm-search {
+    .rsm-search-wrap,
+    .rsm-field {
+        flex: 0 0 auto;
         width: 100%;
     }
 
@@ -617,7 +972,38 @@
         width: 94vw;
     }
 
+    .rsm-modal-body {
+        padding: 1.1rem;
+    }
+
+    .rsm-detail-row {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .rsm-detail-row > span:last-child {
+        text-align: left;
+    }
+
     .rsm-pdf-body {
         height: 65vh;
+    }
+
+    .rsm-preview-frame {
+        height: 50vh;
+        min-height: 260px;
+    }
+
+    .rsm-toast-stack {
+        right: 16px;
+        left: 16px;
+        bottom: 16px;
+        max-width: none;
+    }
+}
+
+@media (max-width: 430px) {
+    .rsm-stat-card strong {
+        font-size: 1.45rem;
     }
 }
