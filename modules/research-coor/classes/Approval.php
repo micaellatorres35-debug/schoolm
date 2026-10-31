@@ -26,7 +26,7 @@
                         CONCAT(rv.first_name, ' ', rv.last_name) AS reviewed_by_name,
                         CONCAT(e2.first_name, ' ', e2.last_name) AS approver_id,
                         d.department_name
-                    FROM sd_approvals a
+                    FROM cc_approvals a
                     LEFT JOIN em_employees e1 ON a.submit_by   = e1.employee_id
                     LEFT JOIN em_employees rv ON a.reviewed_by = rv.employee_id
                     LEFT JOIN em_employees e2 ON a.approver_id = e2.employee_id
@@ -59,7 +59,7 @@
                         CONCAT(e2.first_name, ' ', e2.last_name) AS decided_by_name,
                         e1.department_id AS submitter_department_id,
                         d.department_name
-                    FROM sd_approvals a
+                    FROM cc_approvals a
                     LEFT JOIN em_employees e1 ON a.submit_by   = e1.employee_id
                     LEFT JOIN em_employees rv ON a.reviewed_by = rv.employee_id
                     LEFT JOIN em_employees e2 ON a.approver_id = e2.employee_id
@@ -109,7 +109,7 @@
                 // Update only a draft owned by the current employee.
                 $hasFile = array_key_exists('file_path', $data);
 
-                $sql = "UPDATE sd_approvals SET
+                $sql = "UPDATE cc_approvals SET
                             title = :title,
                             description = :description,
                             justification = :justification,
@@ -144,7 +144,7 @@
             }
 
             // Create a new draft with its department recorded.
-            $sql = "INSERT INTO sd_approvals
+            $sql = "INSERT INTO cc_approvals
                         (
                             title,
                             description,
@@ -193,7 +193,7 @@
             $approval_id = $this->saveDraft($data, $approval_id);
 
             $stmt = $this->conn->prepare(
-                "UPDATE sd_approvals SET status = 'submitted', submitted_on = NOW() WHERE approval_id = :approval_id"
+                "UPDATE cc_approvals SET status = 'submitted', submitted_on = NOW() WHERE approval_id = :approval_id"
             );
             $stmt->execute([':approval_id' => $approval_id]);
 
@@ -202,7 +202,7 @@
 
         // ── REVIEW / DECISION (School Directress) ────────────────────
         public function markReviewed($approval_id, $reviewed_by, $notes = null) {
-            $sql = "UPDATE sd_approvals SET
+            $sql = "UPDATE cc_approvals SET
                         status = 'reviewed', reviewed_by = :reviewed_by, reviewed_at = NOW(), review_notes = :notes
                     WHERE approval_id = :approval_id AND status = 'submitted'";
             $stmt = $this->conn->prepare($sql);
@@ -218,7 +218,7 @@
             if (!in_array($decision, ['approved', 'rejected'], true)) {
                 return false;
             }
-            $sql = "UPDATE sd_approvals SET
+            $sql = "UPDATE cc_approvals SET
                         status = :status, decision = :decision,
                         approver_id = :decided_by, approved_at = NOW(), remarks = :notes
                     WHERE approval_id = :approval_id AND status = 'reviewed'";
@@ -257,7 +257,7 @@
             $fileName     = 'approval_' . $approval_id . '_' . time() . '.pdf';
             $relativePath = FileStorage::storeBytes($dompdf->output(), 'approvals/pdf', $fileName);
 
-            $stmt = $this->conn->prepare("UPDATE sd_approvals SET pdf_path = :pdf_path WHERE approval_id = :approval_id");
+            $stmt = $this->conn->prepare("UPDATE cc_approvals SET pdf_path = :pdf_path WHERE approval_id = :approval_id");
             $stmt->execute([':pdf_path' => $relativePath, ':approval_id' => $approval_id]);
 
             return $relativePath;
@@ -364,7 +364,7 @@
 
             $summaryText = trim($summaryText);
 
-            $stmt = $this->conn->prepare("UPDATE sd_approvals SET ai_summary = :ai_summary WHERE approval_id = :approval_id");
+            $stmt = $this->conn->prepare("UPDATE cc_approvals SET ai_summary = :ai_summary WHERE approval_id = :approval_id");
             $stmt->execute([':ai_summary' => $summaryText, ':approval_id' => $approval_id]);
 
             return ['success' => true, 'summary' => $summaryText];
