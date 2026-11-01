@@ -1,8 +1,9 @@
 <?php
     include_once __DIR__ . '/../../../database/db.php';
-    include_once __DIR__ . '/FileStorage.php'; // shared with Report.php / Approval.php — same classes/ folder
 
     class Issues {
+        const STATUSES = ['draft', 'submitted', 'reviewed', 'resolved', 'dismissed'];
+
         private $conn;
 
         public function __construct($pdo = null) {
@@ -14,44 +15,101 @@
             }
         }
 
+        // ── VIEWER HELPERS ───────────────────────────────────────────
+        // Single source of truth for "is this the School Directress?" (view + controller).
+        public static function isDirectress($userInfo) {
+    $roleName = $_SESSION['role_name'] ?? ($userInfo['role'] ?? '');
+    return in_array($roleName, ['School Directress', 'Admin College Coordinator'], true);
+}
+
+        public static function viewerFrom($userInfo) {
+            return [
+                'employee_id'   => (int) ($userInfo['employee_id'] ?? $_SESSION['employee_id'] ?? 0),
+                'department_id' => (int) ($userInfo['department_id'] ?? $_SESSION['department_id'] ?? 0),
+                'is_directress' => self::isDirectress($userInfo),
+            ];
+        }
+
         public function getDepartments() {
             $stmt = $this->conn->prepare("SELECT department_id, department_name FROM em_departments ORDER BY department_name");
             $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
+        // Who may see which rows:
+        //  - Drafts: only their author (never the Directress, never department colleagues).
+        //  - Submitted and later: the Directress (all departments); everyone else only
+        //    their own department's concerns plus anything they submitted themselves.
+        // Only binds the parameters it actually uses (PDO rejects unused named params).
+        private function visibilitySql(array $viewer, array &$params) {
+            $me = (int) $viewer['employee_id'];
+
+            if (!empty($viewer['is_directress'])) {
+                $params[':vis_me'] = $me;
+                return "(i.status <> 'draft' OR i.submitted_by = :vis_me)";
+            }
+
+            $params[':vis_me_draft'] = $me;
+            $params[':vis_me_own']   = $me;
+            $params[':vis_dept']     = (int) $viewer['department_id'];
+            return "((i.status = 'draft' AND i.submitted_by = :vis_me_draft)
+                     OR (i.status <> 'draft' AND (i.department = :vis_dept OR i.submitted_by = :vis_me_own)))";
+        }
+
+        // Columns for list rows. Deliberately excludes details, desired resolution,
+        // notes, AI summary and file paths: the list never needs them.
+        private function listColumns() {
+            return "i.issue_id, i.title, i.status, i.submitted_on, i.created_at, i.updated_at,
+                    (i.file_path IS NOT NULL AND i.file_path <> '') AS has_attachment,
+                    i.submitted_by AS submitted_by_id,
+                    d.department_name,
+                    CONCAT(e.first_name, ' ', e.last_name) AS submitted_by,
+                    CASE WHEN i.status IN ('submitted','reviewed') AND i.submitted_on IS NOT NULL
+                         THEN DATEDIFF(NOW(), i.submitted_on) END AS days_waiting";
+        }
+
         // ── LIST / READ ──────────────────────────────────────────────
-        public function getConcerns($department_id = null, $status = null, $search = '') {
-            $sql = "SELECT
-                        i.issue_id, i.title, i.details, i.desired_resolution,
-                        i.status, i.file_path, i.pdf_path, i.ai_summary,
-                        i.submitted_on, i.reviewed_at, i.resolved_at,
-                        d.department_name,
-                        CONCAT(e.first_name, ' ', e.last_name)  AS submitted_by,
-                        CONCAT(rv.first_name, ' ', rv.last_name) AS reviewed_by_name,
-                        CONCAT(rs.first_name, ' ', rs.last_name) AS resolved_by_name
+        // $viewer (see viewerFrom) applies the visibility rules above. Without it, drafts
+        // are always excluded so nothing can leak through an old call site.
+        public function getConcerns($department_id = null, $status = null, $search = '', $viewer = null) {
+            $sql = "SELECT " . $this->listColumns() . "
                     FROM cc_issues i
                     JOIN em_departments d ON i.department = d.department_id
                     JOIN em_employees e  ON i.submitted_by = e.employee_id
-                    LEFT JOIN em_employees rv ON i.reviewed_by = rv.employee_id
-                    LEFT JOIN em_employees rs ON i.resolved_by = rs.employee_id
                     WHERE 1=1";
 
             $params = [];
+            if (is_array($viewer)) {
+                $sql .= " AND " . $this->visibilitySql($viewer, $params);
+            } else {
+                $sql .= " AND i.status <> 'draft'";
+            }
+
             if (!is_null($department_id)) {
                 $sql .= " AND i.department = :department_id";
-                $params[':department_id'] = $department_id;
+                $params[':department_id'] = (int) $department_id;
             }
-            if (!is_null($status)) {
+            if (!is_null($status) && in_array($status, self::STATUSES, true)) {
                 $sql .= " AND i.status = :status";
                 $params[':status'] = $status;
             }
+
+            $search = trim((string) $search);
             if ($search !== '') {
-                $sql .= " AND (i.title LIKE :search OR CONCAT(e.first_name, ' ', e.last_name) LIKE :search)";
-                $params[':search'] = '%' . $search . '%';
+                $like   = '%' . addcslashes($search, '%_\\') . '%';
+                $clause = "i.title LIKE :search_title OR CONCAT(e.first_name, ' ', e.last_name) LIKE :search_name";
+                $params[':search_title'] = $like;
+                $params[':search_name']  = $like;
+
+                $idTerm = ltrim($search, '#');
+                if (ctype_digit($idTerm)) {
+                    $clause .= " OR i.issue_id = :search_id";
+                    $params[':search_id'] = (int) $idTerm;
+                }
+                $sql .= " AND ($clause)";
             }
 
-            $sql .= " ORDER BY i.submitted_on DESC, i.created_at DESC";
+            $sql .= " ORDER BY COALESCE(i.submitted_on, i.created_at) DESC, i.issue_id DESC";
 
             $stmt = $this->conn->prepare($sql);
             $stmt->execute($params);
@@ -59,7 +117,7 @@
         }
 
         // NOTE: i.* keeps the raw i.submitted_by (employee id) and i.department (department id);
-        // the controller's access check relies on both.
+        // the controller's access check relies on both. The controller whitelists what is sent on.
         public function getConcernById($issue_id) {
             $sql = "SELECT
                         i.*,
@@ -78,6 +136,54 @@
             $stmt->execute([':issue_id' => $issue_id]);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             return $row ?: null;
+        }
+
+        // ── OVERVIEW (summary cards + needs-attention list) ──────────
+        // Counts submitted/reviewed/resolved/dismissed (drafts are never counted).
+        public function getSummaryCounts(array $viewer, $department_id = null) {
+            $params = [];
+            $sql = "SELECT i.status, COUNT(*) AS total
+                    FROM cc_issues i
+                    WHERE " . $this->visibilitySql($viewer, $params) . "
+                      AND i.status <> 'draft'";
+            if (!is_null($department_id)) {
+                $sql .= " AND i.department = :department_id";
+                $params[':department_id'] = (int) $department_id;
+            }
+            $sql .= " GROUP BY i.status";
+
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
+
+            $counts = ['submitted' => 0, 'reviewed' => 0, 'resolved' => 0, 'dismissed' => 0];
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                if (array_key_exists($row['status'], $counts)) {
+                    $counts[$row['status']] = (int) $row['total'];
+                }
+            }
+            $counts['total'] = array_sum($counts);
+            return $counts;
+        }
+
+        // Unresolved concerns (submitted or reviewed), longest-waiting first.
+        // There is no stored priority, so waiting time is the only ordering used.
+        public function getAttentionConcerns(array $viewer, $department_id = null, $limit = 5) {
+            $params = [];
+            $sql = "SELECT " . $this->listColumns() . "
+                    FROM cc_issues i
+                    JOIN em_departments d ON i.department = d.department_id
+                    JOIN em_employees e  ON i.submitted_by = e.employee_id
+                    WHERE " . $this->visibilitySql($viewer, $params) . "
+                      AND i.status IN ('submitted','reviewed')";
+            if (!is_null($department_id)) {
+                $sql .= " AND i.department = :department_id";
+                $params[':department_id'] = (int) $department_id;
+            }
+            $sql .= " ORDER BY i.submitted_on ASC, i.issue_id ASC LIMIT " . max(1, (int) $limit);
+
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
         // ── CREATE / SAVE ────────────────────────────────────────────
@@ -172,77 +278,10 @@
             return $stmt->rowCount() > 0;
         }
 
-        // ── PDF GENERATION (dompdf) ───────────────────────────────────
-        // Saves into FileStorage and stores a RELATIVE path (issues/pdf/...) in pdf_path.
-        public function generatePdf($issue_id) {
-            $autoload = __DIR__ . '/../../../vendor/autoload.php';
-            if (!file_exists($autoload)) {
-                throw new \RuntimeException('PDF library not installed. Run: composer require dompdf/dompdf');
-            }
-            require_once $autoload;
-
-            $concern = $this->getConcernById($issue_id);
-            if (!$concern) {
-                return false;
-            }
-
-            $html = $this->buildConcernHtml($concern);
-
-            $dompdf = new \Dompdf\Dompdf();
-            $dompdf->loadHtml($html);
-            $dompdf->setPaper('A4', 'portrait');
-            $dompdf->render();
-
-            $fileName     = 'concern_' . $issue_id . '_' . time() . '.pdf';
-            $relativePath = FileStorage::storeBytes($dompdf->output(), 'issues/pdf', $fileName);
-
-            $stmt = $this->conn->prepare("UPDATE cc_issues SET pdf_path = :pdf_path WHERE issue_id = :issue_id");
-            $stmt->execute([':pdf_path' => $relativePath, ':issue_id' => $issue_id]);
-
-            return $relativePath;
-        }
-
-        private function buildConcernHtml($concern) {
-            $title       = htmlspecialchars($concern['title'] ?? '');
-            $department  = htmlspecialchars($concern['department_name'] ?? 'N/A');
-            $submittedBy = htmlspecialchars($concern['submitted_by_name'] ?? 'N/A');
-            $submittedOn = htmlspecialchars($concern['submitted_on'] ?? '');
-            $details     = nl2br(htmlspecialchars($concern['details'] ?? ''));
-            $resolution  = nl2br(htmlspecialchars($concern['desired_resolution'] ?? ''));
-
-            return <<<HTML
-            <html>
-            <head>
-                <style>
-                    body { font-family: DejaVu Sans, sans-serif; font-size: 12px; color: #222; }
-                    h1 { font-size: 18px; margin-bottom: 4px; }
-                    .meta { font-size: 11px; color: #555; margin-bottom: 20px; }
-                    .meta span { display: inline-block; margin-right: 18px; }
-                    h2 { font-size: 13px; margin-top: 22px; margin-bottom: 6px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
-                    p { line-height: 1.5; }
-                </style>
-            </head>
-            <body>
-                <h1>Concern: {$title}</h1>
-                <div class="meta">
-                    <span><strong>Department:</strong> {$department}</span>
-                    <span><strong>Submitted by:</strong> {$submittedBy}</span>
-                    <span><strong>Date:</strong> {$submittedOn}</span>
-                </div>
-
-                <h2>Details</h2>
-                <p>{$details}</p>
-
-                <h2>Desired Resolution</h2>
-                <p>{$resolution}</p>
-            </body>
-            </html>
-            HTML;
-        }
-
         // ── AI SUMMARIZATION (Google Gemini free tier) ────────────────
         // Requires GEMINI_API_KEY in env (or a defined constant of the same name).
-        // Get a free key at https://aistudio.google.com/apikey — no credit card required.
+        // NOTE: this sends the concern text to an external service. The controller only
+        // allows it for users who can already open the concern.
         public function generateAiSummary($issue_id) {
             $concern = $this->getConcernById($issue_id);
             if (!$concern) {
@@ -285,13 +324,9 @@
             curl_close($ch);
 
             if ($httpCode !== 200) {
+                // Details go to the server log only, never to the browser.
                 error_log('[Issues::generateAiSummary] Gemini API error (' . $httpCode . '): ' . $response);
-                return [
-                    'success' => false,
-                    'message' => 'AI summarization failed.',
-                    // TEMP debug info — remove once things are stable.
-                    'debug' => 'HTTP ' . $httpCode . ': ' . $response,
-                ];
+                return ['success' => false, 'message' => 'AI summarization failed.'];
             }
 
             $decoded     = json_decode($response, true);

@@ -7,7 +7,8 @@
     /*User Class*/
     $userClass = new User();
     $userInfo = $userClass->userSession();
-    $isDirectress = ($userInfo['role'] === 'School Directress');
+    $roleName     = $_SESSION['role_name'] ?? $userInfo['role'] ?? '';
+$isDirectress = in_array($roleName, ['School Directress', 'Admin College Coordinator'], true);
 
     /*Report Class*/
     $reportClass = new Report();

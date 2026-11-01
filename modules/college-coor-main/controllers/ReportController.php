@@ -6,7 +6,9 @@ ob_start();
 ini_set('display_errors', '0'); // never leak raw PHP errors into the JSON response
 error_reporting(E_ALL);
 
-// NOTE: the JSON Content-Type header is now set inside rsm_respond() instead of here,
+const RSM_PER_PAGE = 10;
+
+// NOTE: the JSON Content-Type header is set inside rsm_respond() instead of here,
 // because the "file" action streams a PDF/attachment and must send its own headers.
 
 function rsm_respond($payload) {
@@ -60,7 +62,6 @@ try {
     include_once __DIR__ . '/../../../auth/session.php';
     include_once __DIR__ . '/../classes/FileStorage.php';
     include_once __DIR__ . '/../classes/Report.php';
-    include_once __DIR__ . '/../classes/Department.php';
     include_once __DIR__ . '/../classes/User.php';
 
     // ── Guard ──────────────────────────────────────────────────────────────
@@ -77,50 +78,63 @@ try {
     }
 
     $reportClass  = new Report();
-    $isDirectress = (
-    ($_SESSION['role_name'] ?? $userInfo['role'] ?? '') === 'School Directress'
-    );
+    $roleName     = $_SESSION['role_name'] ?? $userInfo['role'] ?? '';
+$isDirectress = in_array($roleName, ['School Directress', 'Admin College Coordinator'], true);
 
     // ── Router ─────────────────────────────────────────────────────────────
     switch ($action) {
 
         // ------------------------------------------------------------------
-        // GET list (optionally filtered by department / status)
+        // GET paginated list, filtered by department / type / status / dates / search.
+        // The School Directress sees every department; everyone else is always
+        // limited to their own department, whatever the request says.
         // ------------------------------------------------------------------
         case 'list':
-            $departmentId = isset($_GET['department_id']) && $_GET['department_id'] !== ''
-                ? (int) $_GET['department_id']
-                : null;
-            $status = isset($_GET['status']) && $_GET['status'] !== ''
-                ? $_GET['status']
-                : null;
-            $page = max(1, (int) ($_GET['page'] ?? 1));
+            $filters = rsm_filters($isDirectress, $userInfo);
+            $total   = $reportClass->countReports($filters);
+            $pages   = max(1, (int) ceil($total / RSM_PER_PAGE));
+            $page    = min(max(1, (int) ($_GET['page'] ?? 1)), $pages);
 
-            if ($isDirectress) {
-                $departmentId = null;
-            } elseif ($departmentId === null) {
-                $departmentId = $userInfo['department_id'] ?? null;
-            }
-
-            $reports = $reportClass->getReports($departmentId, $status);
-            $publicReports = array_map('rsm_public_report', $reports);
-            $perPage = 25;
-            $total = count($publicReports);
-            $pages = max(1, (int) ceil($total / $perPage));
-            $page = min($page, $pages);
-            $offset = ($page - 1) * $perPage;
-            $pageData = array_slice($publicReports, $offset, $perPage);
+            $rows = $reportClass->listReports($filters, RSM_PER_PAGE, ($page - 1) * RSM_PER_PAGE);
 
             rsm_respond([
                 'success' => true,
-                'data' => $pageData,
-                'meta' => [
-                    'page' => $page,
-                    'per_page' => $perPage,
-                    'pages' => $pages,
-                    'total' => $total,
+                'data'    => $rows,
+                'meta'    => ['total' => $total, 'page' => $page, 'pages' => $pages, 'per_page' => RSM_PER_PAGE],
+            ]);
+            break;
+
+        // ------------------------------------------------------------------
+        // GET analytics for the dashboard (stat cards + three charts).
+        // Same department scoping as "list".
+        // ------------------------------------------------------------------
+        case 'analytics':
+            $filters  = rsm_filters($isDirectress, $userInfo);
+            $statuses = $reportClass->getStatusCounts($filters);
+
+            rsm_respond([
+                'success' => true,
+                'data'    => [
+                    'stats' => [
+                        'total'    => array_sum($statuses),
+                        'pending'  => $statuses['submitted'],
+                        'approved' => $statuses['approved'],
+                        'rejected' => $statuses['rejected'],
+                    ],
+                    'statuses'    => $statuses,
+                    'trend'       => $reportClass->getMonthlyTrend($filters),
+                    'departments' => $reportClass->getDepartmentCounts($filters),
                 ],
             ]);
+            break;
+
+        // ------------------------------------------------------------------
+        // GET report type names for the type filter (narrowed by department)
+        // ------------------------------------------------------------------
+        case 'report_types':
+            $filters = rsm_filters($isDirectress, $userInfo);
+            $deptId  = ($filters['department_id'] !== null && $filters['department_id'] > 0) ? $filters['department_id'] : null;
+            rsm_respond(['success' => true, 'data' => $reportClass->getReportTypeNames($deptId)]);
             break;
 
         // ------------------------------------------------------------------
@@ -142,7 +156,7 @@ try {
             break;
 
         // ------------------------------------------------------------------
-        // GET stream the generated PDF or the optional attachment.
+        // GET stream the report file (attachment) or an older generated PDF.
         //   ?action=file&report_id=12&kind=pdf|attachment[&download=1]
         // Files are never linked directly; every request passes the session
         // and department/role check here first.
@@ -171,7 +185,7 @@ try {
             }
 
             if (!$relative) {
-                rsm_file_error(404, $kind === 'attachment' ? 'This report has no attachment.' : 'The PDF has not been generated yet.');
+                rsm_file_error(404, $kind === 'attachment' ? 'This report has no file attached.' : 'No PDF is stored for this report.');
             }
 
             $absolute = FileStorage::resolve($relative);
@@ -191,7 +205,7 @@ try {
                 rsm_respond(['success' => false, 'message' => 'Method not allowed.']);
             }
 
-            // Validate the optional attachment BEFORE saving anything, so a bad file
+            // Validate the file BEFORE saving anything, so a bad file
             // doesn't leave a half-created draft behind.
             list($attachment, $attachmentError) = rsm_prepare_attachment();
             if ($attachmentError) {
@@ -202,8 +216,18 @@ try {
             if (!$validated['valid']) {
                 rsm_respond(['success' => false, 'message' => $validated['message']]);
             }
+            if (!$reportClass->reportTypeExists($validated['fields']['report_type'])) {
+                rsm_respond(['success' => false, 'message' => 'The selected report type does not exist.']);
+            }
+
             $reportId = (int) ($_POST['report_id'] ?? 0) ?: null;
-            $newId    = $reportClass->saveDraft($validated['fields'], $reportId);
+            if ($reportId) {
+                $existing = $reportClass->getReportById($reportId);
+                if (!$existing || (int) $existing['submitted_by'] !== (int) $_SESSION['employee_id'] || $existing['status'] !== 'draft') {
+                    rsm_respond(['success' => false, 'message' => 'This draft can no longer be edited.']);
+                }
+            }
+            $newId = $reportClass->saveDraft($validated['fields'], $reportId);
 
             $warning = null;
             $debug   = null;
@@ -212,7 +236,7 @@ try {
                     rsm_store_attachment($reportClass, $newId, $attachment);
                 } catch (\Throwable $e) {
                     error_log('[ReportController] Attachment failed for report ' . $newId . ': ' . $e->getMessage());
-                    $warning = 'Draft saved, but the attachment could not be saved.';
+                    $warning = 'Draft saved, but the file could not be saved.';
                     // TEMP debug info — remove once things are stable.
                     $debug = $e->getMessage();
                 }
@@ -228,8 +252,8 @@ try {
             break;
 
         // ------------------------------------------------------------------
-        // POST submit a report — creates/promotes to 'submitted' and auto-generates the PDF.
-        // PDF generation / attachment failure never blocks the submission itself.
+        // POST submit a report. A report file is required; nothing is generated
+        // by the system. If the file can't be stored the report stays a draft.
         // ------------------------------------------------------------------
         case 'submit':
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -245,39 +269,48 @@ try {
             if (!$validated['valid']) {
                 rsm_respond(['success' => false, 'message' => $validated['message']]);
             }
-            $reportId = (int) ($_POST['report_id'] ?? 0) ?: null;
-            $newId    = $reportClass->submitReport($validated['fields'], $reportId);
+            if (!$reportClass->reportTypeExists($validated['fields']['report_type'])) {
+                rsm_respond(['success' => false, 'message' => 'The selected report type does not exist.']);
+            }
 
-            $warnings = [];
-            $debug    = [];
+            $reportId = (int) ($_POST['report_id'] ?? 0) ?: null;
+            $existing = null;
+            if ($reportId) {
+                $existing = $reportClass->getReportById($reportId);
+                if (!$existing || (int) $existing['submitted_by'] !== (int) $_SESSION['employee_id'] || $existing['status'] !== 'draft') {
+                    rsm_respond(['success' => false, 'message' => 'This draft can no longer be submitted.']);
+                }
+            }
+
+            $hasFile = $attachment || ($existing && !empty($existing['attachment_path']));
+            if (!$hasFile) {
+                rsm_respond(['success' => false, 'message' => 'Please attach the report file before submitting.']);
+            }
+
+            $newId = $reportClass->saveDraft($validated['fields'], $reportId);
 
             if ($attachment) {
                 try {
                     rsm_store_attachment($reportClass, $newId, $attachment);
                 } catch (\Throwable $e) {
                     error_log('[ReportController] Attachment failed for report ' . $newId . ': ' . $e->getMessage());
-                    $warnings[] = 'Report submitted, but the attachment could not be saved.';
-                    // TEMP debug info — remove once things are stable.
-                    $debug[] = 'attachment: ' . $e->getMessage();
+                    rsm_respond([
+                        'success' => false,
+                        'message' => 'The file could not be saved, so the report was kept as a draft. Please try again.',
+                        // TEMP debug info — remove once things are stable.
+                        'debug'   => $e->getMessage(),
+                    ]);
                 }
             }
 
-            $pdfGenerated = false;
-            try {
-                $pdfGenerated = (bool) $reportClass->generatePdf($newId);
-            } catch (\Throwable $e) {
-                error_log('[ReportController] PDF generation failed for report ' . $newId . ': ' . $e->getMessage());
-                $warnings[] = 'Report submitted, but the PDF could not be generated. Contact your administrator.';
-                // TEMP debug info — remove once things are stable.
-                $debug[] = 'pdf: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine();
+            if (!$reportClass->submitDraft($newId)) {
+                rsm_respond(['success' => false, 'message' => 'This report could not be submitted.']);
             }
 
             rsm_respond([
                 'success' => true,
                 'message' => 'Report submitted successfully.',
-                'warning' => $warnings ? implode(' ', $warnings) : null,
-                'debug'   => $debug ? implode(' | ', $debug) : null,
-                'data'    => ['report_id' => $newId, 'has_pdf' => $pdfGenerated],
+                'data'    => ['report_id' => $newId],
             ]);
             break;
 
@@ -322,6 +355,10 @@ try {
             if (!$reportId) {
                 rsm_respond(['success' => false, 'message' => 'Report ID is required.']);
             }
+            $report = $reportClass->getReportById($reportId);
+            if (!$report || !rsm_can_access($report, $userInfo, $isDirectress)) {
+                rsm_respond(['success' => false, 'message' => 'You do not have access to this report.']);
+            }
             $result = $reportClass->generateAiSummary($reportId);
             rsm_respond($result);
             break;
@@ -344,6 +381,46 @@ try {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
+
+// Reads and validates the filter query parameters shared by list, analytics and report_types.
+// Directress: any department (or all). Everyone else: forced to their own department;
+// -1 means "no department", which matches nothing.
+function rsm_filters($isDirectress, $userInfo) {
+    if ($isDirectress) {
+        $dept = (int) ($_GET['department_id'] ?? 0);
+        $dept = $dept > 0 ? $dept : null;
+    } else {
+        $own  = (int) ($userInfo['department_id'] ?? 0);
+        $dept = $own > 0 ? $own : -1;
+    }
+
+    $status = (string) ($_GET['status'] ?? '');
+    if (!in_array($status, Report::STATUSES, true)) {
+        $status = '';
+    }
+
+    $from = rsm_valid_date($_GET['date_from'] ?? '');
+    $to   = rsm_valid_date($_GET['date_to'] ?? '');
+    if ($from && $to && $from > $to) {
+        list($from, $to) = [$to, $from];
+    }
+
+    return [
+        'department_id' => $dept,
+        'type'          => mb_substr(trim((string) ($_GET['type'] ?? '')), 0, 100),
+        'status'        => $status,
+        'date_from'     => $from,
+        'date_to'       => $to,
+        'search'        => mb_substr(trim((string) ($_GET['search'] ?? '')), 0, 100),
+    ];
+}
+
+// Returns the date back as Y-m-d if it is a real calendar date, otherwise null.
+function rsm_valid_date($value) {
+    $value = trim((string) $value);
+    $d = DateTime::createFromFormat('!Y-m-d', $value);
+    return ($d && $d->format('Y-m-d') === $value) ? $value : null;
+}
 
 // Same visibility rule as the "list" action: Directress sees everything;
 // everyone else sees their own department's reports (and anything they submitted).
@@ -378,14 +455,14 @@ function rsm_prepare_attachment() {
 
     $file = $_FILES['attachment'] ?? null;
     if (!FileStorage::hasUpload($file)) {
-        return [null, null]; // attachment is optional
+        return [null, null]; // no file chosen (the caller decides whether that is allowed)
     }
 
     $error = FileStorage::validateUpload($file);
     return $error ? [null, $error] : [$file, null];
 }
 
-// Saves the validated upload and records it on the report; removes the previous attachment if replaced.
+// Saves the validated upload and records it on the report; removes the previous file if replaced.
 function rsm_store_attachment($reportClass, $reportId, $file) {
     $existing = $reportClass->getReportById($reportId);
     $oldPath  = $existing['attachment_path'] ?? null;
@@ -402,7 +479,7 @@ function rsm_store_attachment($reportClass, $reportId, $file) {
 
     if (!$saved) {
         FileStorage::delete($relative); // don't leave an orphan file behind
-        throw new \RuntimeException('Attachment could not be linked to this report (not the owner, or report is no longer editable).');
+        throw new \RuntimeException('The file could not be linked to this report (not the owner, or report is no longer editable).');
     }
 
     if ($oldPath && $oldPath !== $relative) {
@@ -411,30 +488,29 @@ function rsm_store_attachment($reportClass, $reportId, $file) {
 }
 
 function validateReportInput($post) {
-    $title           = trim($post['title'] ?? '');
-    $reportType      = (int) ($post['report_type'] ?? 0);
-    $summary         = trim($post['summary'] ?? '');
-    $findings        = trim($post['findings'] ?? '');
-    $recommendations = trim($post['recommendations'] ?? '');
+    $title       = trim($post['title'] ?? '');
+    $reportType  = (int) ($post['report_type'] ?? 0);
+    $description = trim($post['description'] ?? '');
 
     if ($title === '') {
         return ['valid' => false, 'message' => 'Title is required.'];
     }
+    if (mb_strlen($title) > 255) {
+        return ['valid' => false, 'message' => 'Title must be 255 characters or fewer.'];
+    }
     if ($reportType === 0) {
         return ['valid' => false, 'message' => 'Please select a report type.'];
     }
-    if ($summary === '') {
-        return ['valid' => false, 'message' => 'Summary is required.'];
+    if (mb_strlen($description) > 5000) {
+        return ['valid' => false, 'message' => 'The description must be 5,000 characters or fewer.'];
     }
 
     return [
         'valid'  => true,
         'fields' => [
-            'title'           => $title,
-            'report_type'     => $reportType,
-            'summary'         => $summary,
-            'findings'        => $findings,
-            'recommendations' => $recommendations,
+            'title'       => $title,
+            'report_type' => $reportType,
+            'description' => $description !== '' ? $description : null,
         ],
     ];
 }

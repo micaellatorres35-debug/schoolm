@@ -2,7 +2,10 @@
 include_once __DIR__ . '/../../../auth/session.php';
 include __DIR__ . '/../classes/Employee.php';
 $employeeClass = new Employee();
-
+$sidebarRoleLabel = trim((string) ($_SESSION['role_name'] ?? 'College Coordinator'));
+if ($sidebarRoleLabel === '') {
+    $sidebarRoleLabel = 'College Coordinator';
+}
 ?>
 
 <aside class="sidebar">
@@ -35,7 +38,7 @@ $employeeClass = new Employee();
                             </div>
                             <div>
                                 <strong><?= htmlspecialchars($employeeClass->getEmployeeName()) ?></strong>
-                                <span><?= htmlspecialchars($employeeClass->getEmployeePosition()) ?></span>
+                                <span><?= htmlspecialchars($sidebarRoleLabel) ?></span>
                             </div>
                         </div>
                     </div>
@@ -61,7 +64,7 @@ $employeeClass = new Employee();
     <div class="sidebar-header">
         <div class="user_avatar"><?= substr(htmlspecialchars($employeeClass->getEmployeeName()), 0, 1) ?></div>
         <h1 class="employee_name"><?= htmlspecialchars($employeeClass->getEmployeeName()) ?></h1>
-        <p class="employee_position"><?= htmlspecialchars($employeeClass->getEmployeePosition()) ?></p>
+        <p class="employee_position"><?= htmlspecialchars($sidebarRoleLabel) ?></p>
     </div>
     <h2>Admin Dashboard</h2>
     <ul>

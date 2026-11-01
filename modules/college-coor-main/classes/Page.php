@@ -10,17 +10,20 @@ class Page {
         'academics' => 'Academics Management',
         'events-management'  => 'Events Management',
         'faculty-management' => 'Faculty Management',
+        'user-management' => 'Coordinator Management',
+        'department-unit-management' => 'Department Overview',
+        'communications-announcements' => 'Communications and Announcements',
         'class-scheduling'   => 'Class Scheduling',
-        'report-submission' => 'Report Submission & Management',
-        'concern-submission' => 'Concern & Issue Tracking',
-        'approval-submission' => 'Approval and Decision Support',
+        'report-submission-management' => 'Report Submission & Management',
+        'concerns-issues-tracking' => 'Concern & Issue Tracking',
+        'approval-decision-support' => 'Approval and Decision Support',
     ];
 
     /*Content Sections*/ 
     private $sections = [
         'top'             => ['dashboard-overview'],
-        'academics'  => ['faculty-management', 'academics-management', 'class-scheduling', 'events-management'],
-        'requests-and-reports' => ['report-submission', 'concern-submission', 'approval-submission']
+        'academics'  => ['faculty-management', 'user-management', 'department-unit-management', 'communications-announcements', 'academics-management', 'class-scheduling', 'events-management'],
+        'requests-and-reports' => ['report-submission-management', 'concerns-issues-tracking', 'approval-decision-support']
     ];
 
     public function __construct($pagesDir = null) {

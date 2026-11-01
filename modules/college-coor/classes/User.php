@@ -20,7 +20,7 @@ class User {
         }
 
         try {
-            $sql = "SELECT e.employee_id, e.first_name, e.last_name, e.middle_name, e.department_id, r.role_name AS role, e.employment_status AS status FROM `em_employees` e LEFT JOIN `em_roles` r ON e.role_id = r.role_id WHERE e.employee_id = :employee_id";
+            $sql = "SELECT e.employee_id, e.first_name, e.last_name, e.middle_name, e.department_id, r.role_name AS role, e.employment_status AS status FROM `em_employees` e LEFT JOIN `cc_roles` r ON e.role_id = r.role_id WHERE e.employee_id = :employee_id";
 
             $stmt = $this->conn->prepare($sql);
             $stmt->execute([':employee_id' => $_SESSION['employee_id']]);
@@ -42,7 +42,7 @@ class User {
         // Get the role tied to this department (null if not found)
         $role_id = null;
         try {
-            $roleStmt = $this->conn->prepare("SELECT role_id FROM em_roles WHERE department_id = :dept_id LIMIT 1");
+            $roleStmt = $this->conn->prepare("SELECT role_id FROM cc_roles WHERE department_id = :dept_id LIMIT 1");
             $roleStmt->execute([':dept_id' => $department_id]);
             $role_id = $roleStmt->fetchColumn() ?: null;
         } catch (PDOException $e) {

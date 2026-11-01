@@ -10,5 +10,9 @@ import './modules/faculty-management.js';
 import './modules/academics-management.js';
 import './modules/class-scheduling.js';
 import './modules/events-management.js';
+import './modules/issue.js';
+import './modules/user.js';
+import './modules/department.js';
+import './modules/announcement.js';
 
 
