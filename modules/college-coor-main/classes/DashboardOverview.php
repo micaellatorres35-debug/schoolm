@@ -57,23 +57,50 @@ class DashboardOverview {
     public function getDepartmentOverview(): array {
         try {
             $query = "
-                SELECT department_data.*
-                FROM (
-                    SELECT
-                        d.department_id,
-                        d.department_name,
-                        CONCAT(e.first_name, ' ', e.last_name) AS assigned_coordinator,
-                        (
-                            (SELECT COUNT(*) FROM cc_reports r WHERE r.department_id = d.department_id AND r.status IN ('submitted', 'reviewed'))
-                            + (SELECT COUNT(*) FROM cc_approvals a
-                               LEFT JOIN em_employees ae ON ae.employee_id = a.submit_by
-                               WHERE ae.department_id = d.department_id AND a.status IN ('submitted', 'reviewed'))
-                            + (SELECT COUNT(*) FROM cc_issues i WHERE i.department = d.department_id AND i.status IN ('submitted', 'reviewed'))
-                        ) AS pending_tasks
-                    FROM em_departments d
-                    LEFT JOIN em_employees e ON e.employee_id = d.department_head
-                    ORDER BY d.department_name
-                ) AS department_data";
+                SELECT
+                    r.role_name AS coordinator_role_name,
+                    COALESCE(rc.report_count, 0) AS report_count,
+                    COALESCE(cc.concern_count, 0) AS concern_count,
+                    COALESCE(ac.approval_count, 0) AS approval_count,
+                    (
+                        COALESCE(rc.report_count, 0)
+                        + COALESCE(cc.concern_count, 0)
+                        + COALESCE(ac.approval_count, 0)
+                    ) AS pending_tasks,
+                    'On Track' AS status
+                FROM cc_roles r
+                LEFT JOIN (
+                    SELECT e.role_id, COUNT(*) AS report_count
+                    FROM cc_reports rep
+                    INNER JOIN em_employees e ON e.employee_id = rep.submitted_by
+                    WHERE rep.status IN ('submitted', 'reviewed')
+                    GROUP BY e.role_id
+                ) rc ON rc.role_id = r.role_id
+                LEFT JOIN (
+                    SELECT e.role_id, COUNT(*) AS concern_count
+                    FROM cc_issues i
+                    INNER JOIN em_employees e ON e.employee_id = i.submitted_by
+                    WHERE i.status IN ('submitted', 'reviewed')
+                    GROUP BY e.role_id
+                ) cc ON cc.role_id = r.role_id
+                LEFT JOIN (
+                    SELECT e.role_id, COUNT(*) AS approval_count
+                    FROM cc_approvals a
+                    INNER JOIN em_employees e ON e.employee_id = a.submit_by
+                    WHERE a.status IN ('submitted', 'reviewed')
+                    GROUP BY e.role_id
+                ) ac ON ac.role_id = r.role_id
+                WHERE LOWER(TRIM(r.role_name)) LIKE '%coordinator%'
+                  AND LOWER(TRIM(r.role_name)) NOT LIKE '%admin college coordinator%'
+                ORDER BY CASE r.role_name
+                    WHEN 'College Coordinator' THEN 1
+                    WHEN 'Assistance Staff Coordinator' THEN 2
+                    WHEN 'Community Extension Coordinator' THEN 3
+                    WHEN 'Community Coordinator' THEN 4
+                    WHEN 'Research Coordinator' THEN 5
+                    WHEN 'GenEd Coordinator' THEN 6
+                    ELSE 99
+                END, r.role_name ASC";
 
             $result = $this->conn->query($query);
             $rows = $result ? $result->fetchAll(PDO::FETCH_ASSOC) : [];
@@ -82,9 +109,7 @@ class DashboardOverview {
                 $row['status'] = 'On Track';
                 $pendingTasks = (int) ($row['pending_tasks'] ?? 0);
 
-                if (empty($row['assigned_coordinator'])) {
-                    $row['status'] = 'Needs Attention';
-                } elseif ($pendingTasks >= 6) {
+                if ($pendingTasks >= 6) {
                     $row['status'] = 'Needs Attention';
                 } elseif ($pendingTasks >= 2 && $pendingTasks < 6) {
                     $row['status'] = 'Needs Attention';
@@ -112,6 +137,14 @@ class DashboardOverview {
                 FROM cc_reports r
                 LEFT JOIN em_departments d ON d.department_id = r.department_id
                 WHERE r.status IN ('submitted', 'reviewed')
+
+                UNION ALL
+
+                SELECT 'concern' AS source, i.title AS submission_title, d.department_name AS department_name, i.submitted_on AS submitted_at, i.status AS status,
+                       '?page=concerns-issues-tracking' AS action_target
+                FROM cc_issues i
+                LEFT JOIN em_departments d ON d.department_id = i.department
+                WHERE i.status IN ('submitted', 'reviewed')
 
                 UNION ALL
 

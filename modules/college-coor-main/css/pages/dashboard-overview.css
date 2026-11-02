@@ -1097,6 +1097,18 @@
     background: transparent;
 }
 
+.monitoring-dashboard .coord-status-table th:first-child,
+.monitoring-dashboard .coord-status-table td:first-child {
+    width: 38%;
+    min-width: 150px;
+}
+
+.monitoring-dashboard .coord-status-table th:nth-child(n + 2),
+.monitoring-dashboard .coord-status-table td:nth-child(n + 2) {
+    width: 20.67%;
+    text-align: center;
+}
+
 .monitoring-dashboard .coord-status-table tbody td {
     font-size: 0.8rem;
     color: #2a2f3a;

@@ -119,7 +119,6 @@ $recentActivities = $dashboardOverview->getRecentActivities(8);
                             </span>
                             <h3>Pending Submissions</h3>
                         </div>
-                        <a href="?page=report-submission" class="view-link">View details</a>
                     </div>
 
                     <?php if (!empty($pendingSubmissions)): ?>
@@ -144,12 +143,6 @@ $recentActivities = $dashboardOverview->getRecentActivities(8);
                                 </div>
 
                                 <div class="attention-item-actions">
-                                    <?php if (($submission['source'] ?? '') === 'approval' && !$userCanReviewApprovals): ?>
-                                        <span class="tiny-link">View only</span>
-                                    <?php else: ?>
-                                        <a href="<?= dashboardEscape($submission['action_target'] ?? '?page=report-submission') ?>" class="tiny-link">View</a>
-                                    <?php endif; ?>
-
                                     <span class="status-badge <?= dashboardStatusClass($submission['status'] ?? 'submitted') ?>">
                                         <?= dashboardEscape(ucfirst($submission['status'] ?? 'submitted')) ?>
                                     </span>
@@ -160,7 +153,7 @@ $recentActivities = $dashboardOverview->getRecentActivities(8);
                         <div class="empty-state-panel">No pending submissions found.</div>
                     <?php endif; ?>
 
-                    <a href="?page=report-submission" class="primary-cta">Go to Reports</a>
+                    <a href="?page=report-submission-management" class="primary-cta">Go to Reports</a>
                 </article>
 
                 <article class="attention-card">
@@ -223,7 +216,6 @@ $recentActivities = $dashboardOverview->getRecentActivities(8);
                             </span>
                             <h3>Coordinator Status</h3>
                         </div>
-                        <a href="?page=report-submission" class="view-link">View details</a>
                     </div>
 
                     <?php if (!empty($departmentOverview)): ?>
@@ -231,27 +223,31 @@ $recentActivities = $dashboardOverview->getRecentActivities(8);
                             <table class="coord-status-table">
                                 <thead>
                                     <tr>
-                                        <th>Department</th>
                                         <th>Coordinator</th>
-                                        <th>Pending Tasks</th>
-                                        <th>Status</th>
+                                        <th>Reports</th>
+                                        <th>Concern</th>
+                                        <th>Approvals</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php foreach ($departmentOverview as $department): ?>
                                         <tr>
                                             <td class="department-name">
-                                                <?= dashboardEscape($department['department_name'] ?? 'Department') ?>
+                                                <?= dashboardEscape($department['coordinator_role_name'] ?? 'Coordinator') ?>
                                             </td>
-                                            <td><?= dashboardEscape($department['assigned_coordinator'] ?? 'Unassigned') ?></td>
                                             <td>
-                                                <span class="task-pill <?= ((int) ($department['pending_tasks'] ?? 0) > 0) ? 'has-tasks' : 'no-tasks' ?>">
-                                                    <?= dashboardEscape((int) ($department['pending_tasks'] ?? 0)) ?>
+                                                <span class="task-pill <?= ((int) ($department['report_count'] ?? 0) > 0) ? 'has-tasks' : 'no-tasks' ?>">
+                                                    <?= dashboardEscape((int) ($department['report_count'] ?? 0)) ?>
                                                 </span>
                                             </td>
                                             <td>
-                                                <span class="status-badge <?= dashboardStatusClass($department['status'] ?? 'On Track') ?>">
-                                                    <?= dashboardEscape($department['status'] ?? 'On Track') ?>
+                                                <span class="task-pill <?= ((int) ($department['concern_count'] ?? 0) > 0) ? 'has-tasks' : 'no-tasks' ?>">
+                                                    <?= dashboardEscape((int) ($department['concern_count'] ?? 0)) ?>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="task-pill <?= ((int) ($department['approval_count'] ?? 0) > 0) ? 'has-tasks' : 'no-tasks' ?>">
+                                                    <?= dashboardEscape((int) ($department['approval_count'] ?? 0)) ?>
                                                 </span>
                                             </td>
                                         </tr>
@@ -295,7 +291,6 @@ $recentActivities = $dashboardOverview->getRecentActivities(8);
                             <th>Assigned Coordinator</th>
                             <th>Pending Tasks</th>
                             <th>Status</th>
-                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -310,14 +305,11 @@ $recentActivities = $dashboardOverview->getRecentActivities(8);
                                             <?= dashboardEscape($department['status'] ?? 'On Track') ?>
                                         </span>
                                     </td>
-                                    <td>
-                                        <a class="action-link" href="?page=report-submission">View Details</a>
-                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="5" class="empty-state-cell">No department records are available yet.</td>
+                                <td colspan="4" class="empty-state-cell">No department records are available yet.</td>
                             </tr>
                         <?php endif; ?>
                     </tbody>
@@ -338,7 +330,6 @@ $recentActivities = $dashboardOverview->getRecentActivities(8);
                             <th>Department</th>
                             <th>Date Submitted</th>
                             <th>Status</th>
-                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -353,18 +344,11 @@ $recentActivities = $dashboardOverview->getRecentActivities(8);
                                             <?= dashboardEscape(ucfirst($submission['status'] ?? 'submitted')) ?>
                                         </span>
                                     </td>
-                                    <td>
-                                        <?php if (($submission['source'] ?? '') === 'approval' && !$userCanReviewApprovals): ?>
-                                            <span class="muted-link">View only</span>
-                                        <?php else: ?>
-                                            <a class="action-link" href="<?= dashboardEscape($submission['action_target'] ?? '?page=report-submission') ?>">View</a>
-                                        <?php endif; ?>
-                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="5" class="empty-state-cell">No pending submissions found.</td>
+                                <td colspan="4" class="empty-state-cell">No pending submissions found.</td>
                             </tr>
                         <?php endif; ?>
                     </tbody>
