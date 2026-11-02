@@ -14,6 +14,161 @@ class DashboardOverview {
         $this->conn = $database->getConnection();
     }
 
+    private function getLastMonths(int $monthCount = 6): array {
+        $months = [];
+        $anchor = new DateTimeImmutable('first day of this month');
+
+        for ($offset = $monthCount - 1; $offset >= 0; $offset--) {
+            $date = $anchor->modify("-$offset month");
+            $months[] = [
+                'key' => $date->format('Y-m-01'),
+                'label' => $date->format('M'),
+            ];
+        }
+
+        return $months;
+    }
+
+    public function getActivityTrend(int $monthCount = 6): array {
+        $trend = [
+            'labels' => [],
+            'event_data' => [],
+            'announcement_data' => [],
+        ];
+
+        $months = $this->getLastMonths($monthCount);
+        $monthKeys = array_column($months, 'key');
+        $monthLabels = array_column($months, 'label');
+
+        $trend['labels'] = $monthLabels;
+
+        try {
+            $eventCounts = [];
+            $eventStmt = $this->conn->query(
+                "SELECT DATE_FORMAT(event_date, '%Y-%m-01') AS period, COUNT(*) AS total
+                 FROM cc_events
+                 WHERE event_date >= DATE_SUB(CURDATE(), INTERVAL " . max(1, $monthCount - 1) . " MONTH)
+                 GROUP BY DATE_FORMAT(event_date, '%Y-%m-01')"
+            );
+
+            foreach ($eventStmt ? $eventStmt->fetchAll(PDO::FETCH_ASSOC) : [] as $row) {
+                $eventCounts[(string) ($row['period'] ?? '')] = (int) ($row['total'] ?? 0);
+            }
+
+            foreach ($monthKeys as $key) {
+                $trend['event_data'][] = (int) ($eventCounts[$key] ?? 0);
+            }
+        } catch (Throwable $e) {
+            $trend['event_data'] = array_fill(0, count($months), 0);
+        }
+
+        try {
+            $announcementCounts = [];
+            $announcementStmt = $this->conn->query(
+                "SELECT DATE_FORMAT(publish_date, '%Y-%m-01') AS period, COUNT(*) AS total
+                 FROM cc_announcements
+                 WHERE status IN ('Published', 'Scheduled')
+                   AND publish_date >= DATE_SUB(CURDATE(), INTERVAL " . max(1, $monthCount - 1) . " MONTH)
+                 GROUP BY DATE_FORMAT(publish_date, '%Y-%m-01')"
+            );
+
+            foreach ($announcementStmt ? $announcementStmt->fetchAll(PDO::FETCH_ASSOC) : [] as $row) {
+                $announcementCounts[(string) ($row['period'] ?? '')] = (int) ($row['total'] ?? 0);
+            }
+
+            foreach ($monthKeys as $key) {
+                $trend['announcement_data'][] = (int) ($announcementCounts[$key] ?? 0);
+            }
+        } catch (Throwable $e) {
+            $trend['announcement_data'] = array_fill(0, count($months), 0);
+        }
+
+        return $trend;
+    }
+
+    public function getEventStatusBreakdown(): array {
+        $breakdown = ['labels' => [], 'data' => [], 'items' => [], 'total' => 0];
+
+        try {
+            $query = "
+                SELECT COALESCE(NULLIF(TRIM(status), ''), 'Scheduled') AS status_label,
+                       COUNT(*) AS total
+                FROM cc_events
+                GROUP BY COALESCE(NULLIF(TRIM(status), ''), 'Scheduled')
+                ORDER BY total DESC, status_label ASC";
+
+            $rows = $this->conn->query($query)->fetchAll(PDO::FETCH_ASSOC);
+            $totalItems = 0;
+            foreach ($rows as $row) {
+                $totalItems += (int) ($row['total'] ?? 0);
+            }
+
+            foreach ($rows as $row) {
+                $label = (string) ($row['status_label'] ?? 'Scheduled');
+                $count = (int) ($row['total'] ?? 0);
+                $breakdown['labels'][] = $label;
+                $breakdown['data'][] = $count;
+                $breakdown['items'][] = [
+                    'label' => $label,
+                    'count' => $count,
+                    'percent' => $totalItems > 0 ? round(($count / $totalItems) * 100, 1) : 0,
+                ];
+            }
+
+            $breakdown['total'] = $totalItems;
+        } catch (Throwable $e) {
+            $breakdown = ['labels' => ['No Data'], 'data' => [0], 'items' => [['label' => 'No Data','count'=>0,'percent'=>0]], 'total' => 0];
+        }
+
+        if (empty($breakdown['labels'])) {
+            $breakdown = ['labels' => ['No Data'], 'data' => [0], 'items' => [['label' => 'No Data','count'=>0,'percent'=>0]], 'total' => 0];
+        }
+
+        return $breakdown;
+    }
+
+    public function getRecentAnnouncements(int $limit = 4): array {
+        try {
+            $query = "
+                SELECT a.announcement_id, a.title, a.announcement_type, a.priority, a.status, a.publish_date,
+                       TRIM(CONCAT_WS(' ', e.first_name, e.last_name)) AS publisher_name,
+                       d.department_name AS issuing_department,
+                       COALESCE(a.publish_date, a.created_at) AS sort_date
+                FROM cc_announcements a
+                LEFT JOIN em_employees e ON e.employee_id = a.created_by
+                LEFT JOIN em_departments d ON d.department_id = a.issuing_department_id
+                WHERE a.status IN ('Published', 'Scheduled')
+                ORDER BY sort_date DESC, a.announcement_id DESC
+                LIMIT :limit";
+
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindValue(':limit', (int) $limit, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            return [];
+        }
+    }
+
+    public function getRecentEvents(int $limit = 4): array {
+        try {
+            $query = "
+                SELECT event_id, event_title, event_date, start_time, end_time, status, target_audience,
+                       COALESCE(target_audience, 'College Wide') AS department_name
+                FROM cc_events
+                WHERE event_date >= CURDATE() AND LOWER(TRIM(COALESCE(status, '')) ) <> 'completed'
+                ORDER BY event_date ASC, start_time ASC, event_id ASC
+                LIMIT :limit";
+
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindValue(':limit', (int) $limit, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            return [];
+        }
+    }
+
     public function getSummary(): array {
         $summary = [
             'total_departments' => 0,
