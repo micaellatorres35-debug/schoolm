@@ -33,7 +33,7 @@ class User {
 
     public function registerEmployee($employee_id, $department_id, $position_id, $password) {
         // Check if employee already has a user account
-        $checkStmt = $this->conn->prepare("SELECT user_id FROM user_account WHERE employee_id = :employee_id");
+        $checkStmt = $this->conn->prepare("SELECT user_id FROM cc_user_account WHERE employee_id = :employee_id");
         $checkStmt->execute([':employee_id' => $employee_id]);
         if ($checkStmt->fetchColumn()) {
             return ['success' => false, 'message' => 'Employee already has a user account.'];
@@ -54,8 +54,8 @@ class User {
         try {
             $this->conn->beginTransaction();
 
-            // 1. INSERT into user_account
-            $insertSql  = "INSERT INTO user_account (password, employee_id, created_at) VALUES (:password, :employee_id, NOW())";
+            // 1. INSERT into cc_user_account
+            $insertSql  = "INSERT INTO cc_user_account (password, employee_id, created_at) VALUES (:password, :employee_id, NOW())";
             $insertStmt = $this->conn->prepare($insertSql);
             $insertStmt->execute([
                 ':password'    => $hashed_password,

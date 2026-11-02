@@ -21,7 +21,7 @@
         }
 
         // ── LIST / READ ──────────────────────────────────────────────
-        public function getConcerns($department_id = null, $status = null, $search = '') {
+        public function getConcerns($department_id = null, $status = null, $search = '', $submitted_by = null) {
             $sql = "SELECT
                         i.issue_id, i.title, i.details, i.desired_resolution,
                         i.status, i.file_path, i.pdf_path, i.ai_summary,
@@ -45,6 +45,10 @@
             if (!is_null($status)) {
                 $sql .= " AND i.status = :status";
                 $params[':status'] = $status;
+            }
+            if (!is_null($submitted_by)) {
+                $sql .= " AND i.submitted_by = :submitted_by";
+                $params[':submitted_by'] = $submitted_by;
             }
             if ($search !== '') {
                 $sql .= " AND (i.title LIKE :search OR CONCAT(e.first_name, ' ', e.last_name) LIKE :search)";
@@ -82,8 +86,7 @@
 
         // ── CREATE / SAVE ────────────────────────────────────────────
         // $data keys: title, details, desired_resolution, department_id
-        // Optional (only when a new attachment was uploaded): file_path, file_name, file_size
-        // file_path is a RELATIVE storage path (issues/attachments/...), never an absolute one.
+        // Optional: file_path only; file_name/file_size are not stored in cc_issues.
         public function saveDraft($data, $issue_id = null) {
             $submitted_by = $_SESSION['employee_id'];
 
@@ -92,7 +95,7 @@
 
                 $sql = "UPDATE cc_issues SET
                             title = :title, details = :details, desired_resolution = :desired_resolution
-                            " . ($hasFile ? ", file_path = :file_path, file_name = :file_name, file_size = :file_size" : "") . "
+                            " . ($hasFile ? ", file_path = :file_path" : "") . "
                         WHERE issue_id = :issue_id AND submitted_by = :submitted_by AND status = 'draft'";
                 $stmt = $this->conn->prepare($sql);
                 $params = [
@@ -104,17 +107,15 @@
                 ];
                 if ($hasFile) {
                     $params[':file_path'] = $data['file_path'];
-                    $params[':file_name'] = $data['file_name'] ?? null;
-                    $params[':file_size'] = $data['file_size'] ?? null;
                 }
                 $stmt->execute($params);
                 return $issue_id;
             }
 
             $sql = "INSERT INTO cc_issues
-                        (title, details, desired_resolution, department, submitted_by, file_path, file_name, file_size, status, created_at)
+                        (title, details, desired_resolution, department, submitted_by, file_path, status, created_at)
                     VALUES
-                        (:title, :details, :desired_resolution, :department, :submitted_by, :file_path, :file_name, :file_size, 'draft', NOW())";
+                        (:title, :details, :desired_resolution, :department, :submitted_by, :file_path, 'draft', NOW())";
             $stmt = $this->conn->prepare($sql);
             $stmt->execute([
                 ':title'              => $data['title'],
@@ -123,8 +124,6 @@
                 ':department'         => $data['department_id'],
                 ':submitted_by'       => $submitted_by,
                 ':file_path'          => $data['file_path'] ?? null,
-                ':file_name'          => $data['file_name'] ?? null,
-                ':file_size'          => $data['file_size'] ?? null,
             ]);
             return $this->conn->lastInsertId();
         }

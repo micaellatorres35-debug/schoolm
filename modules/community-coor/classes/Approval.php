@@ -15,9 +15,7 @@
         }
 
         // ── LIST / READ ──────────────────────────────────────────────
-        // $department_id filters by the SUBMITTER's department (e1.department), matching the
-        // original join. $status filters by workflow status (draft/submitted/reviewed/approved/rejected).
-        public function getApprovals($department_id = null, $status = null) {
+        public function getApprovals($department_id = null, $status = null, $submitted_by = null) {
             $sql = "SELECT
                         a.approval_id, a.title, a.description, a.justification,
                         a.status, a.decision, a.file_path, a.pdf_path, a.ai_summary,
@@ -26,7 +24,7 @@
                         CONCAT(rv.first_name, ' ', rv.last_name) AS reviewed_by_name,
                         CONCAT(e2.first_name, ' ', e2.last_name) AS approver_id,
                         d.department_name
-                    FROM sd_approvals a
+                    FROM cc_approvals a
                     LEFT JOIN em_employees e1 ON a.submit_by   = e1.employee_id
                     LEFT JOIN em_employees rv ON a.reviewed_by = rv.employee_id
                     LEFT JOIN em_employees e2 ON a.approver_id = e2.employee_id
@@ -37,6 +35,10 @@
             if (!is_null($department_id)) {
                 $sql .= " AND e1.department_id = :department_id";
                 $params[':department_id'] = $department_id;
+            }
+            if (!is_null($submitted_by)) {
+                $sql .= " AND a.submit_by = :submitted_by";
+                $params[':submitted_by'] = $submitted_by;
             }
             if (!is_null($status)) {
                 $sql .= " AND a.status = :status";
@@ -49,8 +51,6 @@
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
-        // NOTE: a.submit_by stays the raw employee_id here (used by the controller's access check).
-        // submitter_department_id mirrors the join used by getApprovals() for department filtering.
         public function getApprovalById($approval_id) {
             $sql = "SELECT
                         a.*,
@@ -59,7 +59,7 @@
                         CONCAT(e2.first_name, ' ', e2.last_name) AS decided_by_name,
                         e1.department_id AS submitter_department_id,
                         d.department_name
-                    FROM sd_approvals a
+                    FROM cc_approvals a
                     LEFT JOIN em_employees e1 ON a.submit_by   = e1.employee_id
                     LEFT JOIN em_employees rv ON a.reviewed_by = rv.employee_id
                     LEFT JOIN em_employees e2 ON a.approver_id = e2.employee_id
@@ -73,10 +73,6 @@
         }
 
         // ── CREATE / SAVE ────────────────────────────────────────────
-        // $data keys: title, description, justification
-        // Optional (only when a new attachment was uploaded): file_path, file_name, file_size
-        // file_path is a RELATIVE storage path (approvals/attachments/...), never an absolute one.
-
         public function saveDraft($data, $approval_id = null) {
             if (session_status() !== PHP_SESSION_ACTIVE) {
                 session_start();
@@ -88,12 +84,11 @@
                 throw new RuntimeException('You must be logged in to save an approval.');
             }
 
-            // Get the department from the authenticated employee record.
             $stmt = $this->conn->prepare(
                 "SELECT department_id
-                FROM em_employees
-                WHERE employee_id = :employee_id
-                LIMIT 1"
+                 FROM em_employees
+                 WHERE employee_id = :employee_id
+                 LIMIT 1"
             );
             $stmt->execute([':employee_id' => $submit_by]);
 
@@ -106,10 +101,9 @@
             }
 
             if ($approval_id) {
-                // Update only a draft owned by the current employee.
                 $hasFile = array_key_exists('file_path', $data);
 
-                $sql = "UPDATE sd_approvals SET
+                $sql = "UPDATE cc_approvals SET
                             title = :title,
                             description = :description,
                             justification = :justification,
@@ -139,12 +133,10 @@
                 }
 
                 $stmt->execute($params);
-
                 return $approval_id;
             }
 
-            // Create a new draft with its department recorded.
-            $sql = "INSERT INTO sd_approvals
+            $sql = "INSERT INTO cc_approvals
                         (
                             title,
                             description,
@@ -187,22 +179,20 @@
             return $this->conn->lastInsertId();
         }
 
-
-        // Create (or promote an existing draft belonging to the current user) straight to 'submitted'
         public function submitApproval($data, $approval_id = null) {
             $approval_id = $this->saveDraft($data, $approval_id);
 
             $stmt = $this->conn->prepare(
-                "UPDATE sd_approvals SET status = 'submitted', submitted_on = NOW() WHERE approval_id = :approval_id"
+                "UPDATE cc_approvals SET status = 'submitted', submitted_on = NOW() WHERE approval_id = :approval_id"
             );
             $stmt->execute([':approval_id' => $approval_id]);
 
             return $approval_id;
         }
 
-        // ── REVIEW / DECISION (School Directress) ────────────────────
+        // ── REVIEW / DECISION ────────────────────────────────────────
         public function markReviewed($approval_id, $reviewed_by, $notes = null) {
-            $sql = "UPDATE sd_approvals SET
+            $sql = "UPDATE cc_approvals SET
                         status = 'reviewed', reviewed_by = :reviewed_by, reviewed_at = NOW(), review_notes = :notes
                     WHERE approval_id = :approval_id AND status = 'submitted'";
             $stmt = $this->conn->prepare($sql);
@@ -218,7 +208,7 @@
             if (!in_array($decision, ['approved', 'rejected'], true)) {
                 return false;
             }
-            $sql = "UPDATE sd_approvals SET
+            $sql = "UPDATE cc_approvals SET
                         status = :status, decision = :decision,
                         approver_id = :decided_by, approved_at = NOW(), remarks = :notes
                     WHERE approval_id = :approval_id AND status = 'reviewed'";
@@ -234,7 +224,6 @@
         }
 
         // ── PDF GENERATION (dompdf) ───────────────────────────────────
-        // Saves into FileStorage and stores a RELATIVE path (approvals/pdf/...) in pdf_path.
         public function generatePdf($approval_id) {
             $autoload = __DIR__ . '/../../../vendor/autoload.php';
             if (!file_exists($autoload)) {
@@ -257,7 +246,7 @@
             $fileName     = 'approval_' . $approval_id . '_' . time() . '.pdf';
             $relativePath = FileStorage::storeBytes($dompdf->output(), 'approvals/pdf', $fileName);
 
-            $stmt = $this->conn->prepare("UPDATE sd_approvals SET pdf_path = :pdf_path WHERE approval_id = :approval_id");
+            $stmt = $this->conn->prepare("UPDATE cc_approvals SET pdf_path = :pdf_path WHERE approval_id = :approval_id");
             $stmt->execute([':pdf_path' => $relativePath, ':approval_id' => $approval_id]);
 
             return $relativePath;
@@ -301,9 +290,7 @@
             HTML;
         }
 
-        // ── AI SUMMARIZATION (Google Gemini free tier) ────────────────
-        // Requires GEMINI_API_KEY in env (or a defined constant of the same name).
-        // Get a free key at https://aistudio.google.com/apikey — no credit card required.
+        // ── AI SUMMARIZATION ───────────────────────────────────────────
         public function generateAiSummary($approval_id) {
             $approval = $this->getApprovalById($approval_id);
             if (!$approval) {
@@ -350,7 +337,6 @@
                 return [
                     'success' => false,
                     'message' => 'AI summarization failed.',
-                    // TEMP debug info — remove once things are stable.
                     'debug' => 'HTTP ' . $httpCode . ': ' . $response,
                 ];
             }
@@ -364,7 +350,7 @@
 
             $summaryText = trim($summaryText);
 
-            $stmt = $this->conn->prepare("UPDATE sd_approvals SET ai_summary = :ai_summary WHERE approval_id = :approval_id");
+            $stmt = $this->conn->prepare("UPDATE cc_approvals SET ai_summary = :ai_summary WHERE approval_id = :approval_id");
             $stmt->execute([':ai_summary' => $summaryText, ':approval_id' => $approval_id]);
 
             return ['success' => true, 'summary' => $summaryText];

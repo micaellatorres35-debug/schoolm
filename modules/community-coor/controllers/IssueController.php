@@ -93,15 +93,17 @@ try {
                 : null;
             $search = trim($_GET['search'] ?? '');
 
+            $submittedBy = null;
             if ($isDirectress) {
-                // School Directress can view approvals across all departments.
+                // School Directress can view concerns across all departments.
                 $departmentId = null;
-            } elseif ($departmentId === null) {
-                // Other users default to their own department.
-                $departmentId = $userInfo['department_id'] ?? null;
+            } else {
+                // Community Coordinator users should only see the concerns they submitted.
+                $submittedBy = (int) ($userInfo['employee_id'] ?? $_SESSION['employee_id'] ?? 0);
+                $departmentId = null;
             }
 
-            $concerns = $issuesClass->getConcerns($departmentId, $status, $search);
+            $concerns = $issuesClass->getConcerns($departmentId, $status, $search, $submittedBy);
             concern_respond(['success' => true, 'data' => array_map('concern_public', $concerns)]);
             break;
 
@@ -350,9 +352,9 @@ function concern_public($concern) {
     $concern['has_attachment'] = !empty($concern['file_path']);
 
     if ($concern['has_attachment']) {
-        $concern['attachment_name'] = !empty($concern['file_name']) ? $concern['file_name'] : basename($concern['file_path']);
+        $concern['attachment_name'] = basename((string) ($concern['file_path'] ?? ''));
         $concern['attachment_mime'] = FileStorage::mimeFor($concern['file_path']);
-        $concern['attachment_size'] = $concern['file_size'] ?? null;
+        $concern['attachment_size'] = null;
     }
 
     unset($concern['pdf_path'], $concern['file_path']);
@@ -406,8 +408,6 @@ function concern_prepare_attachment($issuesClass, $issueId, $userInfo) {
     $result['newPath'] = $relative;
     $result['extra']   = [
         'file_path' => $relative,
-        'file_name' => FileStorage::cleanName($file['name']),
-        'file_size' => (int) $file['size'],
     ];
     return $result;
 }

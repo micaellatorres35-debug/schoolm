@@ -21,7 +21,7 @@
         }
 
         // ── LIST / READ ──────────────────────────────────────────────
-        public function getConcerns($department_id = null, $status = null, $search = '') {
+        public function getConcerns($department_id = null, $status = null, $search = '', $submitted_by = null) {
             $sql = "SELECT
                         i.issue_id, i.title, i.details, i.desired_resolution,
                         i.status, i.file_path, i.pdf_path, i.ai_summary,
@@ -30,7 +30,7 @@
                         CONCAT(e.first_name, ' ', e.last_name)  AS submitted_by,
                         CONCAT(rv.first_name, ' ', rv.last_name) AS reviewed_by_name,
                         CONCAT(rs.first_name, ' ', rs.last_name) AS resolved_by_name
-                    FROM sd_issues i
+                    FROM cc_issues i
                     JOIN em_departments d ON i.department = d.department_id
                     JOIN em_employees e  ON i.submitted_by = e.employee_id
                     LEFT JOIN em_employees rv ON i.reviewed_by = rv.employee_id
@@ -45,6 +45,10 @@
             if (!is_null($status)) {
                 $sql .= " AND i.status = :status";
                 $params[':status'] = $status;
+            }
+            if (!is_null($submitted_by)) {
+                $sql .= " AND i.submitted_by = :submitted_by";
+                $params[':submitted_by'] = $submitted_by;
             }
             if ($search !== '') {
                 $sql .= " AND (i.title LIKE :search OR CONCAT(e.first_name, ' ', e.last_name) LIKE :search)";
@@ -67,7 +71,7 @@
                         CONCAT(e.first_name, ' ', e.last_name)  AS submitted_by_name,
                         CONCAT(rv.first_name, ' ', rv.last_name) AS reviewed_by_name,
                         CONCAT(rs.first_name, ' ', rs.last_name) AS resolved_by_name
-                    FROM sd_issues i
+                    FROM cc_issues i
                     JOIN em_departments d ON i.department = d.department_id
                     JOIN em_employees e  ON i.submitted_by = e.employee_id
                     LEFT JOIN em_employees rv ON i.reviewed_by = rv.employee_id
@@ -82,17 +86,16 @@
 
         // ── CREATE / SAVE ────────────────────────────────────────────
         // $data keys: title, details, desired_resolution, department_id
-        // Optional (only when a new attachment was uploaded): file_path, file_name, file_size
-        // file_path is a RELATIVE storage path (issues/attachments/...), never an absolute one.
+        // Optional: file_path only; file_name/file_size are not stored in cc_issues.
         public function saveDraft($data, $issue_id = null) {
             $submitted_by = $_SESSION['employee_id'];
 
             if ($issue_id) {
                 $hasFile = array_key_exists('file_path', $data);
 
-                $sql = "UPDATE sd_issues SET
+                $sql = "UPDATE cc_issues SET
                             title = :title, details = :details, desired_resolution = :desired_resolution
-                            " . ($hasFile ? ", file_path = :file_path, file_name = :file_name, file_size = :file_size" : "") . "
+                            " . ($hasFile ? ", file_path = :file_path" : "") . "
                         WHERE issue_id = :issue_id AND submitted_by = :submitted_by AND status = 'draft'";
                 $stmt = $this->conn->prepare($sql);
                 $params = [
@@ -104,17 +107,15 @@
                 ];
                 if ($hasFile) {
                     $params[':file_path'] = $data['file_path'];
-                    $params[':file_name'] = $data['file_name'] ?? null;
-                    $params[':file_size'] = $data['file_size'] ?? null;
                 }
                 $stmt->execute($params);
                 return $issue_id;
             }
 
-            $sql = "INSERT INTO sd_issues
-                        (title, details, desired_resolution, department, submitted_by, file_path, file_name, file_size, status, created_at)
+            $sql = "INSERT INTO cc_issues
+                        (title, details, desired_resolution, department, submitted_by, file_path, status, created_at)
                     VALUES
-                        (:title, :details, :desired_resolution, :department, :submitted_by, :file_path, :file_name, :file_size, 'draft', NOW())";
+                        (:title, :details, :desired_resolution, :department, :submitted_by, :file_path, 'draft', NOW())";
             $stmt = $this->conn->prepare($sql);
             $stmt->execute([
                 ':title'              => $data['title'],
@@ -123,8 +124,6 @@
                 ':department'         => $data['department_id'],
                 ':submitted_by'       => $submitted_by,
                 ':file_path'          => $data['file_path'] ?? null,
-                ':file_name'          => $data['file_name'] ?? null,
-                ':file_size'          => $data['file_size'] ?? null,
             ]);
             return $this->conn->lastInsertId();
         }
@@ -134,7 +133,7 @@
             $issue_id = $this->saveDraft($data, $issue_id);
 
             $stmt = $this->conn->prepare(
-                "UPDATE sd_issues SET status = 'submitted', submitted_on = NOW() WHERE issue_id = :issue_id"
+                "UPDATE cc_issues SET status = 'submitted', submitted_on = NOW() WHERE issue_id = :issue_id"
             );
             $stmt->execute([':issue_id' => $issue_id]);
 
@@ -143,7 +142,7 @@
 
         // ── REVIEW / RESOLUTION (School Directress) ───────────────────
         public function markReviewed($issue_id, $reviewed_by, $notes = null) {
-            $sql = "UPDATE sd_issues SET
+            $sql = "UPDATE cc_issues SET
                         status = 'reviewed', reviewed_by = :reviewed_by, reviewed_at = NOW(), review_notes = :notes
                     WHERE issue_id = :issue_id AND status = 'submitted'";
             $stmt = $this->conn->prepare($sql);
@@ -159,7 +158,7 @@
             if (!in_array($decision, ['resolved', 'dismissed'], true)) {
                 return false;
             }
-            $sql = "UPDATE sd_issues SET
+            $sql = "UPDATE cc_issues SET
                         status = :status, resolved_by = :resolved_by, resolved_at = NOW(), resolution_notes = :notes
                     WHERE issue_id = :issue_id AND status = 'reviewed'";
             $stmt = $this->conn->prepare($sql);
@@ -196,7 +195,7 @@
             $fileName     = 'concern_' . $issue_id . '_' . time() . '.pdf';
             $relativePath = FileStorage::storeBytes($dompdf->output(), 'issues/pdf', $fileName);
 
-            $stmt = $this->conn->prepare("UPDATE sd_issues SET pdf_path = :pdf_path WHERE issue_id = :issue_id");
+            $stmt = $this->conn->prepare("UPDATE cc_issues SET pdf_path = :pdf_path WHERE issue_id = :issue_id");
             $stmt->execute([':pdf_path' => $relativePath, ':issue_id' => $issue_id]);
 
             return $relativePath;
@@ -303,7 +302,7 @@
 
             $summaryText = trim($summaryText);
 
-            $stmt = $this->conn->prepare("UPDATE sd_issues SET ai_summary = :ai_summary WHERE issue_id = :issue_id");
+            $stmt = $this->conn->prepare("UPDATE cc_issues SET ai_summary = :ai_summary WHERE issue_id = :issue_id");
             $stmt->execute([':ai_summary' => $summaryText, ':issue_id' => $issue_id]);
 
             return ['success' => true, 'summary' => $summaryText];

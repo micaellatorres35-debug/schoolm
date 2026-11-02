@@ -7,7 +7,7 @@
     /*User Class*/
     $userClass = new User();
     $userInfo = $userClass->userSession();
-    $isDirectress = ($userInfo['role'] === 'School Directress');
+    $isDirectress = !empty($userInfo) && trim((string) ($userInfo['role'] ?? '')) === 'School Directress';
 
     /*Approval Class*/
     $approvalClass = new Approval();

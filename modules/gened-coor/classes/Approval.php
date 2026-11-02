@@ -17,7 +17,7 @@
         // ── LIST / READ ──────────────────────────────────────────────
         // $department_id filters by the SUBMITTER's department (e1.department), matching the
         // original join. $status filters by workflow status (draft/submitted/reviewed/approved/rejected).
-        public function getApprovals($department_id = null, $status = null) {
+        public function getApprovals($department_id = null, $status = null, $submitted_by = null) {
             $sql = "SELECT
                         a.approval_id, a.title, a.description, a.justification,
                         a.status, a.decision, a.file_path, a.pdf_path, a.ai_summary,
@@ -41,6 +41,10 @@
             if (!is_null($status)) {
                 $sql .= " AND a.status = :status";
                 $params[':status'] = $status;
+            }
+            if (!is_null($submitted_by)) {
+                $sql .= " AND a.submit_by = :submitted_by";
+                $params[':submitted_by'] = $submitted_by;
             }
             $sql .= " ORDER BY a.submitted_on DESC, a.created_at DESC";
 
