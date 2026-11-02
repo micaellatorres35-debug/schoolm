@@ -7,9 +7,10 @@ class Page {
     /*Sidebar Content*/ 
     private $labels = [
         'dashboard-overview' => 'Dashboard Overview',
-        'academics' => 'Academics Management',
-        'events-management'  => 'Events Management',
-        'faculty-management' => 'Faculty Management',
+        'research-project'  => 'Research Projects',
+        'research-proposal' => 'Research Proposals',
+        'research-documentation' => 'Research Documentation',
+        'ethics-compliance' => 'Ethics and Compliance',
         'class-scheduling'   => 'Class Scheduling',
         'report-submission' => 'Report Submission',
         'concern-submission' => 'Concern Submission',
@@ -19,7 +20,7 @@ class Page {
     /*Content Sections*/ 
     private $sections = [
         'top'             => ['dashboard-overview'],
-        'academics'  => ['faculty-management', 'academics-management', 'class-scheduling', 'events-management'],
+        'research'  => ['research-project', 'research-proposal', 'research-documentation', 'ethics-compliance', 'class-scheduling', 'events-management'],
         'requests-and-reports' => ['report-submission', 'concern-submission', 'approval-submission']
     ];
 
@@ -67,11 +68,11 @@ class Page {
         }
 
         // Grouped sections
-        $sectionOrder = ['academics', 'requests-and-reports'];
+        $sectionOrder = ['research', 'requests-and-reports'];
         foreach ($sectionOrder as $section) {
             echo '<div class="separator"></div>';
-            if ($section === 'academics') {
-                echo '<h3>Academic Affairs</h3>';
+            if ($section === 'research') {
+                echo '<h3>Research Management</h3>';
             } else {
                 echo '<h3>' . ucwords(str_replace('-', ' ', $section)) . '</h3>';
             }

@@ -61,9 +61,9 @@ $employeeClass = new Employee();
     <div class="sidebar-header">
         <div class="user_avatar"><?= substr(htmlspecialchars($employeeClass->getEmployeeName()), 0, 1) ?></div>
         <h1 class="employee_name"><?= htmlspecialchars($employeeClass->getEmployeeName()) ?></h1>
-        <p class="employee_position"><?= htmlspecialchars($employeeClass->getEmployeePosition()) ?></p>
+        <p class="employee_position">Research Coordinator<?= htmlspecialchars($employeeClass->getEmployeePosition()) ?></p>
     </div>
-    <h2>Admin Dashboard</h2>
+    <h2>Dashboard</h2>
     <ul>
         <?php $pageController->renderNav(); ?>
     </ul>

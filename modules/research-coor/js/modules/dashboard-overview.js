@@ -3,24 +3,396 @@
 
     let currentDate = new Date();
     let readNotificationIds = [];
-    let facultyLoadChart = null;
-    let activityTimer = null;
     let dashboardTimer = null;
     const urgentToastShownKey = 'ccUrgentToastShownIds';
     const readNotificationKey = 'ccReadNotificationIds';
+    const researchProjectsStorageKey = 'researchCoor_projects';
+    const researchProposalsStorageKey = 'researchCoor_proposals';
+    const researchDocumentsStorageKey = 'researchCoor_documents';
+    const researchEthicsStorageKey = 'researchCoor_ethics';
+    const researchProjectStatuses = ['Draft', 'Submitted', 'Under Review', 'Approved', 'Ongoing', 'Completed', 'Rejected'];
 
     const dashboard = () => ({
         eventsByDate: window.eventsByDate || {},
         notificationEvents: window.notificationEvents || [],
-        chartData: window.chartData || {},
-        serverTimestamp: window.serverTimestamp || new Date().toISOString(),
-        allActivities: window.allActivities || []
+        serverTimestamp: window.serverTimestamp || new Date().toISOString()
     });
 
     function escapeHtml(text) {
         if (!text) return '';
         const map = {'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;'};
         return String(text).replace(/[&<>"']/g, character => map[character]);
+    }
+
+    function readEmbeddedDashboardData(id, fallback) {
+        const element = document.getElementById(id);
+        if (!element) return fallback;
+        try {
+            return JSON.parse(element.textContent || '');
+        } catch (error) {
+            console.error(`Unable to parse ${id}:`, error);
+            return fallback;
+        }
+    }
+
+    function initializeEmbeddedDashboardData() {
+        window.eventsByDate = readEmbeddedDashboardData('researchDashboardEventsData', {});
+        window.notificationEvents = readEmbeddedDashboardData('researchDashboardNotificationsData', []);
+        window.researchDashboardData = readEmbeddedDashboardData('researchDashboardServerData', {});
+        window.serverTimestamp = readEmbeddedDashboardData('researchDashboardTimestampData', new Date().toISOString());
+    }
+
+    function getResearchProjects() {
+        try {
+            const storedProjects = localStorage.getItem(researchProjectsStorageKey);
+            if (storedProjects === null) return {projects: [], error: null};
+            const projects = JSON.parse(storedProjects);
+            if (!Array.isArray(projects)) throw new Error('Stored research project data must be a list.');
+            if (!projects.every(project => project && typeof project === 'object' && !Array.isArray(project))) {
+                throw new Error('Stored research project data contains an invalid record.');
+            }
+
+            return {projects, error: null};
+        } catch (error) {
+            console.error('Unable to load research dashboard project data:', error);
+            return {projects: [], error: 'Research project totals could not be loaded from this browser.'};
+        }
+    }
+
+    function getResearchProposals() {
+        try {
+            const storedProposals = localStorage.getItem(researchProposalsStorageKey);
+            if (storedProposals === null) return {proposals: null, error: null};
+            const proposals = JSON.parse(storedProposals);
+            if (!Array.isArray(proposals)) throw new Error('Stored research proposal data must be a list.');
+            return {proposals, error: null};
+        } catch (error) {
+            console.error('Unable to load research dashboard proposal data:', error);
+            return {proposals: null, error: 'Research proposal totals could not be loaded from this browser.'};
+        }
+    }
+
+    function getResearchDocumentCount() {
+        try {
+            const storedDocuments = localStorage.getItem(researchDocumentsStorageKey);
+            if (storedDocuments === null) return {count: 0, error: null};
+            const documents = JSON.parse(storedDocuments);
+            if (!Array.isArray(documents)) throw new Error('Stored research document data must be a list.');
+            return {
+                count: documents.filter(document => document && document.archived !== true).length,
+                error: null
+            };
+        } catch (error) {
+            console.error('Unable to load research dashboard document data:', error);
+            return {count: null, error: 'Research document totals could not be loaded from this browser.'};
+        }
+    }
+
+    function getResearchEthicsCount() {
+        try {
+            const storedRecords = localStorage.getItem(researchEthicsStorageKey);
+            if (storedRecords === null) return {count: 0, error: null};
+            const records = JSON.parse(storedRecords);
+            if (!Array.isArray(records)) throw new Error('Stored ethics records must be a list.');
+            return {
+                count: records.filter(record => record && record.archived !== true).length,
+                error: null
+            };
+        } catch (error) {
+            console.error('Unable to load research dashboard ethics data:', error);
+            return {count: null, error: 'Ethics and compliance totals could not be loaded from this browser.'};
+        }
+    }
+
+    function localDateValue(value) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return null;
+        const date = new Date(`${value}T00:00:00`);
+        return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    function dateOnly(date) {
+        return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    }
+
+    function dateLabel(value) {
+        const date = localDateValue(value);
+        return date ? date.toLocaleDateString(undefined, {month: 'short', day: 'numeric', year: 'numeric'}) : 'Date not set';
+    }
+
+    function normalizedProjectStatus(project) {
+        const status = researchProjectStatuses.find(value => value.toLowerCase() === String(project.status || '').trim().toLowerCase());
+        return status || 'Draft';
+    }
+
+    function getStatusPercentages(countByStatus, totalProjects) {
+        const percentages = Object.fromEntries(researchProjectStatuses.map(status => [status, 0]));
+        if (!totalProjects) return percentages;
+
+        const remainders = researchProjectStatuses.map((status, index) => {
+            const exactPercent = (countByStatus[status] / totalProjects) * 100;
+            percentages[status] = Math.floor(exactPercent);
+            return {status, index, remainder: exactPercent - percentages[status]};
+        });
+        let remainingPercent = 100 - Object.values(percentages).reduce((sum, percent) => sum + percent, 0);
+        remainders.sort((left, right) => right.remainder - left.remainder || left.index - right.index);
+        for (let index = 0; index < remainingPercent; index++) {
+            percentages[remainders[index].status]++;
+        }
+        return percentages;
+    }
+
+    function getResearchDeadlines(projects) {
+        const today = dateOnly(new Date());
+        const lastUpcomingDate = new Date(today);
+        lastUpcomingDate.setDate(lastUpcomingDate.getDate() + 30);
+        const deadlines = [];
+        const delayedProjectIds = new Set();
+        let upcomingActivities = 0;
+
+        projects.forEach(project => {
+            const status = normalizedProjectStatus(project);
+            if (status === 'Completed' || status === 'Rejected') return;
+
+            const milestones = (Array.isArray(project.milestones) ? project.milestones : [])
+                .filter(milestone => milestone && typeof milestone === 'object');
+            milestones.forEach(milestone => {
+                const deadline = localDateValue(milestone.date);
+                if (!deadline) return;
+                const milestoneStatus = String(milestone.status || 'Pending').toLowerCase();
+                if (milestoneStatus === 'completed') return;
+                if (deadline < today || milestoneStatus === 'delayed') {
+                    delayedProjectIds.add(String(project.id));
+                    deadlines.push({
+                        title: milestone.title || 'Research milestone',
+                        project: project.title || 'Untitled project',
+                        date: milestone.date,
+                        overdue: deadline < today,
+                        delayed: milestoneStatus === 'delayed'
+                    });
+                } else if (deadline <= lastUpcomingDate) {
+                    upcomingActivities++;
+                    deadlines.push({
+                        title: milestone.title || 'Research milestone',
+                        project: project.title || 'Untitled project',
+                        date: milestone.date,
+                        overdue: false
+                    });
+                }
+            });
+
+            const targetDate = localDateValue(project.targetDate);
+            if (!targetDate) return;
+            const hasTargetMilestone = milestones.some(milestone =>
+                milestone.date === project.targetDate &&
+                String(milestone.status || '').toLowerCase() !== 'completed'
+            );
+            if (targetDate < today) {
+                delayedProjectIds.add(String(project.id));
+                if (!hasTargetMilestone) {
+                    deadlines.push({
+                        title: 'Project completion deadline',
+                        project: project.title || 'Untitled project',
+                        date: project.targetDate,
+                        overdue: true
+                    });
+                }
+            } else if (targetDate <= lastUpcomingDate && !hasTargetMilestone) {
+                upcomingActivities++;
+                deadlines.push({
+                    title: 'Project completion deadline',
+                    project: project.title || 'Untitled project',
+                    date: project.targetDate,
+                    overdue: false
+                });
+            }
+        });
+
+        Object.entries(dashboard().eventsByDate).forEach(([dateValue, events]) => {
+            const eventDate = localDateValue(dateValue);
+            if (!eventDate || eventDate < today || eventDate > lastUpcomingDate) return;
+            (Array.isArray(events) ? events : []).forEach(event => {
+                const eventText = typeof event === 'string'
+                    ? event
+                    : `${event.title || ''} ${event.type || ''} ${event.description || ''}`;
+                if (/\b(research|proposal|thesis|dissertation|manuscript|defense)\b/i.test(eventText)) {
+                    upcomingActivities++;
+                }
+            });
+        });
+
+        deadlines.sort((left, right) => left.date.localeCompare(right.date));
+        return {deadlines, delayedProjectIds, upcomingActivities};
+    }
+
+    function renderResearchOverview() {
+        const notice = document.getElementById('researchDashboardNotice');
+        if (!notice) return;
+        const {projects, error: storageError} = getResearchProjects();
+        const {proposals, error: proposalStorageError} = getResearchProposals();
+        const {count: researchDocuments, error: documentStorageError} = getResearchDocumentCount();
+        const {count: ethicsRecords, error: ethicsStorageError} = getResearchEthicsCount();
+        const activeProjects = projects.filter(project => project.archived !== true);
+        const workflowData = window.researchDashboardData || {};
+        const {deadlines, delayedProjectIds, upcomingActivities} = getResearchDeadlines(activeProjects);
+        const countByStatus = researchProjectStatuses.reduce((counts, status) => {
+            counts[status] = activeProjects.filter(project => normalizedProjectStatus(project) === status).length;
+            return counts;
+        }, {});
+        const countValues = {
+            total: activeProjects.length,
+            ongoing: countByStatus.Ongoing,
+            completed: countByStatus.Completed,
+            pendingProposals: proposals
+                ? proposals.filter(proposal => ['Submitted', 'Under Review', 'Revision Requested', 'Resubmitted'].includes(proposal.status)).length
+                : countByStatus.Submitted + countByStatus['Under Review'],
+            approvedProposals: proposals
+                ? proposals.filter(proposal => proposal.status === 'Approved').length
+                : countByStatus.Approved,
+            pendingReports: workflowData.pendingReports,
+            researchDocuments,
+            ethicsRecords,
+            upcomingActivities,
+            delayed: delayedProjectIds.size,
+            pendingApprovals: workflowData.pendingApprovals
+        };
+
+        document.querySelectorAll('[data-research-count]').forEach(element => {
+            const value = countValues[element.dataset.researchCount];
+            element.textContent = value === null || value === undefined ? '—' : value;
+        });
+
+        const statusOverview = document.getElementById('researchStatusOverview');
+        if (statusOverview) {
+            const statusColors = {
+                Draft: '#64748b',
+                Submitted: '#0284c7',
+                'Under Review': '#d97706',
+                Approved: '#4f46e5',
+                Ongoing: '#0d9488',
+                Completed: '#16a34a',
+                Rejected: '#dc2626'
+            };
+            const totalProjects = activeProjects.length;
+            const statusPercentages = getStatusPercentages(countByStatus, totalProjects);
+            let cumulativePercent = 0;
+            const gradientStops = researchProjectStatuses.map(status => {
+                const count = countByStatus[status];
+                const start = cumulativePercent;
+                cumulativePercent += totalProjects ? (count / totalProjects) * 100 : 0;
+                return `${statusColors[status]} ${start}% ${cumulativePercent}%`;
+            });
+            const donutStyle = totalProjects
+                ? `background:conic-gradient(${gradientStops.join(',')})`
+                : 'background:conic-gradient(#e2e8f0 0% 100%)';
+            const legendItems = researchProjectStatuses.map(status => {
+                const count = countByStatus[status];
+                const percent = statusPercentages[status];
+                return `<li class="research-status-legend-item" data-status="${escapeHtml(status)}">
+                    <span class="research-status-swatch" aria-hidden="true"></span>
+                    <span class="research-status-legend-label">${escapeHtml(status)}</span>
+                    <strong>${count}</strong>
+                    <small>${percent}%</small>
+                </li>`;
+            }).join('');
+            statusOverview.innerHTML = `<div class="research-status-donut" role="img" aria-label="${totalProjects} research projects, grouped by status" style="${donutStyle}">
+                    <div><strong>${totalProjects}</strong><span>Projects</span></div>
+                </div>
+                <ul class="research-status-legend">${legendItems}</ul>`;
+        }
+
+        const deadlineList = document.getElementById('researchDeadlineList');
+        if (deadlineList) {
+            const visibleDeadlines = deadlines.slice(0, 8);
+            deadlineList.innerHTML = visibleDeadlines.length
+                ? visibleDeadlines.map(deadline => `<li class="research-deadline-item ${deadline.overdue || deadline.delayed ? 'is-overdue' : ''}">
+                    <span class="research-deadline-dot" aria-hidden="true"></span>
+                    <span><span class="research-deadline-title">${escapeHtml(deadline.title)}</span><span class="research-deadline-project">${escapeHtml(deadline.project)}</span></span>
+                    <time class="research-deadline-date" datetime="${escapeHtml(deadline.date)}">${deadline.overdue ? 'Overdue · ' : deadline.delayed ? 'Delayed · ' : ''}${escapeHtml(dateLabel(deadline.date))}</time>
+                </li>`).join('')
+                : '<li class="research-empty-state">No upcoming deadlines or overdue research activities.</li>';
+        }
+
+        const recentProjects = document.getElementById('researchRecentProjects');
+        if (recentProjects) {
+            const latestProjects = [...activeProjects]
+                .sort((left, right) => String(right.registeredAt || '').localeCompare(String(left.registeredAt || '')))
+                .slice(0, 5);
+            recentProjects.innerHTML = latestProjects.length
+                ? `<div class="research-recent-table-wrap"><table class="research-recent-table">
+                    <thead><tr><th>Project title</th><th>PI / Lead</th><th>Status</th><th>Progress</th><th>Deadline</th></tr></thead>
+                    <tbody>${latestProjects.map(project => {
+                        const status = normalizedProjectStatus(project);
+                        const progress = Math.round(Math.min(100, Math.max(0, Number(project.progress) || 0)));
+                        return `<tr>
+                            <td><a href="?page=research-project" data-page="research-project" class="research-project-title-link">${escapeHtml(project.title || 'Untitled project')}</a><small>${escapeHtml(project.registrationNo || 'Research project')}</small></td>
+                            <td>${escapeHtml(project.investigator || 'Not assigned')}</td>
+                            <td><span class="research-project-status" data-status="${escapeHtml(status)}">${escapeHtml(status)}</span></td>
+                            <td><div class="research-recent-progress" role="img" aria-label="${progress}% complete"><span><i style="width:${progress}%"></i></span><small>${progress}%</small></div></td>
+                            <td><time datetime="${escapeHtml(project.targetDate || '')}">${escapeHtml(dateLabel(project.targetDate))}</time></td>
+                        </tr>`;
+                    }).join('')}</tbody>
+                </table></div>`
+                : '<p class="research-empty-state">No research projects have been registered yet.</p>';
+        }
+
+        const errors = [storageError, proposalStorageError, documentStorageError, ethicsStorageError, ...(workflowData.workflowErrors || [])].filter(Boolean);
+        if (errors.length) {
+            notice.textContent = errors.join(' ');
+            notice.hidden = false;
+        } else {
+            notice.hidden = true;
+            notice.textContent = '';
+        }
+    }
+
+    function getResearchCalendarEvents() {
+        const eventsByDate = Object.fromEntries(
+            Object.entries(dashboard().eventsByDate).map(([date, events]) => [date, [...events]])
+        );
+        const {projects} = getResearchProjects();
+        projects.forEach(project => {
+            const projectStatus = normalizedProjectStatus(project);
+            if (projectStatus === 'Rejected' || projectStatus === 'Completed') return;
+
+            const milestones = (Array.isArray(project.milestones) ? project.milestones : [])
+                .filter(milestone => milestone && typeof milestone === 'object');
+            const entries = milestones
+                .filter(milestone => milestone.date && String(milestone.status || '').toLowerCase() !== 'completed')
+                .map(milestone => ({
+                    date: milestone.date,
+                    title: milestone.title || 'Research milestone',
+                    type: 'Research Milestone',
+                    time: '',
+                    location: '',
+                    description: `Project: ${project.title || 'Untitled project'}`,
+                    status: 'upcoming'
+                }));
+
+            const hasTargetMilestone = milestones.some(milestone =>
+                milestone.date === project.targetDate &&
+                String(milestone.status || '').toLowerCase() !== 'completed'
+            );
+            if (project.targetDate && !hasTargetMilestone) {
+                entries.push({
+                    date: project.targetDate,
+                    title: 'Project deadline',
+                    type: 'Research Deadline',
+                    time: '',
+                    location: '',
+                    description: project.title || 'Untitled project',
+                    status: 'upcoming'
+                });
+            }
+
+            entries.forEach(entry => {
+                if (!entry.date) return;
+                const date = entry.date;
+                delete entry.date;
+                eventsByDate[date] = eventsByDate[date] || [];
+                eventsByDate[date].unshift(entry);
+            });
+        });
+        return eventsByDate;
     }
 
     function convertTo12Hour(timeStr) {
@@ -39,7 +411,7 @@
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth();
         const names = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-        const events = dashboard().eventsByDate;
+        const events = getResearchCalendarEvents();
         header.textContent = `${names[month]} ${year}`;
         const firstDay = new Date(year, month, 1).getDay();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -57,17 +429,32 @@
             el.className = 'calendar-day';
             const today = new Date();
             if (day === today.getDate() && month === today.getMonth() && year === today.getFullYear()) el.classList.add('today');
+            const dayEvents = events[date] || [];
             let html = `<div class="calendar-day-number">${day}</div>`;
-            if (events[date]) {
-                const event = events[date][0];
-                const title = typeof event === 'string' ? event : (event.title || 'Event');
-                html += `<div class="calendar-events"><span class="calendar-event-dot"></span> ${escapeHtml(title)}</div>`;
+            el.setAttribute('role', 'button');
+            el.tabIndex = 0;
+            if (dayEvents.length) {
+                const hasResearchEvent = dayEvents.some(event =>
+                    typeof event === 'object' && String(event.type || '').toLowerCase().includes('research')
+                );
+                html += `<span class="research-calendar-markers${hasResearchEvent ? ' has-research' : ''}" aria-hidden="true"><i></i>${dayEvents.length > 1 ? '<i></i>' : ''}</span>`;
+                el.setAttribute('aria-label', `${date}, ${dayEvents.length} scheduled ${dayEvents.length === 1 ? 'activity' : 'activities'}`);
+                el.title = `${dayEvents.length} scheduled ${dayEvents.length === 1 ? 'activity' : 'activities'}`;
+            } else {
+                el.setAttribute('aria-label', date);
             }
             el.innerHTML = html;
             el.onclick = () => showEventsModal(date, day);
+            el.onkeydown = event => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    showEventsModal(date, day);
+                }
+            };
             days.appendChild(el);
         }
-        for (let day = 1; day <= 42 - days.children.length; day++) {
+        const trailingDays = 42 - days.children.length;
+        for (let day = 1; day <= trailingDays; day++) {
             const el = document.createElement('div');
             el.className = 'calendar-day other-month';
             el.innerHTML = `<div class="calendar-day-number">${day}</div>`;
@@ -75,8 +462,17 @@
         }
     }
 
-    function previousMonth() { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); }
-    function nextMonth() { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); }
+    function previousMonth() {
+        currentDate.setDate(1);
+        currentDate.setMonth(currentDate.getMonth() - 1);
+        renderCalendar();
+    }
+
+    function nextMonth() {
+        currentDate.setDate(1);
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        renderCalendar();
+    }
 
     function showEventsModal(dateStr) {
         const modal = document.getElementById('eventsModal');
@@ -85,7 +481,7 @@
         if (!modal || !title || !list) return;
         const date = new Date(dateStr + 'T00:00:00');
         title.textContent = date.toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'});
-        const events = dashboard().eventsByDate[dateStr] || [];
+        const events = getResearchCalendarEvents()[dateStr] || [];
         list.innerHTML = events.length ? events.map(event => {
             if (typeof event === 'string') {
                 const parts = event.split(' - ');
@@ -288,141 +684,19 @@
         });
     }
 
-    function formatActivityElapsedTime(value) {
-        const timestamp = new Date(String(value).replace(' ', 'T'));
-        if (Number.isNaN(timestamp.getTime())) return 'Unknown time';
-        const seconds = Math.max(0, Math.floor((Date.now() - timestamp.getTime()) / 1000));
-        if (seconds < 60) return Math.max(1, seconds) + ' seconds ago';
-        if (seconds < 3600) return Math.floor(seconds / 60) + ' minutes ago';
-        if (seconds < 86400) return Math.floor(seconds / 3600) + ' hours ago';
-        if (seconds < 604800) return Math.floor(seconds / 86400) + ' days ago';
-        return timestamp.toLocaleString();
-    }
-
-    function updateRecentActivityTimes() {
-        document.querySelectorAll('.activity-time').forEach(element => {
-            element.textContent = formatActivityElapsedTime(element.dataset.timestamp);
-        });
-    }
-
-    function openActivitiesModal() {
-        const modal = document.getElementById('activitiesModal');
-        const list = document.getElementById('allActivitiesList');
-         if (modal.parentElement !== document.body) { document.body.appendChild(modal); } 
-        if (!modal || !list) return;
-        const activities = dashboard().allActivities;
-        list.innerHTML = activities.length ? activities.map(activity => `<div style="padding:12px;border-radius:5px;background-color:#f0f9ff;border-left:4px solid #3b82f6;margin-bottom:8px;"><div style="font-weight:600;color:#1f2937;font-size:14px;">${escapeHtml(activity.type)}</div><div style="color:#4b5563;font-size:13px;margin:4px 0;">${escapeHtml(activity.description)}</div><div><span style="font-size:11px;color:#6b7280;">${escapeHtml(activity.module)}</span> <span style="font-size:11px;color:#9ca3af;">${formatActivityElapsedTime(activity.timestamp)}</span></div></div>`).join('') : '<div style="padding:20px;text-align:center;color:#999;">No recent activities yet</div>';
-        modal.style.display = 'flex';
-    }
-
-    function closeActivitiesModal() {
-        const modal = document.getElementById('activitiesModal');
-        if (modal) modal.style.display = 'none';
-    }
-
-    function computeLoadCounts(units, maxLoad = 15) {
-        return units.reduce((counts, value) => {
-            const total = Number(value) || 0;
-            if (total < maxLoad) counts.under++;
-            else if (total === maxLoad) counts.full++;
-            else counts.over++;
-            return counts;
-        }, {under:0, full:0, over:0});
-    }
-
-    function updateFaultyLoadSummary(counts) {
-        const element = document.getElementById('faultyLoadSummary');
-        if (element) element.textContent = `Faculty Load: ${counts.under + counts.full + counts.over}`;
-    }
-
-    function chart(id, config) {
-        const canvas = document.getElementById(id);
-        if (!canvas || typeof Chart === 'undefined') return null;
-        const existing = Chart.getChart(canvas);
-        if (existing) existing.destroy();
-        return new Chart(canvas.getContext('2d'), config);
-    }
-
-    function initStudentsPerProgramChart() {
-        const data = dashboard().chartData;
-        chart('studentsPerProgramChart', {type:'line', data:{labels:data.programLabels || [], datasets:[{label:'Number of Students',data:data.programData || [],borderColor:'#3498db',backgroundColor:'rgba(52,152,219,.1)',borderWidth:3,fill:true,tension:.4,pointBackgroundColor:'#3498db',pointBorderColor:'#fff',pointBorderWidth:2,pointRadius:5,pointHoverRadius:7}]}, options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:true,position:'bottom'}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
-    }
-
-    function initFacultyLoadChart(initialUnits) {
-        const counts = computeLoadCounts(initialUnits || dashboard().chartData.facultyUnits || []);
-        updateFaultyLoadSummary(counts);
-        facultyLoadChart = chart('facultyLoadChart', {type:'bar',data:{labels:['Underloaded','Fully Loaded','Overloaded'],datasets:[{label:'Faculty Count',data:[counts.under,counts.full,counts.over],backgroundColor:['#f59e0b','#10b981','#ef4444'],borderColor:['#d97706','#059669','#dc2626'],borderWidth:2}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:true,position:'bottom'}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
-    }
-
-    function initStudentStatusChart() {
-        const data = dashboard().chartData;
-        chart('studentStatusChart', {type:'pie',data:{labels:data.statusLabels || [],datasets:[{data:data.statusCounts || [],backgroundColor:['#2ecc71','#e74c3c','#95a5a6'],borderColor:'#fff',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:true,position:'bottom'}}}});
-    }
-
-    async function refreshFacultyLoadChart() {
-        try {
-            // Use optimized API endpoint for distribution data
-            const response = await fetch('/schoolm/modules/college-coor/api/get_faculty_load_distribution.php', {credentials:'same-origin'});
-            if (!response.ok) throw new Error('Failed to load faculty load distribution');
-            const distribution = await response.json();
-            
-            // Handle error response from API
-            if (distribution.error) {
-                throw new Error(distribution.error);
-            }
-            
-            // Update chart with distribution data
-            const counts = {
-                under: distribution.underloaded || 0,
-                full: distribution.fully_loaded || 0,
-                over: distribution.overloaded || 0
-            };
-            
-            updateFaultyLoadSummary(counts);
-            
-            // Initialize chart if it doesn't exist
-            if (!facultyLoadChart) {
-                initFacultyLoadChart([]);
-                facultyLoadChart.data.datasets[0].data = [counts.under, counts.full, counts.over];
-                facultyLoadChart.update();
-                return;
-            }
-            
-            // Update chart data
-            facultyLoadChart.data.datasets[0].data = [counts.under, counts.full, counts.over];
-            facultyLoadChart.update();
-        } catch (error) {
-            console.error('Error refreshing faculty load chart:', error);
-        }
-    }
-
-    function initDashboardCharts() {
-        const data = dashboard().chartData;
-        initStudentsPerProgramChart();
-        initFacultyLoadChart(data.facultyUnits || []);
-        initStudentStatusChart();
-        refreshFacultyLoadChart();
-    }
-
     function initializeDashboard() {
         if (!document.getElementById('calendarDays')) return;
+        initializeEmbeddedDashboardData();
         window.dashboardClientLoadTs = window.dashboardClientLoadTs || Date.now();
         readNotificationIds = getStoredIds(readNotificationKey);
+        renderResearchOverview();
         renderCalendar();
         renderNotificationBell();
         updatePriorityAlertTimes();
         updateNotificationTimes();
         updateToastCountdowns();
-        updateRecentActivityTimes();
         showUrgentToasts();
-        initDashboardCharts();
-        if (!activityTimer) activityTimer = setInterval(updateRecentActivityTimes, 1000);
         if (!dashboardTimer) dashboardTimer = setInterval(() => { updatePriorityAlertTimes(); updateNotificationTimes(); updateToastCountdowns(); }, 60000);
-        if (!window.facultyLoadRefreshTimer) window.facultyLoadRefreshTimer = window.setInterval(refreshFacultyLoadChart, 30000);
-        if (sessionStorage.getItem('refreshFacultyLoad') === 'true') {
-            sessionStorage.removeItem('refreshFacultyLoad');
-            refreshFacultyLoadChart();
-        }
     }
 
     window.previousMonth = previousMonth;
@@ -430,16 +704,12 @@
     window.showEventsModal = showEventsModal;
     window.closeEventsModal = closeEventsModal;
     window.viewAlertDetails = viewAlertDetails;
-    window.openActivitiesModal = openActivitiesModal;
-    window.closeActivitiesModal = closeActivitiesModal;
     window.viewAllPriorityAlerts = viewAllPriorityAlerts;
-    window.refreshFacultyLoadChart = refreshFacultyLoadChart;
-    window.initDashboardCharts = initDashboardCharts;
     window.reinitializeDashboard = function () {
-        initDashboardCharts();
+        initializeEmbeddedDashboardData();
+        renderResearchOverview();
         renderCalendar();
         renderNotificationBell();
-        updateRecentActivityTimes();
     };
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initializeDashboard, {once:true});
@@ -450,15 +720,43 @@
     });
 
     window.addEventListener('storage', event => {
-        if (event.key === 'refreshFacultyLoad' && event.newValue === 'true') refreshFacultyLoadChart();
+        if ([researchProjectsStorageKey, researchProposalsStorageKey, researchDocumentsStorageKey, researchEthicsStorageKey].includes(event.key) &&
+            document.getElementById('calendarDays')) {
+            renderResearchOverview();
+        }
+        if (event.key === researchProjectsStorageKey && document.getElementById('calendarDays')) {
+            renderCalendar();
+        }
         if (event.key === readNotificationKey) {
             readNotificationIds = getStoredIds(readNotificationKey);
             renderNotificationBell();
         }
     });
 
+    window.addEventListener('research-projects-updated', () => {
+        if (document.getElementById('calendarDays')) {
+            renderResearchOverview();
+            renderCalendar();
+        }
+    });
+
+    window.addEventListener('research-proposals-updated', () => {
+        if (document.getElementById('calendarDays')) renderResearchOverview();
+    });
+
+    window.addEventListener('research-documents-updated', () => {
+        if (document.getElementById('calendarDays')) renderResearchOverview();
+    });
+
+    window.addEventListener('research-ethics-updated', () => {
+        if (document.getElementById('calendarDays')) renderResearchOverview();
+    });
+
     document.addEventListener('click', event => {
         if (event.target === document.getElementById('eventsModal')) closeEventsModal();
-        if (event.target === document.getElementById('activitiesModal')) closeActivitiesModal();
+    });
+
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') closeEventsModal();
     });
 })();

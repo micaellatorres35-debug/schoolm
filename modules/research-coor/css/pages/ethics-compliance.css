@@ -1,0 +1,80 @@
+.ethics-compliance-page{display:grid;gap:1rem;max-width:1500px;margin:0 auto;padding:1rem;color:#1e293b}
+.ethics-header{display:flex;align-items:center;justify-content:space-between;gap:1.25rem;padding:1.4rem 1.5rem;border:1px solid #dbeafe;border-radius:14px;background:linear-gradient(115deg,#f8fbff,#edf5ff 58%,#f6f8ff);box-shadow:0 5px 18px rgba(30,64,175,.06)}
+.ethics-header>div:first-child{min-width:0}
+.ethics-eyebrow{display:inline-flex;align-items:center;gap:.45rem;margin-bottom:.3rem;color:#2563eb;font-size:.72rem;font-weight:750;letter-spacing:.08em;text-transform:uppercase}
+.ethics-header h1{margin:0;color:#14213d;font-size:clamp(1.45rem,2.2vw,2rem);letter-spacing:-.035em}
+.ethics-header p{max-width:780px;margin:.4rem 0 0;color:#64748b;font-size:.88rem;line-height:1.55}
+.ethics-header-actions{display:flex;flex:0 0 auto;flex-wrap:wrap;gap:.55rem}
+.ethics-button{display:inline-flex;min-height:38px;align-items:center;justify-content:center;gap:.45rem;padding:.55rem .8rem;border:1px solid #d5deeb;border-radius:8px;background:#fff;color:#334155;font:inherit;font-size:.78rem;font-weight:700;text-decoration:none;cursor:pointer;transition:background .18s ease,border-color .18s ease,transform .18s ease}
+.ethics-button:hover{transform:translateY(-1px);border-color:#93c5fd;background:#eff6ff;color:#1d4ed8}
+.ethics-button-primary{border-color:#2563eb;background:#2563eb;color:#fff}
+.ethics-button-primary:hover{border-color:#1d4ed8;background:#1d4ed8;color:#fff}
+.ethics-button:focus-visible,.ethics-control:focus-visible,.ethics-tab:focus-visible{outline:3px solid #93c5fd;outline-offset:2px}
+.ethics-guide,.ethics-panel{min-width:0;padding:1.1rem 1.2rem;border:1px solid #e5eaf2;border-radius:12px;background:#fff;box-shadow:0 3px 12px rgba(15,23,42,.045)}
+.ethics-guide-heading{display:flex;align-items:flex-start;gap:.75rem}
+.ethics-guide-icon{display:grid;width:36px;height:36px;flex:0 0 auto;place-items:center;border-radius:10px;background:#eaf1ff;color:#315ec5}
+.ethics-guide h2,.ethics-section-heading h2{margin:0;color:#172554;font-size:1rem;letter-spacing:-.02em}
+.ethics-guide-heading p,.ethics-section-heading p{margin:.25rem 0 0;color:#718096;font-size:.78rem;line-height:1.5}
+.ethics-guide-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.75rem;margin:1rem 0 .7rem;padding:0;list-style:none;counter-reset:ethics-step}
+.ethics-guide-steps li{position:relative;display:grid;align-content:start;gap:.3rem;min-width:0;padding:.75rem .75rem .75rem 2.45rem;border:1px solid #edf0f5;border-radius:9px;background:#fbfcfe;counter-increment:ethics-step}
+.ethics-guide-steps li::before{position:absolute;top:.72rem;left:.75rem;display:grid;width:22px;height:22px;place-items:center;border-radius:50%;background:#e8efff;color:#315ec5;font-size:.68rem;font-weight:800;content:counter(ethics-step)}
+.ethics-guide-steps strong{color:#2c3c56;font-size:.75rem}
+.ethics-guide-steps span{color:#718096;font-size:.69rem;line-height:1.45}
+.ethics-storage-note{display:flex;align-items:flex-start;gap:.45rem;margin:.75rem 0 0;color:#64748b;font-size:.7rem;line-height:1.45}
+.ethics-storage-note i{margin-top:.1rem;color:#5575b8}
+.ethics-notice{padding:.75rem 1rem;border:1px solid #bfdbfe;border-radius:8px;background:#eff6ff;color:#1e40af;font-size:.8rem}
+.ethics-notice.is-error{border-color:#fecaca;background:#fef2f2;color:#991b1b}
+.ethics-notice.is-success{border-color:#bbf7d0;background:#f0fdf4;color:#166534}
+.ethics-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.7rem}
+.ethics-stats article{display:grid;gap:.35rem;min-width:0;padding:.85rem 1rem;border:1px solid #e5eaf2;border-left:3px solid #4774d1;border-radius:9px;background:#fff}
+.ethics-stats article:nth-child(2){border-left-color:#d99325}
+.ethics-stats article:nth-child(3){border-left-color:#25a36f}
+.ethics-stats article:nth-child(4){border-left-color:#d95555}
+.ethics-stats article:nth-child(5){border-left-color:#8667c8}
+.ethics-stats span{color:#718096;font-size:.7rem;font-weight:650}
+.ethics-stats strong{color:#172554;font-size:1.45rem;line-height:1.1}
+.ethics-tabs{display:flex;gap:.3rem;overflow-x:auto;border-bottom:1px solid #dbe2ec}
+.ethics-tab{display:inline-flex;flex:0 0 auto;align-items:center;gap:.45rem;padding:.72rem .85rem;border:0;border-bottom:3px solid transparent;background:transparent;color:#64748b;font:inherit;font-size:.76rem;font-weight:650;white-space:nowrap;cursor:pointer}
+.ethics-tab:hover,.ethics-tab.active{color:#2563eb}
+.ethics-tab.active{border-bottom-color:#2563eb}
+.ethics-panel{display:none;animation:ethicsFadeIn .18s ease-in}
+.ethics-panel.active{display:block}
+.ethics-panel[hidden]{display:none}
+@keyframes ethicsFadeIn{from{opacity:0}to{opacity:1}}
+.ethics-section-heading{display:flex;align-items:center;justify-content:space-between;gap:.8rem;margin-bottom:.9rem}
+.ethics-section-heading>div{min-width:0}
+.ethics-filters{display:grid;grid-template-columns:minmax(200px,1.5fr) repeat(2,minmax(170px,1fr));gap:.7rem;margin-bottom:.9rem}
+.ethics-filters label,.ethics-field,.ethics-requirements-grid label{display:grid;align-content:start;gap:.35rem;min-width:0;color:#475569;font-size:.73rem;font-weight:650}
+.ethics-control{box-sizing:border-box;width:100%;min-width:0;min-height:39px;padding:.55rem .65rem;border:1px solid #cbd5e1;border-radius:7px;background:#fff;color:#1e293b;font:inherit;font-size:.78rem;font-weight:400}
+.ethics-control:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+.ethics-field small{color:#8491a3;font-size:.67rem;font-weight:400;line-height:1.45}
+.ethics-table-wrap{width:100%;overflow-x:auto;border:1px solid #e7ebf1;border-radius:8px}
+.ethics-table{width:100%;border-collapse:collapse;font-size:.75rem}
+.ethics-table th{padding:.65rem .6rem;background:#f8fafc;color:#64748b;font-size:.65rem;font-weight:750;text-align:left;text-transform:uppercase;letter-spacing:.035em;white-space:nowrap}
+.ethics-table td{padding:.68rem .6rem;border-top:1px solid #edf0f5;color:#334155;vertical-align:middle}
+.ethics-table td small{display:block;margin-top:.18rem;color:#8793a4;font-size:.68rem}
+.ethics-project-title{color:#243653;font-weight:700}
+.ethics-status{display:inline-flex;padding:.26rem .5rem;border-radius:20px;background:#e9eef5;color:#475569;font-size:.66rem;font-weight:700;white-space:nowrap}
+.ethics-status[data-status="Approved"],.ethics-status[data-status="Verified"],.ethics-status[data-status="Compliant"],.ethics-status[data-status="Obtained"]{background:#dcfce7;color:#15803d}
+.ethics-status[data-status="Submitted"],.ethics-status[data-status="Under Review"],.ethics-status[data-status="For Review"],.ethics-status[data-status="Required"]{background:#fef3c7;color:#a16207}
+.ethics-status[data-status="Revision Required"],.ethics-status[data-status="Rejected"],.ethics-status[data-status="Expired"],.ethics-status[data-status="Non-compliant"],.ethics-status[data-status="Action Required"]{background:#fee2e2;color:#b91c1c}
+.ethics-actions{display:flex;flex-wrap:wrap;gap:.3rem}
+.ethics-actions button{padding:.35rem .5rem;border:1px solid #d6deea;border-radius:6px;background:#fff;color:#475569;font:inherit;font-size:.67rem;font-weight:650;cursor:pointer}
+.ethics-actions button:hover{border-color:#93c5fd;color:#1d4ed8}
+.ethics-empty{padding:1.5rem!important;color:#718096!important;text-align:center}
+.ethics-form{display:grid;gap:.8rem}
+.ethics-form-section{min-width:0;padding:1rem;border:1px solid #e7ebf1;border-radius:9px;background:#fff}
+.ethics-form-section h3,.ethics-archive-evidence h3{margin:0 0 .7rem;color:#263650;font-size:.88rem}
+.ethics-section-help{margin:-.2rem 0 .8rem;color:#718096;font-size:.72rem;line-height:1.45}
+.ethics-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
+.ethics-field-full{grid-column:1/-1}
+.ethics-requirements-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.7rem}
+.ethics-form-actions{display:flex;justify-content:flex-end;gap:.5rem}
+.ethics-optional{margin-left:.35rem;color:#8491a3;font-size:.68rem;font-weight:500}
+.ethics-file-input{padding:.42rem}
+.ethics-archive-evidence{display:grid;gap:.7rem;margin-top:1.1rem}
+.ethics-compliance-page [hidden]{display:none!important}
+@media(max-width:1050px){.ethics-guide-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.ethics-stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){.ethics-header{align-items:flex-start;flex-direction:column}.ethics-header-actions{width:100%}.ethics-header-actions .ethics-button{flex:1}.ethics-filters{grid-template-columns:1fr 1fr}.ethics-filters label:first-child{grid-column:1/-1}.ethics-requirements-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ethics-table{min-width:720px}}
+@media(max-width:520px){.ethics-compliance-page{padding:.65rem}.ethics-header,.ethics-guide,.ethics-panel{padding:.85rem}.ethics-guide-steps{grid-template-columns:1fr}.ethics-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:.45rem}.ethics-stats article{padding:.7rem}.ethics-tabs{margin-right:-.2rem}.ethics-filters,.ethics-form-grid,.ethics-requirements-grid{grid-template-columns:1fr}.ethics-filters label:first-child,.ethics-field-full{grid-column:auto}.ethics-section-heading{align-items:flex-start;flex-direction:column}.ethics-form-actions{flex-direction:column-reverse}.ethics-form-actions .ethics-button{width:100%}}
+@media(prefers-reduced-motion:reduce){.ethics-button{transition:none}.ethics-panel{animation:none}}

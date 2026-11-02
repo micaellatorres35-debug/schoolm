@@ -6,9 +6,12 @@ import './components/dropdown.js';
 import './modules/report.js';
 import './modules/issue.js';
 import './modules/approval.js';
+import './modules/dashboard-overview.js';
 import './modules/faculty-management.js';
 import './modules/academics-management.js';
+import './modules/research-project.js';
+import './modules/research-proposal.js';
+import './modules/research-documentation.js';
+import './modules/ethics-compliance.js';
 import './modules/class-scheduling.js';
 import './modules/events-management.js';
-
-
