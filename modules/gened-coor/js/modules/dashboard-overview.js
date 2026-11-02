@@ -151,6 +151,65 @@
         updateBellBadge();
     }
 
+    function showAnnouncementModal(eventItem) {
+        const announcementTitle = eventItem && eventItem.title ? eventItem.title : 'Announcement';
+        const announcementMessage = eventItem && eventItem.message ? eventItem.message : 'No announcement details provided.';
+        const announcementAuthor = eventItem && eventItem.author ? eventItem.author : 'Admin College Coordinator';
+        const announcementImage = eventItem && eventItem.image_url ? eventItem.image_url : '';
+
+        let modal = document.getElementById('announcementNotificationModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'announcementNotificationModal';
+            modal.style.position = 'fixed';
+            modal.style.top = '0';
+            modal.style.left = '0';
+            modal.style.width = '100%';
+            modal.style.height = '100%';
+            modal.style.background = 'rgba(15, 23, 42, 0.55)';
+            modal.style.display = 'flex';
+            modal.style.alignItems = 'center';
+            modal.style.justifyContent = 'center';
+            modal.style.zIndex = '99999';
+            modal.innerHTML = `
+                <div style="background:#fff;border-radius:14px;max-width:560px;width:90%;padding:24px 22px;position:relative;box-shadow:0 24px 60px rgba(0,0,0,0.25);">
+                    <button type="button" id="announcementNotificationClose" style="position:absolute;top:12px;right:12px;border:none;background:transparent;font-size:26px;cursor:pointer;color:#475569;line-height:1;">&times;</button>
+                    <div style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#3b82f6;font-weight:700;margin-bottom:10px;">Announcement</div>
+                    <h3 id="announcementNotificationTitle" style="margin:0 0 8px;font-size:24px;color:#0f172a;line-height:1.25;">Announcement</h3>
+                    <div id="announcementNotificationAuthor" style="font-size:13px;color:#475569;margin-bottom:12px;font-weight:600;">Posted by: Admin College Coordinator</div>
+                    <div id="announcementNotificationBody" style="white-space:pre-wrap;color:#334155;line-height:1.7;font-size:15px;max-height:38vh;overflow-y:auto;">No details</div>
+                    <div id="announcementNotificationImageWrap" style="margin-top:14px;display:none;"></div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            modal.querySelector('#announcementNotificationClose').addEventListener('click', () => modal.remove());
+            modal.addEventListener('click', (event) => {
+                if (event.target === modal) modal.remove();
+            });
+        }
+
+        const titleEl = modal.querySelector('#announcementNotificationTitle');
+        const authorEl = modal.querySelector('#announcementNotificationAuthor');
+        const bodyEl = modal.querySelector('#announcementNotificationBody');
+        const imageWrap = modal.querySelector('#announcementNotificationImageWrap');
+
+        if (titleEl) titleEl.textContent = announcementTitle;
+        if (authorEl) authorEl.textContent = 'Posted by: ' + announcementAuthor;
+        if (bodyEl) bodyEl.textContent = announcementMessage;
+
+        if (imageWrap) {
+            if (announcementImage) {
+                imageWrap.innerHTML = `<img src="${announcementImage}" alt="Announcement image" style="width:100%;max-height:320px;object-fit:contain;border-radius:10px;border:1px solid #e2e8f0;background:#f8fafc;display:block;" />`;
+                imageWrap.style.display = 'block';
+            } else {
+                imageWrap.innerHTML = '';
+                imageWrap.style.display = 'none';
+            }
+        }
+
+        modal.style.display = 'flex';
+    }
+
     function renderNotificationBell() {
         const list = document.querySelector('#bellDropdown .notif-list');
         if (!list) return;
@@ -162,11 +221,24 @@
         }
         list.innerHTML = events.map(event => {
             const unread = !readNotificationIds.includes(String(event.id));
-            return `<li class="notif-item${unread ? ' unread' : ''}" data-event-id="${escapeHtml(event.id)}" data-date="${escapeHtml(event.date)}" data-day="${escapeHtml(event.day)}" data-priority="${escapeHtml(event.priority)}" data-start="${escapeHtml(event.start_iso || '')}" data-end="${escapeHtml(event.end_iso || '')}" data-created="${escapeHtml(event.notification_created_iso || '')}"><button type="button" class="notif-link" data-event-id="${escapeHtml(event.id)}" data-date="${escapeHtml(event.date)}" data-day="${escapeHtml(event.day)}"><div class="notif-left"><span class="notif-icon">${event.icon || '🔔'}</span><div class="notif-text"><span class="notif-title">${escapeHtml(event.title)}</span><span class="notif-status">${escapeHtml(event.remaining)}</span></div></div><div class="notif-right"><span class="notif-time">${escapeHtml(event.notification || '')}</span>${unread ? '<span class="notif-unread-dot"></span>' : ''}</div></button></li>`;
+            const title = escapeHtml(event.title || 'Announcement');
+            const status = escapeHtml(event.remaining || 'Announcement');
+            const time = escapeHtml(event.notification || '');
+            return `<li class="notif-item${unread ? ' unread' : ''}" data-event-id="${escapeHtml(event.id)}" data-date="${escapeHtml(event.date)}" data-day="${escapeHtml(event.day)}" data-priority="${escapeHtml(event.priority)}" data-start="${escapeHtml(event.start_iso || '')}" data-end="${escapeHtml(event.end_iso || '')}" data-created="${escapeHtml(event.notification_created_iso || '')}" data-message="${escapeHtml(event.message || '')}" data-author="${escapeHtml(event.author || 'Admin College Coordinator')}" data-image-url="${escapeHtml(event.image_url || '')}"><button type="button" class="notif-link" data-event-id="${escapeHtml(event.id)}" data-date="${escapeHtml(event.date)}" data-day="${escapeHtml(event.day)}" data-message="${escapeHtml(event.message || '')}" data-author="${escapeHtml(event.author || 'Admin College Coordinator')}" data-image-url="${escapeHtml(event.image_url || '')}"><div class="notif-left"><span class="notif-icon">${event.icon || '🔔'}</span><div class="notif-text"><span class="notif-title">${title}</span><span class="notif-status">${status}</span></div></div><div class="notif-right"><span class="notif-time">${time}</span>${unread ? '<span class="notif-unread-dot"></span>' : ''}</div></button></li>`;
         }).join('');
         list.querySelectorAll('.notif-link').forEach(link => link.addEventListener('click', function () {
             markNotificationRead(this.dataset.eventId);
             closeNotificationDropdown();
+            const item = dashboard().notificationEvents.find(entry => String(entry.id) === String(this.dataset.eventId));
+            if (item && item.message) {
+                showAnnouncementModal({
+                    title: item.title,
+                    message: item.message,
+                    author: item.author || 'Admin College Coordinator',
+                    image_url: item.image_url || ''
+                });
+                return;
+            }
             showEventsModal(this.dataset.date, this.dataset.day);
         }));
         updateBellBadge();
