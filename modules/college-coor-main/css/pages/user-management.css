@@ -416,6 +416,11 @@ body.um-modal-open {
 .um-menu-wrap {
     position: relative;
     flex: 0 0 auto;
+    z-index: 3;
+}
+
+.um-table-wrap .um-menu-wrap {
+    position: static;
 }
 
 .um-menu {
@@ -454,6 +459,64 @@ body.um-modal-open {
     color: var(--color10);
 }
 
+.um-role-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: rgba(32, 0, 130, 0.08);
+    color: var(--color1);
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.um-switch-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.um-switch {
+    position: relative;
+    width: 38px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: #d9d9e7;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.um-switch::before {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    content: "";
+    transition: transform 0.2s ease;
+}
+
+.um-switch.is-on {
+    background: rgba(22, 163, 74, 0.8);
+}
+
+.um-switch.is-on::before {
+    transform: translateX(16px);
+}
+
+.um-switch-label {
+    color: var(--color2);
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
 /* ── Status badges (text + icon, never color alone) ─ */
 .um-status {
     display: inline-flex;
@@ -484,6 +547,7 @@ body.um-modal-open {
     overflow-x: auto;
     border: 1px solid var(--color9);
     border-radius: 12px;
+    position: relative;
 }
 
 .um-table {
@@ -497,6 +561,7 @@ body.um-modal-open {
 .um-table td {
     padding: 13px 16px;
     border-bottom: 1px solid var(--color9);
+    vertical-align: middle;
 }
 
 .um-table th {
@@ -544,6 +609,7 @@ body.um-modal-open {
 
 .um-row-actions {
     display: flex;
+    align-items: center;
     gap: 6px;
 }
 
@@ -632,13 +698,14 @@ body.um-modal-open {
 /* ── Modals ─────────────────────────────────────── */
 .um-modal-backdrop {
     position: fixed;
-    z-index: 1000;
+    z-index: 900;
     inset: 0;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
-    padding: 24px;
+    padding: 84px 24px 24px;
     background: rgba(15, 15, 30, 0.55);
+    overflow-y: auto;
 }
 
 .um-modal-backdrop[hidden] {

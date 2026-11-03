@@ -16,7 +16,7 @@ $announcement = new Announcement();
 $announcements = $announcement->getAnnouncement();
 
 // NOTE: this path is case-sensitive on Linux hosts. Match the real folder URL (/sms/ vs /SMS/).
-$annImageBase = '/schoolm/modules/college-coor/uploads/';
+$annImageBase = '/schoolm/modules/college-coor-main/uploads/announcements/';
 ?>
 
 <div class="module-header">
@@ -75,6 +75,22 @@ $annImageBase = '/schoolm/modules/college-coor/uploads/';
                         <?php endif; ?>
                         <?php if (trim((string) $ann['message']) !== ''): ?>
                             <p class="announcement-message"><?= nl2br(htmlspecialchars((string) $ann['message'])) ?></p>
+                        <?php endif; ?>
+
+                        <?php if (!empty($ann['attachments'])): ?>
+                            <div class="announcement-attachments" aria-label="Announcement attachments">
+                                <?php foreach ($ann['attachments'] as $attachment): ?>
+                                    <?php $fileName = trim((string) ($attachment['original_name'] ?? '')) ?: 'Attachment'; ?>
+                                    <?php $attachmentId = (int) ($attachment['attachment_id'] ?? 0); ?>
+                                    <?php if ($attachmentId > 0): ?>
+                                        <a class="announcement-attachment" href="controllers/AnnouncementController.php?action=file&id=<?= (int) $attachmentId ?>" target="_blank" rel="noopener noreferrer" title="<?= htmlspecialchars($fileName) ?>">
+                                            <?= htmlspecialchars($fileName) ?>
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="announcement-attachment announcement-attachment--plain" title="<?= htmlspecialchars($fileName) ?>"><?= htmlspecialchars($fileName) ?></span>
+                                    <?php endif; ?>
+                                <?php endforeach; ?>
+                            </div>
                         <?php endif; ?>
                     </div>
                 </div>

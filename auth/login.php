@@ -57,6 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 e.unit_id,
                 e.employment_status,
                 r.role_name,
+                r.status AS role_status,
                 d.department_name,
                 u.unit_name
             FROM cc_user_account ua
@@ -79,8 +80,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($user && password_verify($password, $user['password'])) {
+        $restrictedRoles = [22, 29, 30, 31];
+        $roleStatus = strtolower((string) ($user['role_status'] ?? 'inactive'));
+        $roleId = (int) $user['role'];
+
+        if (in_array($roleId, $restrictedRoles, true) && $roleStatus !== 'active') {
+            unset($_SESSION[$key]);
+            echo json_encode([
+                'success' => false,
+                'locked' => false,
+                'message' => 'This coordinator role is currently inactive. Please contact the administrator.'
+            ]);
+            exit();
+        }
+
         // ── Success: clear attempt tracking & build session ───────────────────
         unset($_SESSION[$key]);
+
+        $updateLogin = $conn->prepare(
+            'UPDATE cc_user_account SET last_login = NOW() WHERE employee_id = :employeeid'
+        );
+        $updateLogin->execute([':employeeid' => $user['employee_id']]);
 
         session_regenerate_id(true);
 

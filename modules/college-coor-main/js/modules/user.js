@@ -16,9 +16,7 @@ let umPage = 1;
 let umTotalPages = 1;
 let umRequestId = 0;
 let umSearchTimer = null;
-let umLookupTimer = null;
-let umLookupId = 0;
-let umView = 'cards';
+let umView = 'table';
 let umRows = [];
 let umBusy = false;
 let umToastTimer = null;
@@ -64,7 +62,7 @@ function umInit() {
     if (!root.dataset.umLoaded) {
         root.dataset.umLoaded = '1';
         umPage = 1;
-        umView = 'cards';
+        umView = 'table';
         umRows = [];
         umBusy = false;
         umDetailUserId = null;
@@ -175,8 +173,15 @@ function umIsLocked(r) {
 
 function umStatusBadge(r) {
     const off = umIsDeactivated(r);
-    return '<span class="um-status ' + (off ? 'is-inactive' : 'is-active') + '">' + (off ? 'Deactivated' : 'Active') + '</span>' +
-        (umIsLocked(r) ? ' <span class="um-status is-locked">Locked</span>' : '');
+    return '<span class="um-switch-wrap">' +
+        '<button type="button" class="um-switch' + (off ? '' : ' is-on') + '" role="switch"' +
+            ' aria-checked="' + (off ? 'false' : 'true') + '"' +
+            ' aria-label="Account active for ' + umEsc(umFullName(r)) + '"' +
+            ' data-um-action="toggle-status" data-user="' + umEsc(r.user_id) + '"' +
+            ' data-mode="' + (off ? 'reactivate' : 'deactivate') + '"></button>' +
+        '<span class="um-switch-label">' + (off ? 'Inactive' : 'Active') + '</span>' +
+        (umIsLocked(r) ? ' <span class="um-status is-locked">Locked</span>' : '') +
+    '</span>';
 }
 
 function umFilterParams() {
@@ -301,36 +306,24 @@ function umRenderDirectory() {
         return;
     }
     umEl('umEmpty').hidden = true;
-    umEl('umCardGrid').innerHTML = umRows.map(umCardHtml).join('');
+    umEl('umCardGrid').innerHTML = '';
     umEl('umTableBody').innerHTML = umRows.map(umRowHtml).join('');
     umApplyView();
 }
 
 function umApplyView() {
     const has = umRows.length > 0;
-    umEl('umCardGrid').hidden = !(has && umView === 'cards');
+    umView = 'table';
+    umEl('umCardGrid').hidden = true;
     umEl('umTableWrap').hidden = !(has && umView === 'table');
     document.querySelectorAll('#umRoot .um-view-btn').forEach(function (b) {
-        const on = b.dataset.view === umView;
-        b.classList.toggle('is-active', on);
-        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+        b.classList.remove('is-active');
+        b.setAttribute('aria-pressed', 'false');
     });
 }
 
 function umMenuHtml(r) {
-    const name = umFullName(r);
-    const off = umIsDeactivated(r);
-    return '' +
-    '<div class="um-menu-wrap">' +
-        '<button class="um-icon-btn" type="button" data-um-action="menu" aria-haspopup="true" aria-expanded="false" aria-label="More actions for ' + umEsc(name) + '">⋯</button>' +
-        '<div class="um-menu" role="menu" hidden>' +
-            '<button type="button" role="menuitem" data-um-action="edit-user" data-user="' + umEsc(r.user_id) + '">Edit user</button>' +
-            '<button type="button" role="menuitem" data-um-action="reset-password" data-user="' + umEsc(r.user_id) + '">Reset password</button>' +
-            (umIsLocked(r) ? '<button type="button" role="menuitem" data-um-action="unlock" data-user="' + umEsc(r.user_id) + '">Unlock account</button>' : '') +
-            '<button type="button" role="menuitem" class="um-menu-danger" data-um-action="toggle-status" data-user="' + umEsc(r.user_id) + '" data-mode="' + (off ? 'reactivate' : 'deactivate') + '">' +
-                (off ? 'Reactivate account' : 'Deactivate account') + '</button>' +
-        '</div>' +
-    '</div>';
+    return '';
 }
 
 function umCardHtml(r) {
@@ -348,7 +341,6 @@ function umCardHtml(r) {
                 '<p class="um-user-department">' + umEsc(umNA(place, 'No department assigned')) + '</p>' +
                 (r.position_name ? '<p>' + umEsc(r.position_name) + '</p>' : '') +
             '</div>' +
-            umMenuHtml(r) +
         '</div>' +
         '<div class="um-card-meta">' +
             '<div><span>Account status</span><strong>' + umStatusBadge(r) + '</strong></div>' +
@@ -367,14 +359,12 @@ function umRowHtml(r) {
     return '' +
     '<tr data-user-id="' + umEsc(r.user_id) + '">' +
         '<td><div class="um-table-person"><span class="um-avatar um-avatar-small' + umAvatarClass(r) + '" aria-hidden="true">' + umEsc(umInitials(r)) + '</span>' +
-            '<span><strong>' + umEsc(name) + '</strong><small>' + umEsc(umNA(r.employee_code, 'No employee ID')) + '</small></span></div></td>' +
-        '<td>' + umEsc(umNA(r.role_name, 'No role')) + '</td>' +
+            '<span><strong>' + umEsc(name) + '</strong><small>' + umEsc(umNA(r.email, umNA(r.employee_code, 'No email'))) + '</small></span></div></td>' +
+        '<td><span class="um-role-pill">' + umEsc(umNA(r.role_name, 'No role')) + '</span></td>' +
         '<td>' + umEsc(umNA(place, 'Not assigned')) + '</td>' +
-        '<td>' + umEsc(umFormatWhen(r.last_login, 'No login recorded')) + '</td>' +
         '<td>' + umStatusBadge(r) + '</td>' +
         '<td><div class="um-row-actions">' +
             '<button class="um-btn um-btn-quiet" type="button" data-um-action="view-details" data-user="' + umEsc(r.user_id) + '">View</button>' +
-            '<button class="um-btn um-btn-quiet" type="button" data-um-action="edit-user" data-user="' + umEsc(r.user_id) + '">Edit</button>' +
         '</div></td>' +
     '</tr>';
 }
@@ -442,7 +432,6 @@ function umOnClick(e) {
         case 'page':           umPage = parseInt(btn.dataset.page, 10) || 1; umLoad(); break;
         case 'clear-filters':  umClearFilters(); break;
         case 'export':         umExportCsv(); break;
-        case 'open-create':    umOpenCreate(); break;
         case 'view-details':   umOpenDetails(userId); break;
         case 'edit-user':      umOpenEdit(userId || umDetailUserId, ''); break;
         case 'edit-access':    umOpenEdit(umDetailUserId, 'umEditRole'); break;
@@ -464,8 +453,6 @@ function umOnInput(e) {
     if (id === 'umSearch') {
         clearTimeout(umSearchTimer);
         umSearchTimer = setTimeout(function () { umPage = 1; umLoad(); }, UM_SEARCH_DELAY);
-    } else if (id === 'umLookup') {
-        umScheduleLookup();
     }
 }
 
@@ -478,21 +465,16 @@ function umOnChange(e) {
     } else if (id === 'umStatus' || id === 'umRole' || id === 'umUnit') {
         umPage = 1;
         umLoad();
-    } else if (id === 'umCreateDept') {
-        umFilterUnits(umEl('umCreateDept'), umEl('umCreateUnit'));
     } else if (id === 'umEditDept') {
         umFilterUnits(umEl('umEditDept'), umEl('umEditUnit'));
-    } else if (id === 'umEmployee') {
-        umOnEmployeePick(e.target);
     }
 }
 
 function umOnSubmit(e) {
     const form = e.target;
-    if (form.id !== 'umCreateForm' && form.id !== 'umEditForm') return;
+    if (form.id !== 'umEditForm') return;
     e.preventDefault();
-    if (form.id === 'umCreateForm') umSubmitCreate(form);
-    else umSubmitEdit(form);
+    umSubmitEdit(form);
 }
 
 function umOnRootKeydown(e) {
@@ -518,45 +500,25 @@ function umOnRootKeydown(e) {
     }
 }
 
-/* ── Filters ────────────────────────────────────── */
+function umTrapTab(e) {
+    if (e.key !== 'Tab' || !umModalStack.length) return;
+    const top = umEl(umModalStack[umModalStack.length - 1]);
+    if (!top) return;
+    const items = Array.from(top.querySelectorAll(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )).filter(function (el) { return el.offsetParent !== null; });
+    if (!items.length) return;
 
-function umClearFilters() {
-    ['umSearch', 'umStatus', 'umRole', 'umDepartment', 'umUnit'].forEach(function (id) {
-        const el = umEl(id);
-        if (el) el.value = '';
-    });
-    umFilterUnits(umEl('umDepartment'), umEl('umUnit'));
-    umPage = 1;
-    umLoad();
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (e.shiftKey && (document.activeElement === first || document.activeElement === top.querySelector('.um-modal'))) {
+        e.preventDefault();
+        last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+    }
 }
-
-// Show only the units that belong to the chosen department
-function umFilterUnits(deptSel, unitSel) {
-    if (!deptSel || !unitSel) return;
-    const dept = deptSel.value;
-    Array.from(unitSel.options).forEach(function (o) {
-        const d = o.dataset.department;
-        const hide = !!(dept && d && d !== dept);
-        o.hidden = hide;
-        o.disabled = hide;
-    });
-    const sel = unitSel.selectedOptions[0];
-    if (sel && sel.disabled) unitSel.value = '';
-}
-
-// Make sure the record's current value is selectable even if it is no longer in the active list
-function umEnsureOption(sel, value, label, dept) {
-    if (!sel || !value) return;
-    const exists = Array.from(sel.options).some(function (o) { return o.value === String(value); });
-    if (exists) return;
-    const o = document.createElement('option');
-    o.value = String(value);
-    o.textContent = (label || 'Current value') + ' (inactive)';
-    if (dept) o.dataset.department = String(dept);
-    sel.appendChild(o);
-}
-
-/* ── Row menu ───────────────────────────────────── */
 
 function umToggleMenu(btn) {
     const wrap = btn.closest('.um-menu-wrap');
@@ -581,8 +543,6 @@ function umCloseMenus(returnFocus) {
         }
     });
 }
-
-/* ── Modal plumbing ─────────────────────────────── */
 
 function umSyncBodyLock() {
     document.body.classList.toggle('um-modal-open', umModalStack.length > 0);
@@ -617,26 +577,6 @@ function umCloseModal(id) {
     const back = umReturnFocus[id];
     delete umReturnFocus[id];
     if (back && document.body.contains(back) && typeof back.focus === 'function') back.focus();
-}
-
-function umTrapTab(e) {
-    if (e.key !== 'Tab' || !umModalStack.length) return;
-    const top = umEl(umModalStack[umModalStack.length - 1]);
-    if (!top) return;
-    const items = Array.from(top.querySelectorAll(
-        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-    )).filter(function (el) { return el.offsetParent !== null; });
-    if (!items.length) return;
-
-    const first = items[0];
-    const last = items[items.length - 1];
-    if (e.shiftKey && (document.activeElement === first || document.activeElement === top.querySelector('.um-modal'))) {
-        e.preventDefault();
-        last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-    }
 }
 
 function umToast(message) {
@@ -700,8 +640,11 @@ async function umOpenDetails(userId) {
     umSetNotice('umActivityNotice', '');
     umSet('umDetailsTitle', 'Employee details');
     umSet('umDetailSubline', '');
-    umEl('umDetailStatus').className = 'um-status';
-    umSet('umDetailStatus', '');
+    const statusBadge = umEl('umDetailStatus');
+    if (statusBadge) {
+        statusBadge.className = 'um-status';
+        statusBadge.textContent = '';
+    }
     umSelectTab('overview', false);
     umOpenModal('umDetailsModal');
 
@@ -738,41 +681,50 @@ function umRenderDetails(d) {
     umSet('umDetailsTitle', name);
     umSet('umDetailSubline', umNA(d.employee_code, 'No employee ID') + ' · ' + umNA(d.role_name, 'No role'));
     const st = umEl('umDetailStatus');
-    st.className = 'um-status ' + (off ? 'is-inactive' : 'is-active');
-    st.textContent = off ? 'Deactivated' : 'Active';
+    if (st) {
+        st.className = 'um-status ' + (off ? 'is-inactive' : 'is-active');
+        st.textContent = off ? 'Inactive' : 'Active';
+    }
 
     umSet('umDetailLastLogin', umFormatWhen(d.last_login, 'No login recorded'));
     umSet('umDetailCreated', umFormatDate(d.account_created_at));
-    umSet('umDetailActivityCount', d.activity_total + (Number(d.activity_total) === 1 ? ' event' : ' events'));
 
     umSet('umInfoName', name);
     umSet('umInfoId', umNA(d.employee_code));
     umSet('umInfoEmail', umNA(d.email));
     umSet('umInfoContact', umNA(d.mobile_no || d.phone_no));
     umSet('umInfoDepartment', umNA(d.department_name));
-    umSet('umInfoUnit', umNA(d.unit_name));
     umSet('umInfoPosition', umNA(d.position_name));
-    umSet('umInfoLastActivity', umFormatWhen(d.last_activity_at, 'No activity recorded'));
 
     umSet('umAccessRole', umNA(d.role_name, 'No role assigned'));
-    umSet('umAccessStatus', off ? 'Deactivated' : 'Active');
+    umSet('umAccessStatus', off ? 'Inactive' : 'Active');
     umSet('umAccessDepartment', umNA(d.department_name));
-    umSet('umAccessUnit', umNA(d.unit_name));
-    umSet('umAccessPwChanged', umFormatWhen(d.password_changed_at, 'No change recorded'));
-    umSet('umAccessFailed', String(d.failed_login_attempts || 0));
-    umSet('umAccessLock', umIsLocked(d) ? 'Locked until ' + umFormatWhen(d.locked_until) : 'Not locked');
 
-    umEl('umAccessDeactWrap').hidden = !off;
-    umSet('umAccessDeactAt', umFormatWhen(d.deactivated_at));
-    umSet('umAccessDeactBy', umNA(d.deactivated_by_name));
-    umSet('umAccessDeactReason', umNA(d.deactivation_reason, 'No reason given'));
+    const accessLock = umEl('umAccessLock');
+    if (accessLock) {
+        accessLock.textContent = umIsLocked(d) ? 'Locked until ' + umFormatWhen(d.locked_until) : 'Not locked';
+    }
 
-    umEl('umDetailUnlockBtn').hidden = !umIsLocked(d);
+    const accessDeactWrap = umEl('umAccessDeactWrap');
+    if (accessDeactWrap) {
+        accessDeactWrap.hidden = !off;
+    }
+    const accessDeactAt = umEl('umAccessDeactAt');
+    if (accessDeactAt) accessDeactAt.textContent = umFormatWhen(d.deactivated_at);
+    const accessDeactBy = umEl('umAccessDeactBy');
+    if (accessDeactBy) accessDeactBy.textContent = umNA(d.deactivated_by_name);
+    const accessDeactReason = umEl('umAccessDeactReason');
+    if (accessDeactReason) accessDeactReason.textContent = umNA(d.deactivation_reason, 'No reason given');
+
+    const detailUnlock = umEl('umDetailUnlockBtn');
+    if (detailUnlock) detailUnlock.hidden = !umIsLocked(d);
 
     const sb = umEl('umDetailStatusBtn');
-    sb.textContent = off ? 'Reactivate' : 'Deactivate';
-    sb.dataset.mode = off ? 'reactivate' : 'deactivate';
-    sb.dataset.user = String(d.user_id);
+    if (sb) {
+        sb.textContent = off ? 'Reactivate' : 'Deactivate';
+        sb.dataset.mode = off ? 'reactivate' : 'deactivate';
+        sb.dataset.user = String(d.user_id);
+    }
 }
 
 function umSelectTab(name, focus) {
@@ -850,108 +802,6 @@ async function umLoadActivity(reset) {
     }
 }
 
-/* ── Create modal ───────────────────────────────── */
-
-function umOpenCreate() {
-    const form = umEl('umCreateForm');
-    form.reset();
-    umClearErrors(form, 'umCreateMsg');
-    umEl('umEmployee').innerHTML = '';
-    umFilterUnits(umEl('umCreateDept'), umEl('umCreateUnit'));
-    umSet('umLookupHint', 'Type at least ' + UM_MIN_LOOKUP + ' characters to search. Employees who already have an account can\u2019t be selected.');
-    umResetPasswordToggles();
-    umOpenModal('umCreateModal');
-    umEl('umLookup').focus();
-}
-
-function umScheduleLookup() {
-    clearTimeout(umLookupTimer);
-    umLookupTimer = setTimeout(umLookup, UM_LOOKUP_DELAY);
-}
-
-async function umLookup() {
-    const input = umEl('umLookup');
-    const list = umEl('umEmployee');
-    if (!input || !list) return;
-
-    const q = input.value.trim();
-    const reqId = ++umLookupId;
-
-    if (q.length < UM_MIN_LOOKUP) {
-        list.innerHTML = '';
-        umSet('umLookupHint', 'Type at least ' + UM_MIN_LOOKUP + ' characters to search.');
-        return;
-    }
-
-    umSet('umLookupHint', 'Searching…');
-    try {
-        const data = await umRequest('lookup_employees', { q: q });
-        if (reqId !== umLookupId) return;
-
-        list.innerHTML = data.rows.map(function (r) {
-            let note = '';
-            let disabled = false;
-            if (Number(r.has_account) === 1) { note = ' — already has an account'; disabled = true; }
-            else if (Number(r.eligible) !== 1) { note = ' — not eligible (' + r.employment_status + ')'; disabled = true; }
-
-            return '<option value="' + umEsc(r.employee_id) + '"' +
-                ' data-role="' + umEsc(r.role_id || '') + '"' +
-                ' data-dept="' + umEsc(r.department_id || '') + '"' +
-                ' data-unit="' + umEsc(r.unit_id || '') + '"' +
-                ' data-email="' + umEsc(r.email || '') + '"' +
-                (disabled ? ' disabled' : '') + '>' +
-                umEsc(umNA(r.full_name, 'Unnamed') + ' (' + umNA(r.employee_code, 'no ID') + ')' +
-                    (r.department_name ? ' · ' + r.department_name : '') + note) +
-                '</option>';
-        }).join('');
-
-        umSet('umLookupHint', data.rows.length
-            ? data.rows.length + ' match' + (data.rows.length === 1 ? '' : 'es') + '. Select an employee to continue.'
-            : 'No employees found.');
-    } catch (err) {
-        if (reqId !== umLookupId) return;
-        umSet('umLookupHint', err.message || 'Search failed.');
-    }
-}
-
-function umOnEmployeePick(sel) {
-    const opt = sel.selectedOptions[0];
-    if (!opt) return;
-    const d = opt.dataset;
-
-    umEl('umCreateRole').value = d.role || '';
-    umEl('umCreateDept').value = d.dept || '';
-    umFilterUnits(umEl('umCreateDept'), umEl('umCreateUnit'));
-    umEl('umCreateUnit').value = d.unit || '';
-    umEl('umCreateEmail').value = d.email || '';
-    umSet('umLookupHint', 'Selected: ' + opt.textContent);
-}
-
-async function umSubmitCreate(form) {
-    if (umBusy) return;
-    umClearErrors(form, 'umCreateMsg');
-
-    const data = Object.fromEntries(new FormData(form).entries());
-    if (!data.employee_id) {
-        umSet('umCreateMsg', 'Select an employee from the search results.');
-        umEl('umLookup').focus();
-        return;
-    }
-
-    umSetBusy(form, true, 'Creating…');
-    try {
-        const res = await umRequest('create', data, 'POST');
-        umCloseModal('umCreateModal');
-        umToast('Account created for ' + res.name + '.');
-        await umLoad();
-    } catch (err) {
-        umShowFormErrors(form, 'umCreateMsg', err);
-        if (err.status === 409) umLookup(); // refresh so the employee shows as already having an account
-    } finally {
-        umSetBusy(form, false);
-    }
-}
-
 /* ── Edit modal ─────────────────────────────────── */
 
 async function umOpenEdit(userId, focusId) {
@@ -969,7 +819,7 @@ async function umOpenEdit(userId, focusId) {
 
     try {
         const d = await umRequest('details', { user_id: id });
-        if (umModalStack.indexOf('umEditModal') === -1) return; // closed while loading
+        if (umModalStack.indexOf('umEditModal') === -1) return;
 
         umEl('umEditUserId').value = String(d.user_id);
         umSet('umEditSubline', umFullName(d) + ' · ' + umNA(d.employee_code, 'No employee ID'));
@@ -1065,7 +915,7 @@ async function umConfirmStatus() {
         if (deactivate) params.reason = umEl('umStatusReason').value.trim();
         const res = await umRequest(deactivate ? 'deactivate' : 'reactivate', params, 'POST');
         umCloseModal('umStatusModal');
-        umToast(res.name + (deactivate ? '\u2019s account was deactivated.' : '\u2019s account was reactivated.'));
+        umToast(res.name + (deactivate ? '’s account was deactivated.' : '’s account was reactivated.'));
         await umAfterChange();
     } catch (err) {
         umSet('umStatusMsg', err.message);
@@ -1083,7 +933,7 @@ async function umUnlock(userId) {
     umBusy = true;
     try {
         const res = await umRequest('unlock', { user_id: id }, 'POST');
-        umToast(res.name + '\u2019s account was unlocked.');
+        umToast(res.name + '’s account was unlocked.');
         await umAfterChange();
     } catch (err) {
         umToast(err.message || 'Unable to unlock this account.');
@@ -1110,11 +960,10 @@ function umGeneratePassword(targetId) {
     const rand = function (max) {
         const buf = new Uint32Array(1);
         const limit = Math.floor(0xFFFFFFFF / max) * max;
-        do { crypto.getRandomValues(buf); } while (buf[0] >= limit); // avoid modulo bias
+        do { crypto.getRandomValues(buf); } while (buf[0] >= limit);
         return buf[0] % max;
     };
 
-    // One character from each set first, so the result always mixes cases, digits and symbols
     const chars = sets.map(function (s) { return s.charAt(rand(s.length)); });
     while (chars.length < len) chars.push(all.charAt(rand(all.length)));
     for (let i = chars.length - 1; i > 0; i--) {
@@ -1129,9 +978,8 @@ function umGeneratePassword(targetId) {
     input.removeAttribute('aria-invalid');
 }
 
-// Password fields always start masked, with their Show/Hide buttons in sync
 function umResetPasswordToggles() {
-    ['umCreatePassword', 'umEditPassword'].forEach(function (id) {
+    ['umEditPassword'].forEach(function (id) {
         const input = umEl(id);
         if (input) input.type = 'password';
         const toggle = document.querySelector('[data-um-action="toggle-password"][data-target="' + id + '"]');
@@ -1165,7 +1013,7 @@ async function umCopyPassword(targetId) {
 
 function umCsvCell(v) {
     let s = String(v === null || v === undefined ? '' : v);
-    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; // stop spreadsheet formula injection
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
     return '"' + s.replace(/"/g, '""') + '"';
 }
 
@@ -1216,9 +1064,6 @@ async function umExportCsv() {
 document.addEventListener('DOMContentLoaded', umInit);
 document.addEventListener('page:loaded', umInit);
 
-// Safety net: the router may insert the page after (or without) firing the events
-// above, so also watch for #umRoot appearing. umInit is safe to call repeatedly —
-// the initial load is guarded by a flag on the root element.
 function umWatchDom() {
     if (window.__umObserver || !document.body) return;
     window.__umObserver = new MutationObserver(function () {

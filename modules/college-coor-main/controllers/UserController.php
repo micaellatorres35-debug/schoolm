@@ -56,7 +56,7 @@ if (!in_array($_SESSION['role_name'] ?? '', UM_ALLOWED_ROLES, true)) {
 }
 
     $action = (string) ($_GET['action'] ?? '');
-    $writeActions = ['create', 'update', 'deactivate', 'reactivate', 'unlock'];
+    $writeActions = ['update', 'deactivate', 'reactivate', 'unlock'];
 
     if (in_array($action, $writeActions, true)) {
         if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
@@ -134,19 +134,6 @@ if (!in_array($_SESSION['role_name'] ?? '', UM_ALLOWED_ROLES, true)) {
                 um_respond(['success' => true, 'data' => ['rows' => []]]);
             }
             um_respond(['success' => true, 'data' => ['rows' => $model->lookupEmployees($q)]]);
-            break;
-
-        case 'create':
-            $result = $model->createAccount(
-                (int) um_post('employee_id'),
-                (int) um_post('role_id'),
-                (int) um_post('department_id'),
-                (int) um_post('unit_id'),
-                um_post('email'),
-                (string) ($_POST['password'] ?? ''),   // not trimmed: spaces may be intentional
-                $actorId
-            );
-            um_respond(['success' => true, 'message' => 'Account created.', 'data' => $result], 201);
             break;
 
         case 'update':

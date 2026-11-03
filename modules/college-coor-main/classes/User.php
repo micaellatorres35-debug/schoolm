@@ -657,6 +657,13 @@ class User {
                 throw new AccountException('This account is already ' . strtolower($target) . '.', 409);
             }
 
+            $roleId = null;
+            $roleStmt = $this->conn->prepare(
+                'SELECT e.role_id FROM cc_user_account ua INNER JOIN em_employees e ON e.employee_id = ua.employee_id WHERE ua.user_id = :id LIMIT 1'
+            );
+            $roleStmt->execute([':id' => $userId]);
+            $roleId = (int) $roleStmt->fetchColumn();
+
             if ($deactivate) {
                 $u = $this->conn->prepare(
                     "UPDATE cc_user_account
@@ -672,6 +679,16 @@ class User {
                      WHERE user_id = :id"
                 );
                 $u->execute([':id' => $userId]);
+            }
+
+            if ($roleId > 0) {
+                $roleUpdate = $this->conn->prepare(
+                    'UPDATE cc_roles SET status = :status WHERE role_id = :role_id'
+                );
+                $roleUpdate->execute([
+                    ':status' => $deactivate ? 'Inactive' : 'Active',
+                    ':role_id' => $roleId,
+                ]);
             }
 
             $this->conn->commit();
