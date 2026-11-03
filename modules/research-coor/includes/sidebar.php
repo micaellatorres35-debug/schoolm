@@ -48,7 +48,7 @@ $employeeClass = new Employee();
                         </li>
                         <li class="divider"></li>
                         <li>
-                            <a href="/auth/logout.php" class="signout-link">
+                            <a href="/schoolm/auth/logout.php" class="signout-link">
                                 <i class="fa-solid fa-right-from-bracket"></i> Sign Out
                             </a>
                         </li>

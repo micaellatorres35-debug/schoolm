@@ -20,7 +20,7 @@ class User {
         }
 
         try {
-            $sql = "SELECT e.employee_id, e.first_name, e.last_name, e.middle_name, e.department_id, r.role_name AS role, e.employment_status AS status FROM `em_employees` e LEFT JOIN `em_roles` r ON e.role_id = r.role_id WHERE e.employee_id = :employee_id";
+            $sql = "SELECT e.employee_id, e.first_name, e.last_name, e.middle_name, e.department_id, r.role_name AS role, e.employment_status AS status FROM `em_employees` e LEFT JOIN `cc_roles` r ON e.role_id = r.role_id WHERE e.employee_id = :employee_id";
 
             $stmt = $this->conn->prepare($sql);
             $stmt->execute([':employee_id' => $_SESSION['employee_id']]);
@@ -33,7 +33,7 @@ class User {
 
     public function registerEmployee($employee_id, $department_id, $position_id, $password) {
         // Check if employee already has a user account
-        $checkStmt = $this->conn->prepare("SELECT user_id FROM user_account WHERE employee_id = :employee_id");
+        $checkStmt = $this->conn->prepare("SELECT user_id FROM cc_user_account WHERE employee_id = :employee_id");
         $checkStmt->execute([':employee_id' => $employee_id]);
         if ($checkStmt->fetchColumn()) {
             return ['success' => false, 'message' => 'Employee already has a user account.'];
@@ -42,7 +42,7 @@ class User {
         // Get the role tied to this department (null if not found)
         $role_id = null;
         try {
-            $roleStmt = $this->conn->prepare("SELECT role_id FROM em_roles WHERE department_id = :dept_id LIMIT 1");
+            $roleStmt = $this->conn->prepare("SELECT role_id FROM cc_roles WHERE department_id = :dept_id LIMIT 1");
             $roleStmt->execute([':dept_id' => $department_id]);
             $role_id = $roleStmt->fetchColumn() ?: null;
         } catch (PDOException $e) {
@@ -54,8 +54,8 @@ class User {
         try {
             $this->conn->beginTransaction();
 
-            // 1. INSERT into user_account
-            $insertSql  = "INSERT INTO user_account (password, employee_id, created_at) VALUES (:password, :employee_id, NOW())";
+            // 1. INSERT into cc_user_account
+            $insertSql  = "INSERT INTO cc_user_account (password, employee_id, created_at) VALUES (:password, :employee_id, NOW())";
             $insertStmt = $this->conn->prepare($insertSql);
             $insertStmt->execute([
                 ':password'    => $hashed_password,

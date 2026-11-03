@@ -93,15 +93,15 @@ try {
                 : null;
             $search = trim($_GET['search'] ?? '');
 
+            $submittedBy = null;
             if ($isDirectress) {
-                // School Directress can view approvals across all departments.
                 $departmentId = null;
-            } elseif ($departmentId === null) {
-                // Other users default to their own department.
-                $departmentId = $userInfo['department_id'] ?? null;
+            } else {
+                $submittedBy = (int) ($userInfo['employee_id'] ?? $_SESSION['employee_id'] ?? 0);
+                $departmentId = null;
             }
 
-            $concerns = $issuesClass->getConcerns($departmentId, $status, $search);
+            $concerns = $issuesClass->getConcerns($departmentId, $status, $search, $submittedBy);
             concern_respond(['success' => true, 'data' => array_map('concern_public', $concerns)]);
             break;
 

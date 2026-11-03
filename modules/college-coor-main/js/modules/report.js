@@ -397,15 +397,13 @@ async function loadReports() {
             return;
         }
 
-        const meta = json.meta || {};
-        const page = Number(meta.page) || rsmPage;
-        rsmPage = page;
+        rsmPage = json.meta.page;
 
         if (!json.data?.length) {
             tbody.innerHTML = `<tr><td colspan="8" class="rsm-muted">${rsmFiltersActive()
                 ? 'No reports match your search or filters.'
                 : 'No reports found.'}</td></tr>`;
-            rsmRenderFooter(meta, 0);
+            rsmRenderFooter(json.meta, 0);
             return;
         }
 
@@ -424,7 +422,7 @@ async function loadReports() {
             </tr>
         `).join('');
 
-        rsmRenderFooter(meta, json.data.length);
+        rsmRenderFooter(json.meta, json.data.length);
     } catch (err) {
         if (req !== rsmListReq) return;
         console.error('loadReports error:', err);

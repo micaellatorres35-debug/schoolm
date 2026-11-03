@@ -15,7 +15,7 @@
         }
 
         // ── LIST / READ ──────────────────────────────────────────────
-        public function getReports($department_id = null, $status = null) {
+        public function getReports($department_id = null, $status = null, $submitted_by = null) {
             $sql = "SELECT
                         r.report_id, r.title, r.summary, r.findings, r.recommendations,
                         r.status, r.pdf_path, r.ai_summary,
@@ -42,6 +42,10 @@
             if (!is_null($status)) {
                 $sql .= " AND r.status = :status";
                 $params[':status'] = $status;
+            }
+            if (!is_null($submitted_by)) {
+                $sql .= " AND r.submitted_by = :submitted_by";
+                $params[':submitted_by'] = $submitted_by;
             }
             $sql .= " ORDER BY r.submitted_at DESC, r.created_at DESC";
 

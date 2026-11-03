@@ -1097,6 +1097,18 @@
     background: transparent;
 }
 
+.monitoring-dashboard .coord-status-table th:first-child,
+.monitoring-dashboard .coord-status-table td:first-child {
+    width: 38%;
+    min-width: 150px;
+}
+
+.monitoring-dashboard .coord-status-table th:nth-child(n + 2),
+.monitoring-dashboard .coord-status-table td:nth-child(n + 2) {
+    width: 20.67%;
+    text-align: center;
+}
+
 .monitoring-dashboard .coord-status-table tbody td {
     font-size: 0.8rem;
     color: #2a2f3a;
@@ -1184,36 +1196,305 @@
     color: #000000;
 }
 
+.monitoring-dashboard .dashboard-activity-overview {
+    margin-top: 1.75rem;
+}
+
+.monitoring-dashboard .dashboard-activity-layout {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.25rem;
+    align-items: stretch;
+}
+
+.monitoring-dashboard .full-width-card {
+    grid-column: 1 / -1;
+}
+
+.monitoring-dashboard .dashboard-activity-card {
+    background: #ffffff;
+    border: 1px solid #eceef3;
+    border-radius: 12px;
+    padding: 1.1rem 1.15rem;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+    min-height: 230px;
+    display: flex;
+    flex-direction: column;
+}
+
+.monitoring-dashboard .analytics-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.9rem;
+}
+
+.monitoring-dashboard .analytics-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.35;
+    font-weight: 800;
+    color: #2e3342;
+}
+
+.monitoring-dashboard .analytics-range-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem;
+    border-radius: 999px;
+    background: #f3f5f9;
+    border: 1px solid #e9edf4;
+}
+
+.monitoring-dashboard .range-button {
+    border: none;
+    background: transparent;
+    border-radius: 999px;
+    color: #5b6479;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 0.38rem 0.7rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.monitoring-dashboard .range-button.active {
+    background: var(--color7, #5146b7);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(81, 70, 183, 0.18);
+}
+
+.monitoring-dashboard .activity-chart-shell {
+    position: relative;
+    flex: 1;
+    min-height: 260px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.monitoring-dashboard .activity-chart-shell canvas {
+    display: block;
+    width: 100% !important;
+    height: 260px !important;
+}
+
+.monitoring-dashboard .empty-chart-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 260px;
+    border: 1px dashed #dfe3eb;
+    background: #f9fafb;
+    border-radius: 10px;
+    color: #70798f;
+    font-size: 0.8rem;
+    text-align: center;
+    padding: 1rem;
+}
+
+.monitoring-dashboard .event-status-shell {
+    display: grid;
+    grid-template-columns: minmax(160px, 180px) 1fr;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+}
+
+.monitoring-dashboard .donut-chart-wrap {
+    position: relative;
+    width: 100%;
+    height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.monitoring-dashboard .donut-chart-wrap canvas {
+    display: block;
+    width: 100% !important;
+    height: 180px !important;
+    max-width: 180px;
+}
+
+.monitoring-dashboard .status-summary-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    min-width: 0;
+}
+
+.monitoring-dashboard .status-total {
+    font-size: 1.8rem;
+    line-height: 1;
+    font-weight: 800;
+    color: #2d3240;
+}
+
+.monitoring-dashboard .status-total-label {
+    font-size: 0.72rem;
+    color: #757f90;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 0.2rem;
+}
+
+.monitoring-dashboard .status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.74rem;
+    color: #3d4557;
+    line-height: 1.5;
+}
+
+.monitoring-dashboard .status-name-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+}
+
+.monitoring-dashboard .status-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.monitoring-dashboard .status-figure {
+    color: #677285;
+    white-space: nowrap;
+}
+
+.monitoring-dashboard .announcement-list,
+.monitoring-dashboard .upcoming-events-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    max-height: 280px;
+    overflow-y: auto;
+    padding-right: 0.2rem;
+}
+
+.monitoring-dashboard .announcement-item,
+.monitoring-dashboard .upcoming-event-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.7rem 0.75rem;
+    border-radius: 10px;
+    border: 1px solid #edf1f6;
+    background: #fafbfc;
+}
+
+.monitoring-dashboard .announcement-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.26rem 0.52rem;
+    border-radius: 999px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+    background: rgba(148, 163, 184, 0.12);
+    color: #475569;
+    margin-top: 0.1rem;
+}
+
+.monitoring-dashboard .announcement-copy,
+.monitoring-dashboard .event-copy {
+    flex: 1;
+    min-width: 0;
+}
+
+.monitoring-dashboard .announcement-title,
+.monitoring-dashboard .event-title {
+    font-size: 0.9rem;
+    line-height: 1.4;
+    font-weight: 800;
+    color: #2c3140;
+    margin-bottom: 0.18rem;
+    word-break: break-word;
+}
+
+.monitoring-dashboard .announcement-meta,
+.monitoring-dashboard .event-meta {
+    font-size: 0.72rem;
+    line-height: 1.4;
+    color: #778194;
+}
+
+.monitoring-dashboard .small-meta {
+    margin-top: 0.13rem;
+}
+
+.monitoring-dashboard .event-date-box {
+    width: 52px;
+    min-width: 52px;
+    border-radius: 10px;
+    background: #f2f0ff;
+    color: var(--color7, #5146b7);
+    text-align: center;
+    padding: 0.45rem 0.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.monitoring-dashboard .event-date-box span {
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.monitoring-dashboard .event-date-box strong {
+    font-size: 1.05rem;
+    line-height: 1.1;
+}
+
+.monitoring-dashboard .tiny-link {
+    color: var(--color7, #5146b7);
+    text-decoration: none;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.monitoring-dashboard .tiny-link:hover {
+    text-decoration: underline;
+}
+
 @media (max-width: 1100px) {
-    .monitoring-dashboard .attention-grid {
-        grid-template-columns: 1fr;
+    .monitoring-dashboard .dashboard-activity-layout {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .monitoring-dashboard .coord-status-table {
-        min-width: 560px;
+    .monitoring-dashboard .full-width-card {
+        grid-column: 1 / -1;
     }
 }
 
 @media (max-width: 768px) {
-    .monitoring-dashboard .summary-card-grid {
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    .monitoring-dashboard .dashboard-activity-layout {
+        grid-template-columns: 1fr;
     }
 
-    .monitoring-dashboard .attention-card {
-        padding-left: 0.9rem;
-        padding-right: 0.9rem;
+    .monitoring-dashboard .event-status-shell {
+        grid-template-columns: 1fr;
     }
 
-    .monitoring-dashboard .attention-item {
-        gap: 0.55rem;
-    }
-
-    .monitoring-dashboard .attention-item-actions {
-        margin-left: 0;
-    }
-
-    .monitoring-dashboard .item-date {
-        display: none;
+    .monitoring-dashboard .donut-chart-wrap {
+        height: 160px;
     }
 }
 

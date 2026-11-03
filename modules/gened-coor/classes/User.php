@@ -20,11 +20,34 @@ class User {
         }
 
         try {
-            $sql = "SELECT e.employee_id, e.first_name, e.last_name, e.middle_name, e.department_id, r.role_name AS role, e.employment_status AS status FROM `em_employees` e LEFT JOIN `em_roles` r ON e.role_id = r.role_id WHERE e.employee_id = :employee_id";
+            $sql = "
+                SELECT e.employee_id,
+                       e.first_name,
+                       e.last_name,
+                       e.middle_name,
+                       e.department_id,
+                       e.role_id AS role,
+                       r.role_name,
+                       e.employment_status AS status
+                FROM em_employees e
+                LEFT JOIN cc_roles r ON r.role_id = e.role_id
+                WHERE e.employee_id = :employee_id
+                LIMIT 1
+            ";
 
             $stmt = $this->conn->prepare($sql);
             $stmt->execute([':employee_id' => $_SESSION['employee_id']]);
-            return $stmt->fetch(PDO::FETCH_ASSOC);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$user) {
+                return null;
+            }
+
+            if (!empty($user['role_name'])) {
+                $user['role'] = $user['role_name'];
+            }
+
+            return $user;
         } catch (PDOException $e) {
             error_log('userSession error: ' . $e->getMessage());
             return null;

@@ -17,7 +17,7 @@
         // ── LIST / READ ──────────────────────────────────────────────
         // $department_id filters by the SUBMITTER's department (e1.department), matching the
         // original join. $status filters by workflow status (draft/submitted/reviewed/approved/rejected).
-        public function getApprovals($department_id = null, $status = null) {
+        public function getApprovals($department_id = null, $status = null, $submitted_by = null) {
             $sql = "SELECT
                         a.approval_id, a.title, a.description, a.justification,
                         a.status, a.decision, a.file_path, a.pdf_path, a.ai_summary,
@@ -41,6 +41,10 @@
             if (!is_null($status)) {
                 $sql .= " AND a.status = :status";
                 $params[':status'] = $status;
+            }
+            if (!is_null($submitted_by)) {
+                $sql .= " AND a.submit_by = :submitted_by";
+                $params[':submitted_by'] = $submitted_by;
             }
             $sql .= " ORDER BY a.submitted_on DESC, a.created_at DESC";
 
@@ -74,7 +78,7 @@
 
         // ── CREATE / SAVE ────────────────────────────────────────────
         // $data keys: title, description, justification
-        // Optional (only when a new attachment was uploaded): file_path, file_name, file_size
+        // Optional: file_path only; file_name/file_size are not stored in cc_approvals.
         // file_path is a RELATIVE storage path (approvals/attachments/...), never an absolute one.
 
         public function saveDraft($data, $approval_id = null) {
@@ -114,9 +118,7 @@
                             description = :description,
                             justification = :justification,
                             department = :department"
-                            . ($hasFile
-                                ? ", file_path = :file_path, file_name = :file_name, file_size = :file_size"
-                                : "") . "
+                            . ($hasFile ? ", file_path = :file_path" : "") . "
                         WHERE approval_id = :approval_id
                         AND submit_by = :submit_by
                         AND status = 'draft'";
@@ -134,8 +136,6 @@
 
                 if ($hasFile) {
                     $params[':file_path'] = $data['file_path'];
-                    $params[':file_name'] = $data['file_name'] ?? null;
-                    $params[':file_size'] = $data['file_size'] ?? null;
                 }
 
                 $stmt->execute($params);
@@ -151,8 +151,6 @@
                             justification,
                             department,
                             file_path,
-                            file_name,
-                            file_size,
                             submit_by,
                             status,
                             created_at
@@ -164,8 +162,6 @@
                             :justification,
                             :department,
                             :file_path,
-                            :file_name,
-                            :file_size,
                             :submit_by,
                             'draft',
                             NOW()
@@ -179,8 +175,6 @@
                 ':justification' => $data['justification'],
                 ':department'    => $departmentId,
                 ':file_path'     => $data['file_path'] ?? null,
-                ':file_name'     => $data['file_name'] ?? null,
-                ':file_size'     => $data['file_size'] ?? null,
                 ':submit_by'     => $submit_by,
             ]);
 

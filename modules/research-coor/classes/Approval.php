@@ -17,7 +17,7 @@
         // ── LIST / READ ──────────────────────────────────────────────
         // $department_id filters by the SUBMITTER's department (e1.department), matching the
         // original join. $status filters by workflow status (draft/submitted/reviewed/approved/rejected).
-        public function getApprovals($department_id = null, $status = null) {
+        public function getApprovals($department_id = null, $status = null, $submitted_by = null) {
             $sql = "SELECT
                         a.approval_id, a.title, a.description, a.justification,
                         a.status, a.decision, a.file_path, a.pdf_path, a.ai_summary,
@@ -26,7 +26,7 @@
                         CONCAT(rv.first_name, ' ', rv.last_name) AS reviewed_by_name,
                         CONCAT(e2.first_name, ' ', e2.last_name) AS approver_id,
                         d.department_name
-                    FROM sd_approvals a
+                    FROM cc_approvals a
                     LEFT JOIN em_employees e1 ON a.submit_by   = e1.employee_id
                     LEFT JOIN em_employees rv ON a.reviewed_by = rv.employee_id
                     LEFT JOIN em_employees e2 ON a.approver_id = e2.employee_id
@@ -41,6 +41,10 @@
             if (!is_null($status)) {
                 $sql .= " AND a.status = :status";
                 $params[':status'] = $status;
+            }
+            if (!is_null($submitted_by)) {
+                $sql .= " AND a.submit_by = :submitted_by";
+                $params[':submitted_by'] = $submitted_by;
             }
             $sql .= " ORDER BY a.submitted_on DESC, a.created_at DESC";
 
@@ -59,7 +63,7 @@
                         CONCAT(e2.first_name, ' ', e2.last_name) AS decided_by_name,
                         e1.department_id AS submitter_department_id,
                         d.department_name
-                    FROM sd_approvals a
+                    FROM cc_approvals a
                     LEFT JOIN em_employees e1 ON a.submit_by   = e1.employee_id
                     LEFT JOIN em_employees rv ON a.reviewed_by = rv.employee_id
                     LEFT JOIN em_employees e2 ON a.approver_id = e2.employee_id
@@ -74,7 +78,7 @@
 
         // ── CREATE / SAVE ────────────────────────────────────────────
         // $data keys: title, description, justification
-        // Optional (only when a new attachment was uploaded): file_path, file_name, file_size
+        // Optional: file_path only; file_name/file_size are not stored in cc_approvals.
         // file_path is a RELATIVE storage path (approvals/attachments/...), never an absolute one.
 
         public function saveDraft($data, $approval_id = null) {
@@ -109,14 +113,12 @@
                 // Update only a draft owned by the current employee.
                 $hasFile = array_key_exists('file_path', $data);
 
-                $sql = "UPDATE sd_approvals SET
+                $sql = "UPDATE cc_approvals SET
                             title = :title,
                             description = :description,
                             justification = :justification,
                             department = :department"
-                            . ($hasFile
-                                ? ", file_path = :file_path, file_name = :file_name, file_size = :file_size"
-                                : "") . "
+                            . ($hasFile ? ", file_path = :file_path" : "") . "
                         WHERE approval_id = :approval_id
                         AND submit_by = :submit_by
                         AND status = 'draft'";
@@ -134,8 +136,6 @@
 
                 if ($hasFile) {
                     $params[':file_path'] = $data['file_path'];
-                    $params[':file_name'] = $data['file_name'] ?? null;
-                    $params[':file_size'] = $data['file_size'] ?? null;
                 }
 
                 $stmt->execute($params);
@@ -144,15 +144,13 @@
             }
 
             // Create a new draft with its department recorded.
-            $sql = "INSERT INTO sd_approvals
+            $sql = "INSERT INTO cc_approvals
                         (
                             title,
                             description,
                             justification,
                             department,
                             file_path,
-                            file_name,
-                            file_size,
                             submit_by,
                             status,
                             created_at
@@ -164,8 +162,6 @@
                             :justification,
                             :department,
                             :file_path,
-                            :file_name,
-                            :file_size,
                             :submit_by,
                             'draft',
                             NOW()
@@ -179,8 +175,6 @@
                 ':justification' => $data['justification'],
                 ':department'    => $departmentId,
                 ':file_path'     => $data['file_path'] ?? null,
-                ':file_name'     => $data['file_name'] ?? null,
-                ':file_size'     => $data['file_size'] ?? null,
                 ':submit_by'     => $submit_by,
             ]);
 
@@ -193,7 +187,7 @@
             $approval_id = $this->saveDraft($data, $approval_id);
 
             $stmt = $this->conn->prepare(
-                "UPDATE sd_approvals SET status = 'submitted', submitted_on = NOW() WHERE approval_id = :approval_id"
+                "UPDATE cc_approvals SET status = 'submitted', submitted_on = NOW() WHERE approval_id = :approval_id"
             );
             $stmt->execute([':approval_id' => $approval_id]);
 
@@ -202,7 +196,7 @@
 
         // ── REVIEW / DECISION (School Directress) ────────────────────
         public function markReviewed($approval_id, $reviewed_by, $notes = null) {
-            $sql = "UPDATE sd_approvals SET
+            $sql = "UPDATE cc_approvals SET
                         status = 'reviewed', reviewed_by = :reviewed_by, reviewed_at = NOW(), review_notes = :notes
                     WHERE approval_id = :approval_id AND status = 'submitted'";
             $stmt = $this->conn->prepare($sql);
@@ -218,7 +212,7 @@
             if (!in_array($decision, ['approved', 'rejected'], true)) {
                 return false;
             }
-            $sql = "UPDATE sd_approvals SET
+            $sql = "UPDATE cc_approvals SET
                         status = :status, decision = :decision,
                         approver_id = :decided_by, approved_at = NOW(), remarks = :notes
                     WHERE approval_id = :approval_id AND status = 'reviewed'";
@@ -257,7 +251,7 @@
             $fileName     = 'approval_' . $approval_id . '_' . time() . '.pdf';
             $relativePath = FileStorage::storeBytes($dompdf->output(), 'approvals/pdf', $fileName);
 
-            $stmt = $this->conn->prepare("UPDATE sd_approvals SET pdf_path = :pdf_path WHERE approval_id = :approval_id");
+            $stmt = $this->conn->prepare("UPDATE cc_approvals SET pdf_path = :pdf_path WHERE approval_id = :approval_id");
             $stmt->execute([':pdf_path' => $relativePath, ':approval_id' => $approval_id]);
 
             return $relativePath;
@@ -364,7 +358,7 @@
 
             $summaryText = trim($summaryText);
 
-            $stmt = $this->conn->prepare("UPDATE sd_approvals SET ai_summary = :ai_summary WHERE approval_id = :approval_id");
+            $stmt = $this->conn->prepare("UPDATE cc_approvals SET ai_summary = :ai_summary WHERE approval_id = :approval_id");
             $stmt->execute([':ai_summary' => $summaryText, ':approval_id' => $approval_id]);
 
             return ['success' => true, 'summary' => $summaryText];

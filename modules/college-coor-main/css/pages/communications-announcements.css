@@ -1,0 +1,888 @@
+/* ============================================================
+   School Directress — Communications & Announcements
+   Matches the Guidance Module's card/form language.
+   (.module-header is handled by the global stylesheet — not included here.)
+   ============================================================ */
+
+.comm-form h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--color2);
+    margin: 0 0 1.1rem 0;
+}
+
+.form-group {
+    margin-bottom: 1.1rem;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--color2);
+    margin-bottom: 0.4rem;
+}
+
+.form-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 1.25rem;
+    margin-bottom: 0;
+}
+
+.form-group.small {
+    margin-bottom: 0;
+}
+
+/* Date input */
+.form-group input[type="date"] {
+    border: 1px solid var(--color9);
+    border-radius: 7px;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.82rem;
+    color: var(--color2);
+    background: var(--color3);
+    min-width: 190px;
+}
+
+.form-group input[type="date"]:focus {
+    outline: none;
+    border-color: var(--color1);
+    box-shadow: 0 0 0 3px rgba(32, 0, 130, 0.08);
+}
+
+/* File input — styled to look like Guidance's bordered upload field */
+.ann-image {
+    display: block;
+    width: 100%;
+    border: 1px solid var(--color9);
+    border-radius: 7px;
+    padding: 0.45rem;
+    font-size: 0.8rem;
+    color: var(--color5);
+    background: var(--color3);
+}
+
+.ann-image::file-selector-button {
+    background: var(--color1);
+    color: var(--color3);
+    font-size: 0.76rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    padding: 0.5rem 0.9rem;
+    margin-right: 0.7rem;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.ann-image::file-selector-button:hover {
+    background: var(--color7);
+}
+
+/* ── Buttons ────────────────────────────────────── */
+.btn-save,
+.btn-cancel {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.6rem 1.1rem;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-save {
+    background: var(--color1);
+    color: var(--color3);
+    border: none;
+}
+
+.btn-save:hover {
+    background: var(--color7);
+}
+
+.btn-cancel {
+    background: var(--color3);
+    color: var(--color5);
+    border: 1px solid var(--color9);
+    margin-left: 0.6rem;
+}
+
+.btn-cancel:hover {
+    border-color: var(--color5);
+    color: var(--color2);
+}
+
+/* ── Announcements List ─────────────────────────── */
+.announcements-list {
+    background: var(--color3);
+    border: 1px solid var(--color9);
+    border-radius: 10px;
+    padding: 1.4rem 1.6rem;
+}
+
+.comm-list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 0.9rem;
+    border-bottom: 1px solid var(--color9);
+    margin-bottom: 1.1rem;
+}
+
+.comm-list-header h2 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--color2);
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.comm-add-btn {
+    padding: 0.6rem 1.1rem;
+    border: none;
+    border-radius: 7px;
+    background: var(--color1);
+    color: var(--color3);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.comm-add-btn:hover {
+    background: var(--color7);
+}
+
+.muted {
+    font-size: 0.82rem;
+    color: var(--color5);
+    text-align: center;
+    padding: 1.2rem 0;
+    margin: 0;
+}
+
+/* ── Announcement Card ──────────────────────────── */
+.announcement-card {
+    border: 1px solid var(--color9);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 1.25rem;
+}
+
+.announcement-card:last-child {
+    margin-bottom: 0;
+}
+
+.announcement-image {
+    width: 100%;
+    line-height: 0;
+    background: var(--bg, #f4f4f7);
+}
+
+.announcement-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.announcement-content {
+    padding: 0.85rem 1.1rem;
+}
+
+.announcement-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.announcement-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.meta-date {
+    font-size: 0.75rem;
+    color: var(--color5);
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+/* ── Modal ─────────────────────────────────────────────── */
+
+.comm-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.comm-modal-overlay.active {
+    display: flex;
+}
+
+.comm-modal {
+    width: 520px;
+    max-width: 92vw;
+    max-height: 88vh;
+    overflow-y: auto;
+    background: var(--color3);
+    border: 1px solid var(--color9);
+    border-radius: 10px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.comm-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.2rem 1.6rem;
+    border-bottom: 1px solid var(--color9);
+}
+
+.comm-modal-header h3 {
+    margin: 0;
+    color: var(--color2);
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.comm-modal-close {
+    border: none;
+    background: transparent;
+    font-size: 1.4rem;
+    line-height: 1;
+    color: var(--color5);
+    cursor: pointer;
+}
+
+.comm-modal-close:hover {
+    color: var(--color2);
+}
+
+.comm-modal-body {
+    padding: 1.6rem;
+}
+
+/* ── Responsive ─────────────────────────────────── */
+@media (max-width: 700px) {
+    .form-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+
+    .btn-cancel {
+        margin-left: 0;
+    }
+
+    .comm-modal {
+        width: 94vw;
+    }
+}
+
+/* ============================================================
+   Archive / restore (prefix: ann-)
+   ============================================================ */
+
+#annRoot [hidden] {
+    display: none !important;
+}
+
+.ann-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ── Active / Archived tabs ─────────────────────── */
+.ann-tabs {
+    display: inline-flex;
+    gap: 3px;
+    padding: 4px;
+    margin-bottom: 1rem;
+    border: 1px solid var(--color9);
+    border-radius: 10px;
+    background: rgba(32, 0, 130, 0.03);
+}
+
+.ann-tab {
+    min-height: 40px;
+    padding: 0.5rem 1.1rem;
+    border: 0;
+    border-radius: 7px;
+    color: var(--color5);
+    background: transparent;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.ann-tab.is-active {
+    color: var(--color1);
+    background: var(--color3);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+
+.ann-tab:focus-visible,
+.ann-card-btn:focus-visible,
+.ann-page-btn:focus-visible,
+.ann-link-btn:focus-visible {
+    outline: 3px solid rgba(32, 0, 130, 0.35);
+    outline-offset: 2px;
+}
+
+/* ── Card action button (Archive / Restore) ─────── */
+.ann-card-btn {
+    flex: 0 0 auto;
+    min-height: 40px;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--color1);
+    border-radius: 7px;
+    color: var(--color3);
+    background: var(--color1);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.ann-card-btn:hover {
+    background: var(--color7);
+    border-color: var(--color7);
+}
+
+/* ── Archived panel (same box as the active list) ─ */
+.ann-archive-panel {
+    background: var(--color3);
+    border: 1px solid var(--color9);
+    border-radius: 10px;
+    padding: 1.4rem 1.6rem;
+}
+
+.ann-archive-header {
+    flex-wrap: wrap;
+}
+
+.ann-search {
+    flex: 1 1 240px;
+    max-width: 340px;
+}
+
+.ann-search input {
+    width: 100%;
+    min-height: 40px;
+    padding: 0.55rem 0.8rem;
+    border: 1px solid var(--color9);
+    border-radius: 7px;
+    outline: none;
+    color: var(--color2);
+    background: var(--color3);
+    font-size: 0.82rem;
+}
+
+.ann-search input:focus {
+    border-color: var(--color1);
+    box-shadow: 0 0 0 3px rgba(32, 0, 130, 0.08);
+}
+
+.ann-state--error {
+    color: var(--color10);
+}
+
+.ann-link-btn {
+    padding: 0;
+    border: 0;
+    color: var(--color1);
+    background: none;
+    font: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.ann-archived-card .announcement-content {
+    padding: 1rem 1.1rem;
+}
+
+.ann-archived-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.ann-archived-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.ann-archived-title {
+    margin: 0 0 0.35rem;
+    color: var(--color2);
+    font-size: 0.95rem;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.ann-archived-preview {
+    margin: 0;
+    color: var(--color5);
+    font-size: 0.82rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.ann-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.9rem 1.2rem;
+    margin: 0.9rem 0 0;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--color9);
+}
+
+.ann-meta-grid > div {
+    min-width: 0;
+}
+
+.ann-meta-grid dt {
+    margin-bottom: 3px;
+    color: var(--color5);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.ann-meta-grid dd {
+    margin: 0;
+    color: var(--color2);
+    font-size: 0.8rem;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+/* ── Footer / pagination ────────────────────────── */
+.ann-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.ann-showing {
+    font-size: 0.8rem;
+    color: var(--color5);
+}
+
+.ann-page-nav {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.ann-page-btn {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 0.7rem;
+    border: 1px solid var(--color9);
+    border-radius: 7px;
+    color: var(--color2);
+    background: var(--color3);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.ann-page-btn:hover:not(:disabled):not(.ann-page-btn--active) {
+    border-color: var(--color1);
+    color: var(--color1);
+}
+
+.ann-page-btn--active {
+    background: var(--color1);
+    border-color: var(--color1);
+    color: #fff;
+    cursor: default;
+}
+
+.ann-page-btn:disabled {
+    color: var(--color4);
+    cursor: not-allowed;
+}
+
+.ann-page-gap {
+    padding: 0 0.2rem;
+    color: var(--color5);
+    font-size: 0.8rem;
+}
+
+/* ── Confirm dialog ─────────────────────────────── */
+.ann-confirm-modal {
+    width: 440px;
+}
+
+.ann-confirm-text {
+    margin: 0;
+    color: var(--color2);
+    font-size: 0.88rem;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+}
+
+.ann-form-message {
+    margin: 0.8rem 0 0;
+    color: var(--color10);
+    font-size: 0.82rem;
+}
+
+.ann-form-message:empty {
+    display: none;
+}
+
+.ann-confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6rem;
+    margin-top: 1.4rem;
+}
+
+.ann-confirm-actions .btn-cancel {
+    margin-left: 0;
+}
+
+.ann-confirm-actions .btn-save,
+.ann-confirm-actions .btn-cancel {
+    min-height: 44px;
+}
+
+.ann-confirm-actions .btn-save:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ── Toast ──────────────────────────────────────── */
+.ann-toast {
+    position: fixed;
+    z-index: 1200;
+    right: 24px;
+    bottom: 24px;
+    max-width: min(420px, calc(100vw - 32px));
+    padding: 13px 16px;
+    border-radius: 10px;
+    color: #fff;
+    background: var(--color2);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+    font-size: 0.86rem;
+    overflow-wrap: anywhere;
+}
+
+/* ── Archive responsive ─────────────────────────── */
+@media (max-width: 900px) {
+    .ann-meta-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 700px) {
+    .announcements-list,
+    .ann-archive-panel {
+        padding: 1rem;
+    }
+
+    .ann-tabs {
+        display: flex;
+        width: 100%;
+    }
+
+    .ann-tab {
+        flex: 1;
+    }
+
+    .ann-archive-header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .ann-search {
+        max-width: none;
+    }
+
+    .ann-archived-top {
+        flex-direction: column;
+    }
+
+    .ann-archived-top .ann-card-btn {
+        width: 100%;
+    }
+
+    .ann-confirm-modal {
+        width: 94vw;
+    }
+
+    .ann-confirm-actions .btn-save,
+    .ann-confirm-actions .btn-cancel {
+        flex: 1;
+    }
+
+    .ann-toast {
+        right: 16px;
+        left: 16px;
+        bottom: 16px;
+        max-width: none;
+    }
+}
+
+/* ============================================================
+   Announcement modal — refined layout
+   Paste at the END of your announcements stylesheet. It overrides the
+   earlier "Modal" and form-field rules, so nothing above needs deleting.
+   Uses only your existing tokens (--color1, --color2, --color3, --color5,
+   --color7, --color9, --color10).
+   ============================================================ */
+
+/* ── Overlay + dialog shell ─────────────────────── */
+.comm-modal-overlay {
+    padding: 1rem;
+    background: rgba(15, 12, 40, 0.5);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+}
+
+.comm-modal {
+    display: flex;
+    flex-direction: column;
+    width: 560px;
+    max-width: 100%;
+    max-height: 90vh;
+    overflow: hidden;              /* header and footer stay put, only the body scrolls */
+    border-radius: 12px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.25);
+}
+
+.comm-modal.ann-confirm-modal {
+    width: 440px;                  /* keep the confirm dialog compact */
+}
+
+.comm-modal-overlay.active .comm-modal {
+    animation: comm-modal-in 0.18s ease-out;
+}
+
+@keyframes comm-modal-in {
+    from { opacity: 0; transform: translateY(8px) scale(0.985); }
+    to   { opacity: 1; transform: none; }
+}
+
+/* ── Header ─────────────────────────────────────── */
+.comm-modal-header {
+    flex: 0 0 auto;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.15rem 1.5rem;
+}
+
+.comm-modal-header h3 {
+    font-size: 1rem;
+}
+
+.comm-modal-sub {
+    margin: 0.25rem 0 0;
+    color: var(--color5);
+    font-size: 0.78rem;
+    line-height: 1.4;
+}
+
+.comm-modal-close {
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    margin: -0.3rem -0.5rem 0 0;
+    border-radius: 8px;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.comm-modal-close:hover {
+    background: rgba(32, 0, 130, 0.07);
+}
+
+.comm-modal-close:focus-visible {
+    outline: 3px solid rgba(32, 0, 130, 0.35);
+    outline-offset: 1px;
+}
+
+/* ── Form structure: scrolling body + fixed footer ─ */
+.comm-modal .comm-form {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.comm-modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 1.4rem 1.5rem;
+    overflow-y: auto;
+}
+
+.comm-modal-footer {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.6rem;
+    padding: 0.9rem 1.5rem;
+    border-top: 1px solid var(--color9);
+    background: rgba(32, 0, 130, 0.025);
+}
+
+.comm-modal-footer .btn-save,
+.comm-modal-footer .btn-cancel {
+    min-height: 40px;
+    margin: 0;
+}
+
+/* ── Fields ─────────────────────────────────────── */
+.comm-modal .form-group {
+    margin-bottom: 1.1rem;
+}
+
+.comm-modal .form-group label {
+    margin-bottom: 0.4rem;
+}
+
+.comm-optional {
+    font-weight: 500;
+    color: var(--color5);
+}
+
+.comm-modal .form-group input[type="text"],
+.comm-modal .form-group input[type="date"],
+.comm-modal .form-group textarea {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    border: 1px solid var(--color9);
+    border-radius: 7px;
+    padding: 0.6rem 0.8rem;
+    font: inherit;
+    font-size: 0.85rem;
+    color: var(--color2);
+    background: var(--color3);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.comm-modal .form-group textarea {
+    min-height: 130px;
+    line-height: 1.5;
+    resize: vertical;
+}
+
+.comm-modal .form-group input[type="text"]:focus,
+.comm-modal .form-group input[type="date"]:focus,
+.comm-modal .form-group textarea:focus {
+    outline: none;
+    border-color: var(--color1);
+    box-shadow: 0 0 0 3px rgba(32, 0, 130, 0.08);
+}
+
+.comm-hint {
+    display: block;
+    margin-top: 0.35rem;
+    color: var(--color5);
+    font-size: 0.72rem;
+    line-height: 1.4;
+}
+
+/* Date and image side by side */
+.comm-form-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0 1.1rem;
+    align-items: start;
+}
+
+.comm-form-grid .form-group {
+    margin-bottom: 0;
+}
+
+/* Selected image preview (created by announcements.js) */
+.ann-image-preview {
+    display: none;
+    width: 100%;
+    max-height: 150px;
+    margin-top: 0.6rem;
+    border: 1px solid var(--color9);
+    border-radius: 7px;
+    object-fit: cover;
+}
+
+/* ── Phones: bottom sheet, stacked fields ───────── */
+@media (max-width: 700px) {
+    .comm-modal-overlay {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .comm-modal,
+    .comm-modal.ann-confirm-modal {
+        width: 100%;
+        max-height: 92vh;
+        border-radius: 14px 14px 0 0;
+    }
+
+    .comm-modal-header,
+    .comm-modal-body,
+    .comm-modal-footer {
+        padding-left: 1.1rem;
+        padding-right: 1.1rem;
+    }
+
+    .comm-form-grid {
+        grid-template-columns: 1fr;
+        gap: 1.1rem;
+    }
+
+    .comm-form-grid .form-group:last-child {
+        margin-bottom: 0;
+    }
+
+    .comm-modal-footer {
+        padding-bottom: calc(0.9rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    .comm-modal-footer .btn-save,
+    .comm-modal-footer .btn-cancel {
+        flex: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .comm-modal-overlay.active .comm-modal {
+        animation: none;
+    }
+}
+
+@media (max-width: 430px) {
+    .ann-meta-grid {
+        grid-template-columns: 1fr;
+    }
+}

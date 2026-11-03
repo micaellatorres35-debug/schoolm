@@ -1403,4 +1403,3 @@ function renderTrainingsPanel($trainingSummary, $eligibleEmployees = []) {
     </div>
 </div>
 
-

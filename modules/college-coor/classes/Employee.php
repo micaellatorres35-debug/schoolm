@@ -196,8 +196,9 @@ Class Employee {
         $employeeId = $_SESSION['employee_id'] ?? null;
 
         if ($employeeId) {
-            $sql = "SELECT sp.position_name 
+            $sql = "SELECT COALESCE(r.role_name, sp.position_name) AS role_name
                     FROM em_employees em
+                    LEFT JOIN cc_roles r ON em.role_id = r.role_id
                     LEFT JOIN em_positions sp ON em.position_id = sp.position_id
                     WHERE em.employee_id = :employee_id LIMIT 1";
             $stmt = $this->conn->prepare($sql);
@@ -205,8 +206,8 @@ Class Employee {
             $stmt->execute();
             $employee = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if ($employee) {
-                return htmlspecialchars($employee['position_name']);
+            if ($employee && !empty($employee['role_name'])) {
+                return htmlspecialchars($employee['role_name']);
             }
         }
         return 'Unknown Position';

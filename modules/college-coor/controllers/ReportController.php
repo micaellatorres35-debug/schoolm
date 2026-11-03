@@ -95,15 +95,15 @@ try {
                 ? $_GET['status']
                 : null;
 
+            $submittedBy = null;
             if ($isDirectress) {
-                // School Directress can view approvals across all departments.
                 $departmentId = null;
-            } elseif ($departmentId === null) {
-                // Other users default to their own department.
-                $departmentId = $userInfo['department_id'] ?? null;
+            } else {
+                $submittedBy = (int) ($userInfo['employee_id'] ?? $_SESSION['employee_id'] ?? 0);
+                $departmentId = null;
             }
 
-            $reports = $reportClass->getReports($departmentId, $status);
+            $reports = $reportClass->getReports($departmentId, $status, $submittedBy);
             rsm_respond(['success' => true, 'data' => array_map('rsm_public_report', $reports)]);
             break;
 

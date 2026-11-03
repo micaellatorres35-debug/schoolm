@@ -59,10 +59,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 r.role_name,
                 d.department_name,
                 u.unit_name
-            FROM user_account ua
+            FROM cc_user_account ua
             INNER JOIN em_employees e
                 ON e.employee_id = ua.employee_id
-            LEFT JOIN em_roles r
+            LEFT JOIN cc_roles r
                 ON r.role_id = e.role_id
             LEFT JOIN em_departments d
                 ON d.department_id = e.department_id
@@ -109,6 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         29 => 'modules/community-coor/index.php',
         30 => 'modules/gened-coor/index.php',
         31 => 'modules/research-coor/index.php',
+
     ];
 
         $role = (int) $user['role'];

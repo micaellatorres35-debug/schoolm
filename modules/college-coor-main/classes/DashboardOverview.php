@@ -14,6 +14,161 @@ class DashboardOverview {
         $this->conn = $database->getConnection();
     }
 
+    private function getLastMonths(int $monthCount = 6): array {
+        $months = [];
+        $anchor = new DateTimeImmutable('first day of this month');
+
+        for ($offset = $monthCount - 1; $offset >= 0; $offset--) {
+            $date = $anchor->modify("-$offset month");
+            $months[] = [
+                'key' => $date->format('Y-m-01'),
+                'label' => $date->format('M'),
+            ];
+        }
+
+        return $months;
+    }
+
+    public function getActivityTrend(int $monthCount = 6): array {
+        $trend = [
+            'labels' => [],
+            'event_data' => [],
+            'announcement_data' => [],
+        ];
+
+        $months = $this->getLastMonths($monthCount);
+        $monthKeys = array_column($months, 'key');
+        $monthLabels = array_column($months, 'label');
+
+        $trend['labels'] = $monthLabels;
+
+        try {
+            $eventCounts = [];
+            $eventStmt = $this->conn->query(
+                "SELECT DATE_FORMAT(event_date, '%Y-%m-01') AS period, COUNT(*) AS total
+                 FROM cc_events
+                 WHERE event_date >= DATE_SUB(CURDATE(), INTERVAL " . max(1, $monthCount - 1) . " MONTH)
+                 GROUP BY DATE_FORMAT(event_date, '%Y-%m-01')"
+            );
+
+            foreach ($eventStmt ? $eventStmt->fetchAll(PDO::FETCH_ASSOC) : [] as $row) {
+                $eventCounts[(string) ($row['period'] ?? '')] = (int) ($row['total'] ?? 0);
+            }
+
+            foreach ($monthKeys as $key) {
+                $trend['event_data'][] = (int) ($eventCounts[$key] ?? 0);
+            }
+        } catch (Throwable $e) {
+            $trend['event_data'] = array_fill(0, count($months), 0);
+        }
+
+        try {
+            $announcementCounts = [];
+            $announcementStmt = $this->conn->query(
+                "SELECT DATE_FORMAT(publish_date, '%Y-%m-01') AS period, COUNT(*) AS total
+                 FROM cc_announcements
+                 WHERE status IN ('Published', 'Scheduled')
+                   AND publish_date >= DATE_SUB(CURDATE(), INTERVAL " . max(1, $monthCount - 1) . " MONTH)
+                 GROUP BY DATE_FORMAT(publish_date, '%Y-%m-01')"
+            );
+
+            foreach ($announcementStmt ? $announcementStmt->fetchAll(PDO::FETCH_ASSOC) : [] as $row) {
+                $announcementCounts[(string) ($row['period'] ?? '')] = (int) ($row['total'] ?? 0);
+            }
+
+            foreach ($monthKeys as $key) {
+                $trend['announcement_data'][] = (int) ($announcementCounts[$key] ?? 0);
+            }
+        } catch (Throwable $e) {
+            $trend['announcement_data'] = array_fill(0, count($months), 0);
+        }
+
+        return $trend;
+    }
+
+    public function getEventStatusBreakdown(): array {
+        $breakdown = ['labels' => [], 'data' => [], 'items' => [], 'total' => 0];
+
+        try {
+            $query = "
+                SELECT COALESCE(NULLIF(TRIM(status), ''), 'Scheduled') AS status_label,
+                       COUNT(*) AS total
+                FROM cc_events
+                GROUP BY COALESCE(NULLIF(TRIM(status), ''), 'Scheduled')
+                ORDER BY total DESC, status_label ASC";
+
+            $rows = $this->conn->query($query)->fetchAll(PDO::FETCH_ASSOC);
+            $totalItems = 0;
+            foreach ($rows as $row) {
+                $totalItems += (int) ($row['total'] ?? 0);
+            }
+
+            foreach ($rows as $row) {
+                $label = (string) ($row['status_label'] ?? 'Scheduled');
+                $count = (int) ($row['total'] ?? 0);
+                $breakdown['labels'][] = $label;
+                $breakdown['data'][] = $count;
+                $breakdown['items'][] = [
+                    'label' => $label,
+                    'count' => $count,
+                    'percent' => $totalItems > 0 ? round(($count / $totalItems) * 100, 1) : 0,
+                ];
+            }
+
+            $breakdown['total'] = $totalItems;
+        } catch (Throwable $e) {
+            $breakdown = ['labels' => ['No Data'], 'data' => [0], 'items' => [['label' => 'No Data','count'=>0,'percent'=>0]], 'total' => 0];
+        }
+
+        if (empty($breakdown['labels'])) {
+            $breakdown = ['labels' => ['No Data'], 'data' => [0], 'items' => [['label' => 'No Data','count'=>0,'percent'=>0]], 'total' => 0];
+        }
+
+        return $breakdown;
+    }
+
+    public function getRecentAnnouncements(int $limit = 4): array {
+        try {
+            $query = "
+                SELECT a.announcement_id, a.title, a.announcement_type, a.priority, a.status, a.publish_date,
+                       TRIM(CONCAT_WS(' ', e.first_name, e.last_name)) AS publisher_name,
+                       d.department_name AS issuing_department,
+                       COALESCE(a.publish_date, a.created_at) AS sort_date
+                FROM cc_announcements a
+                LEFT JOIN em_employees e ON e.employee_id = a.created_by
+                LEFT JOIN em_departments d ON d.department_id = a.issuing_department_id
+                WHERE a.status IN ('Published', 'Scheduled')
+                ORDER BY sort_date DESC, a.announcement_id DESC
+                LIMIT :limit";
+
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindValue(':limit', (int) $limit, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            return [];
+        }
+    }
+
+    public function getRecentEvents(int $limit = 4): array {
+        try {
+            $query = "
+                SELECT event_id, event_title, event_date, start_time, end_time, status, target_audience,
+                       COALESCE(target_audience, 'College Wide') AS department_name
+                FROM cc_events
+                WHERE event_date >= CURDATE() AND LOWER(TRIM(COALESCE(status, '')) ) <> 'completed'
+                ORDER BY event_date ASC, start_time ASC, event_id ASC
+                LIMIT :limit";
+
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindValue(':limit', (int) $limit, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            return [];
+        }
+    }
+
     public function getSummary(): array {
         $summary = [
             'total_departments' => 0,
@@ -25,11 +180,11 @@ class DashboardOverview {
         ];
 
         try {
-            $summary['total_departments'] = (int) $this->conn->query("SELECT COUNT(*) FROM em_roles WHERE LOWER(TRIM(role_name)) LIKE '%coordinator%' AND LOWER(TRIM(role_name)) NOT LIKE '%college coordinator%'")->fetchColumn();
+            $summary['total_departments'] = (int) $this->conn->query("SELECT COUNT(*) FROM cc_roles WHERE LOWER(TRIM(role_name)) LIKE '%coordinator%' AND LOWER(TRIM(role_name)) NOT LIKE '%college coordinator%'")->fetchColumn();
         } catch (Throwable $e) {}
 
         try {
-            $summary['active_coordinators'] = (int) $this->conn->query("SELECT COUNT(*) FROM em_roles WHERE LOWER(TRIM(role_name)) LIKE '%coordinator%' AND LOWER(TRIM(role_name)) NOT LIKE '%college coordinator%' AND LOWER(TRIM(status)) = 'active'")->fetchColumn();
+            $summary['active_coordinators'] = (int) $this->conn->query("SELECT COUNT(*) FROM cc_roles WHERE LOWER(TRIM(role_name)) LIKE '%coordinator%' AND LOWER(TRIM(role_name)) NOT LIKE '%college coordinator%' AND LOWER(TRIM(status)) = 'active'")->fetchColumn();
         } catch (Throwable $e) {}
 
         try {
@@ -57,23 +212,50 @@ class DashboardOverview {
     public function getDepartmentOverview(): array {
         try {
             $query = "
-                SELECT department_data.*
-                FROM (
-                    SELECT
-                        d.department_id,
-                        d.department_name,
-                        CONCAT(e.first_name, ' ', e.last_name) AS assigned_coordinator,
-                        (
-                            (SELECT COUNT(*) FROM cc_reports r WHERE r.department_id = d.department_id AND r.status IN ('submitted', 'reviewed'))
-                            + (SELECT COUNT(*) FROM cc_approvals a
-                               LEFT JOIN em_employees ae ON ae.employee_id = a.submit_by
-                               WHERE ae.department_id = d.department_id AND a.status IN ('submitted', 'reviewed'))
-                            + (SELECT COUNT(*) FROM cc_issues i WHERE i.department = d.department_id AND i.status IN ('submitted', 'reviewed'))
-                        ) AS pending_tasks
-                    FROM em_departments d
-                    LEFT JOIN em_employees e ON e.employee_id = d.department_head
-                    ORDER BY d.department_name
-                ) AS department_data";
+                SELECT
+                    r.role_name AS coordinator_role_name,
+                    COALESCE(rc.report_count, 0) AS report_count,
+                    COALESCE(cc.concern_count, 0) AS concern_count,
+                    COALESCE(ac.approval_count, 0) AS approval_count,
+                    (
+                        COALESCE(rc.report_count, 0)
+                        + COALESCE(cc.concern_count, 0)
+                        + COALESCE(ac.approval_count, 0)
+                    ) AS pending_tasks,
+                    'On Track' AS status
+                FROM cc_roles r
+                LEFT JOIN (
+                    SELECT e.role_id, COUNT(*) AS report_count
+                    FROM cc_reports rep
+                    INNER JOIN em_employees e ON e.employee_id = rep.submitted_by
+                    WHERE rep.status IN ('submitted', 'reviewed')
+                    GROUP BY e.role_id
+                ) rc ON rc.role_id = r.role_id
+                LEFT JOIN (
+                    SELECT e.role_id, COUNT(*) AS concern_count
+                    FROM cc_issues i
+                    INNER JOIN em_employees e ON e.employee_id = i.submitted_by
+                    WHERE i.status IN ('submitted', 'reviewed')
+                    GROUP BY e.role_id
+                ) cc ON cc.role_id = r.role_id
+                LEFT JOIN (
+                    SELECT e.role_id, COUNT(*) AS approval_count
+                    FROM cc_approvals a
+                    INNER JOIN em_employees e ON e.employee_id = a.submit_by
+                    WHERE a.status IN ('submitted', 'reviewed')
+                    GROUP BY e.role_id
+                ) ac ON ac.role_id = r.role_id
+                WHERE LOWER(TRIM(r.role_name)) LIKE '%coordinator%'
+                  AND LOWER(TRIM(r.role_name)) NOT LIKE '%admin college coordinator%'
+                ORDER BY CASE r.role_name
+                    WHEN 'College Coordinator' THEN 1
+                    WHEN 'Assistance Staff Coordinator' THEN 2
+                    WHEN 'Community Extension Coordinator' THEN 3
+                    WHEN 'Community Coordinator' THEN 4
+                    WHEN 'Research Coordinator' THEN 5
+                    WHEN 'GenEd Coordinator' THEN 6
+                    ELSE 99
+                END, r.role_name ASC";
 
             $result = $this->conn->query($query);
             $rows = $result ? $result->fetchAll(PDO::FETCH_ASSOC) : [];
@@ -82,9 +264,7 @@ class DashboardOverview {
                 $row['status'] = 'On Track';
                 $pendingTasks = (int) ($row['pending_tasks'] ?? 0);
 
-                if (empty($row['assigned_coordinator'])) {
-                    $row['status'] = 'Needs Attention';
-                } elseif ($pendingTasks >= 6) {
+                if ($pendingTasks >= 6) {
                     $row['status'] = 'Needs Attention';
                 } elseif ($pendingTasks >= 2 && $pendingTasks < 6) {
                     $row['status'] = 'Needs Attention';
@@ -112,6 +292,14 @@ class DashboardOverview {
                 FROM cc_reports r
                 LEFT JOIN em_departments d ON d.department_id = r.department_id
                 WHERE r.status IN ('submitted', 'reviewed')
+
+                UNION ALL
+
+                SELECT 'concern' AS source, i.title AS submission_title, d.department_name AS department_name, i.submitted_on AS submitted_at, i.status AS status,
+                       '?page=concerns-issues-tracking' AS action_target
+                FROM cc_issues i
+                LEFT JOIN em_departments d ON d.department_id = i.department
+                WHERE i.status IN ('submitted', 'reviewed')
 
                 UNION ALL
 
