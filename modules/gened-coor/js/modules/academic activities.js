@@ -33,7 +33,7 @@ function closeModalById(modalId) {
 }
 
 // Tab Persistence - Save and restore active tab using localStorage
-const ACTIVE_TAB_KEY = "academicsManagement_activeTab";
+const ACTIVE_TAB_KEY = "academicActivitiesActiveTab";
 
 function switchToTab(tabName) {
   document.querySelectorAll(".academics-panel").forEach((panel) => {
@@ -1845,7 +1845,7 @@ document.addEventListener("DOMContentLoaded", function () {
 // facultyTab convenience listener removed; loadFacultyLoadData is triggered via page:loaded
 
 window.addEventListener("page:loaded", function (e) {
-  if (e.detail && e.detail.page === "academics-management") {
+  if (e.detail && e.detail.page === "academic activities") {
     setTimeout(initializeAllSearches, 100);
     initAcademicsManagementBindings();
     loadFacultyLoadData();
@@ -1859,7 +1859,7 @@ window.addEventListener("page:loaded", function (e) {
 });
 
 window.addEventListener("page:loaded", function (e) {
-  if (e.detail && e.detail.page === "academics-management") {
+  if (e.detail && e.detail.page === "academic activities") {
     if (sessionStorage.getItem("refreshFacultyLoad") === "true") {
       sessionStorage.removeItem("refreshFacultyLoad");
       setTimeout(loadFacultyLoadData, 100);

@@ -46,11 +46,11 @@ foreach ($calendarEventsData as $event) {
 // Fetch recent activities from all modules
 $recentActivities = $helper->getRecentActivities(15);
 
-// ===== Priority Alerts Logic (automatic priority based on time remaining) =====
+// ===== Academic Alerts Logic (automatic priority based on time remaining) =====
 // Use Asia/Manila timezone for all event time computations
 $tz = new DateTimeZone('Asia/Manila');
 $now = new DateTime('now', $tz);
-$priorityAlerts = [];
+$academicAlerts = [];
 $notificationAlerts = [];
 
 $addCompletedNotification = function (array $event, DateTime $eventDateTime, ?DateTime $endDateTime) use (&$notificationAlerts, $tz) {
@@ -209,7 +209,7 @@ foreach ($calendarEventsData as $event) {
         'end_iso'             => $endDateTime ? $endDateTime->format(DateTime::ATOM) : null,
     ];
 
-    $priorityAlerts[] = [
+$academicAlerts[] = [
         'title'           => $event['event_title'] ?? $event['title'] ?? 'Untitled Event',
         'datetime'        => $eventDateTime,
         'priority'        => $priority,
@@ -223,12 +223,12 @@ foreach ($calendarEventsData as $event) {
 }
 
 // Sort by nearest event first
-usort($priorityAlerts, function ($a, $b) {
+usort($academicAlerts, function ($a, $b) {
     return $a['datetime'] <=> $b['datetime'];
 });
 
-// Show only the latest 4 priority alerts
-$priorityAlerts = array_slice($priorityAlerts, 0, 4);
+// Show the four nearest upcoming academic alerts
+$academicAlerts = array_slice($academicAlerts, 0, 4);
 
 // Server timestamp (Asia/Manila) for client baseline
 $serverTimestampIso = $now->format(DateTime::ATOM);
@@ -263,7 +263,7 @@ $chartDataJson = json_encode([
 
 <div class="module-header">
     <h1>Dashboard Overview</h1>
-    <p class="text-muted small">Summary of academic analytics, events, and recent activities</p>
+    <p class="text-muted small"> module</p>
 </div>
 
 <div class="module-content">
@@ -280,9 +280,9 @@ $chartDataJson = json_encode([
                 </div>
             </div>
 
-            <!-- Faculty Load Distribution Chart -->
+            <!-- Faculty Load Summary Chart -->
             <div class="chart-container">
-                <h3 class="chart-title">Faculty Load Distribution</h3>
+                <h3 class="chart-title">Faculty Load Summary</h3>
                 <div id="faultyLoadSummary" class="chart-subtitle" style="font-size: 13px; color: #6b7280; margin: 4px 0 10px;">Loading faculty load countsâ€¦</div>
                 <div class="chart-wrapper">
                     <canvas id="facultyLoadChart"></canvas>
@@ -330,18 +330,18 @@ $chartDataJson = json_encode([
             </div>
         </section>
 
-        <!-- Priority Alerts -->
+        <!-- Academic Alerts -->
         <section class="priority-alerts-section">
             <div class="priority-alerts-card">
-                <h2 class="section-title" style="padding: 20px;">Priority Alerts</h2>
+                <h2 class="section-title" style="padding: 20px;">Academic Alerts</h2>
                 <ul class="list-group list-group-flush mb-0">
-                    <?php if (empty($priorityAlerts)): ?>
+                    <?php if (empty($academicAlerts)): ?>
                         <li class="list-group-item text-center text-muted py-4 border-0">
-                            No upcoming priority alerts
+                            No upcoming academic alerts
                         </li>
                     <?php else: ?>
-                        <?php foreach ($priorityAlerts as $idx => $alert): ?>
-    <li class="list-group-item alert-item <?php echo $idx === count($priorityAlerts) - 1 ? 'no-border' : ''; ?>" data-start="<?php echo htmlspecialchars($alert['start_iso']); ?>" data-end="<?php echo htmlspecialchars($alert['end_iso'] ?? ''); ?>">
+                        <?php foreach ($academicAlerts as $idx => $alert): ?>
+    <li class="list-group-item alert-item <?php echo $idx === count($academicAlerts) - 1 ? 'no-border' : ''; ?>" data-start="<?php echo htmlspecialchars($alert['start_iso']); ?>" data-end="<?php echo htmlspecialchars($alert['end_iso'] ?? ''); ?>">
         <div class="d-flex justify-content-between align-items-center" style="width:100%;">
             <div class="d-flex flex-column flex-grow-1 align-items-start" style="gap: 6px;">
                 <div class="d-flex align-items-center gap-3" style="width:100%;">

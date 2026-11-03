@@ -180,6 +180,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 : ['success' => false, 'message' => 'Unable to archive engagement.'];
         }
 
+        if ($action === 'save_training_record') {
+            $uploadedPath = null;
+            try {
+                $source = (string)($input['record_source'] ?? '');
+                $recordId = (int)($input['record_id'] ?? 0);
+                if (isset($_FILES['certificate']) && $_FILES['certificate']['error'] !== UPLOAD_ERR_NO_FILE) {
+                    $file = $_FILES['certificate'];
+                    if ($file['error'] !== UPLOAD_ERR_OK || $file['size'] > 10485760) {
+                        throw new RuntimeException('Certificate upload failed or exceeds the 10 MB limit.');
+                    }
+                    $mimeType = (new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
+                    $allowedTypes = [
+                        'application/pdf' => '.pdf',
+                        'image/jpeg' => '.jpg',
+                        'image/png' => '.png',
+                    ];
+                    if (!isset($allowedTypes[$mimeType])) {
+                        throw new RuntimeException('Upload a PDF, JPG, or PNG certificate.');
+                    }
+
+                    $uploadDirectory = dirname(__DIR__, 3) . '/uploads/faculty_certificates';
+                    if (!is_dir($uploadDirectory) && !mkdir($uploadDirectory, 0750, true) && !is_dir($uploadDirectory)) {
+                        throw new RuntimeException('Unable to prepare certificate storage.');
+                    }
+                    $fileName = bin2hex(random_bytes(16)) . $allowedTypes[$mimeType];
+                    if (!move_uploaded_file($file['tmp_name'], $uploadDirectory . '/' . $fileName)) {
+                        throw new RuntimeException('Unable to save the uploaded certificate.');
+                    }
+                    $uploadedPath = 'uploads/faculty_certificates/' . $fileName;
+                }
+
+                $facultyManager->saveTrainingRecord($source, $recordId, $input, $uploadedPath);
+                $response = ['success' => true, 'message' => 'Training record updated successfully.'];
+            } catch (Throwable $e) {
+                if ($uploadedPath !== null) {
+                    $uploadedFile = dirname(__DIR__, 3) . '/' . $uploadedPath;
+                    if (is_file($uploadedFile)) unlink($uploadedFile);
+                }
+                $response = ['success' => false, 'message' => $e->getMessage()];
+            }
+        }
+
+        if ($action === 'archive_training_record') {
+            $source = (string)($input['record_source'] ?? '');
+            $recordId = (int)($input['record_id'] ?? 0);
+            $archived = $source === 'cc_certification_engagements'
+                ? $facultyManager->archiveEngagement($recordId)
+                : $facultyManager->archiveTrainingRecord($source, $recordId);
+            $response = $archived
+                ? ['success' => true, 'message' => 'Training record archived.']
+                : ['success' => false, 'message' => 'Training record could not be archived.'];
+        }
+
         if ($action === 'restore_engagement' && isset($input['engagement_id'])) {
             $engagementId = (int)$input['engagement_id'];
             $response = $facultyManager->restoreEngagement($engagementId)
@@ -243,6 +296,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'requirements' => $facultyRequirements,
                     'message' => 'No records found.'
                 ];
+            }
+        }
+
+        if ($action === 'save_faculty_education') {
+            try {
+                $employeeId = (int)($input['employee_id'] ?? 0);
+                $educationId = (int)($input['education_id'] ?? 0);
+                $savedId = $facultyManager->saveFacultyEducation($employeeId, $educationId, $input);
+                $response = [
+                    'success' => true,
+                    'message' => $educationId > 0 ? 'Educational attainment updated.' : 'Educational attainment added.',
+                    'education_id' => $savedId,
+                    'records' => $facultyManager->getFacultyEducationRecords($employeeId),
+                ];
+            } catch (Throwable $e) {
+                $response = ['success' => false, 'message' => $e->getMessage()];
             }
         }
 
@@ -329,7 +398,7 @@ $requirementStatusSummary = $facultyManager->getFacultyRequirementStatusSummary(
 $employmentTypeStats = [
     'Full-time' => 0,
     'Part-time' => 0,
-    'OJT / Training' => 0,
+
 ];
 
 foreach ($facultyList as $faculty) {
@@ -405,6 +474,7 @@ function renderCredentialsRow($faculty) {
 
 function renderAttainmentRow($education) {
     $recordsJson = json_encode($education['records'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+    $hasEducationRecord = !empty($education['records']);
 
     ob_start();
     ?>
@@ -412,9 +482,12 @@ function renderAttainmentRow($education) {
         <td><?= htmlspecialchars((string)($education['employee_id'] ?? 'N/A')) ?></td>
         <td><?= htmlspecialchars($education['faculty_name']) ?></td>
         <td><?= htmlspecialchars($education['highest_degree']) ?></td>
-        <td><?= htmlspecialchars($education['school_name']) ?></td>
-        <td><?= htmlspecialchars($education['year_graduated']) ?></td>
-        <td class="actions"><button type="button" class="btn btn-sm btn-info view-attainment-btn">View</button></td>
+        <td><?= htmlspecialchars($education['school_name'] ?? 'No record yet') ?></td>
+        <td><?= htmlspecialchars($education['year_graduated'] ?? 'No record yet') ?></td>
+        <td class="actions">
+            <button type="button" class="btn btn-sm btn-info view-attainment-btn">View</button>
+            <button type="button" class="btn btn-sm btn-outline-primary edit-attainment-btn"><?= $hasEducationRecord ? 'Edit' : 'Add Record' ?></button>
+        </td>
     </tr>
     <?php
     return ob_get_clean();
@@ -429,6 +502,7 @@ function renderTrainingRow($training) {
         data-record-source="<?= htmlspecialchars($training['record_source'] ?? '') ?>"
         data-record-id="<?= htmlspecialchars((string)($training['record_id'] ?? '')) ?>"
         data-record-status="<?= htmlspecialchars($training['status'] ?? '') ?>"
+        data-has-certificate="<?= !empty($training['certificate_path']) ? '1' : '0' ?>"
         data-record-outcome="<?= htmlspecialchars($training['outcome'] ?? '') ?>"
         data-employee-code="<?= htmlspecialchars($training['employee_code'] ?? '') ?>"
         data-faculty-name="<?= htmlspecialchars($training['faculty_name'] ?? '') ?>"
@@ -444,22 +518,18 @@ function renderTrainingRow($training) {
         <td><?= htmlspecialchars($training['status'] ?? 'No record yet') ?></td>
         <td class="actions">
             <button type="button" class="btn btn-sm btn-info view-training-btn">View</button>
-            <?php if (($training['record_source'] ?? '') === 'cc_certification_engagements'): ?>
-                <?php
-                    $statusValue = $training['status'] ?? '';
-                    $workflowButtons = '';
-
-                    if ($statusValue === 'Pending') {
-                        $workflowButtons .= '<button type="button" class="btn btn-sm btn-success approve-engagement-btn" data-engagement-id="' . (int)($training['record_id'] ?? 0) . '">Approve</button>';
-                    } elseif (in_array($statusValue, ['Approved', 'Ongoing'], true)) {
-                        $workflowButtons .= '<button type="button" class="btn btn-sm btn-warning complete-engagement-btn" data-engagement-id="' . (int)($training['record_id'] ?? 0) . '">Mark Completed</button>';
-                    } elseif ($statusValue === 'Completed') {
-                        $workflowButtons .= '<button type="button" class="btn btn-sm btn-primary generate-certificate-btn" data-engagement-id="' . (int)($training['record_id'] ?? 0) . '">Generate Certificate</button>';
-                        $workflowButtons .= '<button type="button" class="btn btn-sm btn-secondary archive-engagement-btn" data-engagement-id="' . (int)($training['record_id'] ?? 0) . '">Archive</button>';
-                    }
-
-                    echo $workflowButtons;
-                ?>
+            <?php if (!empty($training['record_id']) && ($training['record_source'] ?? '') !== ''): ?>
+                <button type="button" class="btn btn-sm btn-outline-primary edit-training-btn">Edit</button>
+                <?php if (strtolower((string)($training['status'] ?? '')) !== 'archived'): ?>
+                    <button type="button" class="btn btn-sm btn-outline-secondary archive-training-btn">Archive</button>
+                <?php endif; ?>
+                <?php if (($training['record_source'] ?? '') === 'cc_certification_engagements'): ?>
+                    <a class="btn btn-sm btn-primary" href="/schoolm/modules/gened-coor/api/download_training_certificate.php?source=cc_certification_engagements&amp;record_id=<?= (int)$training['record_id'] ?>">Download Certificate</a>
+                <?php elseif (!empty($training['certificate_path'])): ?>
+                    <a class="btn btn-sm btn-primary" href="/schoolm/modules/gened-coor/api/download_training_certificate.php?source=<?= rawurlencode((string)$training['record_source']) ?>&amp;record_id=<?= (int)$training['record_id'] ?>">Download Certificate</a>
+                <?php else: ?>
+                    <button type="button" class="btn btn-sm btn-outline-primary upload-training-certificate-btn">Upload Certificate</button>
+                <?php endif; ?>
             <?php endif; ?>
         </td>
     </tr>
@@ -672,14 +742,10 @@ function renderTrainingsPanel($trainingSummary, $eligibleEmployees = []) {
     <div class="academics-panel fm-panel" id="fm-panel-trainings">
         <div class="section-header">
             <h3>Trainings & Certifications</h3>
-                <p class="text-muted" style="margin: 0;"><small>Record faculty trainings and certificates.</small></p>
                 <div style="margin-top:8px;"><button id="addEngagementBtn" type="button" class="btn btn-sm btn-primary">Add Engagement</button></div>
         </div>
 
         <div class="search-filter-container training-filter-container">
-            <div class="search-box">
-                <input type="text" id="searchTrainings" placeholder="Search trainings and certifications...">
-            </div>
             <div class="training-status-filters" role="group" aria-label="Training status filter">
                 <button type="button" class="training-status-filter active" data-training-filter="all">All</button>
                 <button type="button" class="training-status-filter" data-training-filter="active">Active</button>
@@ -761,6 +827,9 @@ function renderTrainingsPanel($trainingSummary, $eligibleEmployees = []) {
             <button class="academics-tab" data-fm-tab="trainings">
                 <i class="fas fa-certificate"></i> Trainings & Certifications
             </button>
+            <button class="academics-tab" data-fm-tab="assignments">
+                <i class="fas fa-chalkboard-teacher"></i> Faculty Assignments
+            </button>
         </div>
 
         <?php echo renderCredentialsPanel($facultyList); ?>
@@ -768,6 +837,110 @@ function renderTrainingsPanel($trainingSummary, $eligibleEmployees = []) {
         <?php echo renderAttainmentPanel($educationSummary); ?>
 
         <?php echo renderTrainingsPanel($trainingSummary, $eligibleEmployees); ?>
+
+        <div class="academics-panel fm-panel" id="fm-panel-assignments">
+            <div class="section-header">
+                <h3>Faculty Assignments</h3>
+                <p class="text-muted" style="margin: 0;"><small>Assign faculty to sections, then assign curriculum subjects.</small></p>
+            </div>
+            <div class="table-card">
+                <div class="table-responsive">
+                    <table id="facultyAssignmentsTable">
+                        <thead>
+                            <tr>
+                                <th>Faculty Name</th>
+                                <th>Department</th>
+                                <th>Sections</th>
+                                <th>Subjects</th>
+                                <th>Teaching Units</th>
+                                <th>Load Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="7" class="text-center text-muted">Loading faculty assignments...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="fmAssignSectionsModal" class="modal">
+        <div class="modal-dialog" style="max-width: 720px;">
+            <div class="modal-header">
+                <h5 class="modal-title">Assign Faculty to Sections</h5>
+                <button type="button" class="modal-close" aria-label="Close">&times;</button>
+            </div>
+            <form id="fmAssignSectionsForm" data-custom-submit>
+                <div class="modal-body">
+                    <input type="hidden" id="fmAssignSectionsFacultyId">
+                    <div class="form-group">
+                        <label class="form-label">Faculty</label>
+                        <input type="text" class="form-control" id="fmAssignSectionsFacultyName" readonly>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6 form-group">
+                            <label for="fmAssignSectionsSchoolYear" class="form-label">School Year</label>
+                            <select id="fmAssignSectionsSchoolYear" class="form-select" required>
+                                <option value="">Loading school years...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label for="fmAssignSectionsSemester" class="form-label">Semester</label>
+                            <select id="fmAssignSectionsSemester" class="form-select" required disabled>
+                                <option value="">Select semester</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="fmAssignSectionsList" class="form-label">Sections</label>
+                        <select id="fmAssignSectionsList" class="form-select" multiple size="7" required disabled></select>
+                        <small class="text-muted">Hold Ctrl to select multiple sections.</small>
+                    </div>
+                    <div id="fmAssignSectionsMessage" class="text-muted" role="status" aria-live="polite"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Section Assignments</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="fmAssignSubjectModal" class="modal">
+        <div class="modal-dialog" style="max-width: 640px;">
+            <div class="modal-header">
+                <h5 class="modal-title">Assign Subject</h5>
+                <button type="button" class="modal-close" aria-label="Close">&times;</button>
+            </div>
+            <form id="fmAssignSubjectForm" data-custom-submit>
+                <div class="modal-body">
+                    <input type="hidden" id="fmAssignSubjectFacultyId">
+                    <div class="form-group">
+                        <label class="form-label">Faculty</label>
+                        <input type="text" class="form-control" id="fmAssignSubjectFacultyName" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="fmAssignSubjectSection" class="form-label">Assigned Section</label>
+                        <select id="fmAssignSubjectSection" class="form-select" required disabled>
+                            <option value="">Loading assigned sections...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="fmAssignSubjectSubject" class="form-label">Curriculum Subject</label>
+                        <select id="fmAssignSubjectSubject" class="form-select" required disabled>
+                            <option value="">Select a section first</option>
+                        </select>
+                    </div>
+                    <div id="fmAssignSubjectMessage" class="text-muted" role="status" aria-live="polite"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+                    <button type="submit" class="btn btn-primary" disabled>Save Subject Assignment</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <div id="fmAddEngagementModal" class="modal">
@@ -921,6 +1094,60 @@ function renderTrainingsPanel($trainingSummary, $eligibleEmployees = []) {
     </div>
 </div>
 
+<div id="fmEditEducationModal" class="modal">
+    <div class="modal-dialog" style="max-width: 640px;">
+        <div class="modal-header">
+            <h5 class="modal-title" id="fmEditEducationTitle">Add Educational Attainment</h5>
+            <button type="button" class="modal-close" aria-label="Close">&times;</button>
+        </div>
+        <form id="fmEditEducationForm">
+            <div class="modal-body">
+                <input type="hidden" id="fmEditEducationEmployeeId" name="employee_id">
+                <input type="hidden" id="fmEditEducationRecordId" name="education_id">
+                <div class="form-group">
+                    <label class="form-label">Faculty</label>
+                    <input type="text" class="form-control" id="fmEditEducationFacultyName" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="fmEditEducationLevel" class="form-label">Education Level</label>
+                    <select class="form-select" id="fmEditEducationLevel" name="level" required>
+                        <option value="">Select level</option>
+                        <option value="Elementary">Elementary</option>
+                        <option value="High School">High School</option>
+                        <option value="Senior High School">Senior High School</option>
+                        <option value="College">College</option>
+                        <option value="Masteral">Masteral</option>
+                        <option value="Doctoral">Doctoral</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="fmEditEducationCourse" class="form-label">Course / Degree</label>
+                    <input type="text" class="form-control" id="fmEditEducationCourse" name="course" maxlength="100" required>
+                </div>
+                <div class="form-group">
+                    <label for="fmEditEducationSchool" class="form-label">School / Institution</label>
+                    <input type="text" class="form-control" id="fmEditEducationSchool" name="school_name" maxlength="100" required>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6 form-group">
+                        <label for="fmEditEducationYear" class="form-label">Year Graduated</label>
+                        <input type="text" class="form-control" id="fmEditEducationYear" name="year_graduated" maxlength="20" placeholder="e.g. 2020 or 2020-2021" required>
+                    </div>
+                    <div class="col-md-6 form-group">
+                        <label for="fmEditEducationHonors" class="form-label">Honors</label>
+                        <input type="text" class="form-control" id="fmEditEducationHonors" name="honors" maxlength="50">
+                    </div>
+                </div>
+                <div id="fmEditEducationMessage" class="text-danger" role="status" aria-live="polite"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="fmSaveEducationButton">Save Record</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div id="fmTrainingModal" class="modal">
     <div class="modal-dialog" style="max-width: 900px;">
         <div class="modal-header">
@@ -958,20 +1185,77 @@ function renderTrainingsPanel($trainingSummary, $eligibleEmployees = []) {
                                 <th>Organization</th>
                                 <th>Date / Period</th>
                                 <th>Status</th>
+                                <th>Outcome</th>
                             </tr>
                         </thead>
                         <tbody id="fmTrainingHistoryBody">
                             <tr>
-                                <td colspan="5" class="text-center text-muted" style="padding: 18px;">No training or certification records found.</td>
+                                <td colspan="6" class="text-center text-muted" style="padding: 18px;">No training or certification records found.</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
+                <div id="fmTrainingCertificate" class="mt-3"></div>
             </div>
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary modal-close">Close</button>
         </div>
+    </div>
+</div>
+
+<div id="fmEditTrainingModal" class="modal">
+    <div class="modal-dialog" style="max-width: 640px;">
+        <div class="modal-header">
+            <h5 class="modal-title">Edit Training Record</h5>
+            <button type="button" class="modal-close" aria-label="Close">&times;</button>
+        </div>
+        <form id="fmEditTrainingForm" enctype="multipart/form-data">
+            <div class="modal-body">
+                <input type="hidden" name="action" value="save_training_record">
+                <input type="hidden" id="fmTrainingRecordId" name="record_id">
+                <input type="hidden" id="fmTrainingRecordSource" name="record_source">
+                <div class="form-group">
+                    <label class="form-label">Faculty</label>
+                    <input type="text" id="fmEditTrainingFaculty" class="form-control" readonly>
+                </div>
+                <div class="form-group" id="fmEditTrainingTypeGroup">
+                    <label for="fmEditTrainingType" class="form-label">Engagement Type</label>
+                    <select id="fmEditTrainingType" name="engagement_type" class="form-select" required>
+                        <option value="">Select engagement type</option>
+                        <option value="Part-time">Part-time</option>
+                        <option value="OJT/Training">OJT/Training</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="fmEditTrainingTitle" class="form-label">Training / Certificate</label>
+                    <input type="text" id="fmEditTrainingTitle" name="title" class="form-control" maxlength="150" required>
+                </div>
+                <div class="form-group">
+                    <label for="fmEditTrainingOrganization" class="form-label">Organization</label>
+                    <input type="text" id="fmEditTrainingOrganization" name="organization" class="form-control" maxlength="150" required>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6 form-group">
+                        <label for="fmEditTrainingStart" id="fmEditTrainingStartLabel" class="form-label">Date Issued / Start</label>
+                        <input type="date" id="fmEditTrainingStart" name="date_issued" class="form-control" required>
+                    </div>
+                    <div class="col-md-6 form-group">
+                        <label for="fmEditTrainingEnd" id="fmEditTrainingEndLabel" class="form-label">Expiry / End Date</label>
+                        <input type="date" id="fmEditTrainingEnd" name="expiry_date" class="form-control">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="fmEditTrainingCertificate" class="form-label">Upload Certificate (PDF, JPG, PNG; max 10 MB)</label>
+                    <input type="file" id="fmEditTrainingCertificate" name="certificate" class="form-control" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">
+                </div>
+                <div id="fmEditTrainingMessage" class="text-danger" role="status" aria-live="polite"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="fmSaveTrainingButton">Save Changes</button>
+            </div>
+        </form>
     </div>
 </div>
 

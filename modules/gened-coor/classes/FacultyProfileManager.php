@@ -214,6 +214,58 @@ class FacultyProfileManager {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function saveFacultyEducation($employeeId, $educationId, array $data) {
+        $allowedLevels = ['Elementary', 'High School', 'Senior High School', 'College', 'Masteral', 'Doctoral'];
+        if ($employeeId <= 0 || !in_array($data['level'] ?? '', $allowedLevels, true)) {
+            throw new InvalidArgumentException('Select a valid education level.');
+        }
+
+        $schoolName = trim((string)($data['school_name'] ?? ''));
+        $course = trim((string)($data['course'] ?? ''));
+        $yearGraduated = trim((string)($data['year_graduated'] ?? ''));
+        $honors = trim((string)($data['honors'] ?? ''));
+        if ($schoolName === '' || $course === '' || $yearGraduated === '') {
+            throw new InvalidArgumentException('School, course, and year graduated are required.');
+        }
+
+        if ($educationId > 0) {
+            $stmt = $this->conn->prepare("UPDATE em_education
+                SET level = :level, school_name = :school_name, course = :course,
+                    year_graduated = :year_graduated, honors = :honors, updated_at = CURRENT_TIMESTAMP
+                WHERE education_id = :education_id AND employee_id = :employee_id");
+            $stmt->execute([
+                ':level' => $data['level'],
+                ':school_name' => $schoolName,
+                ':course' => $course,
+                ':year_graduated' => $yearGraduated,
+                ':honors' => $honors !== '' ? $honors : null,
+                ':education_id' => $educationId,
+                ':employee_id' => $employeeId,
+            ]);
+            if ($stmt->rowCount() === 0) {
+                $check = $this->conn->prepare('SELECT 1 FROM em_education WHERE education_id = :education_id AND employee_id = :employee_id');
+                $check->execute([':education_id' => $educationId, ':employee_id' => $employeeId]);
+                if (!$check->fetchColumn()) {
+                    throw new RuntimeException('Education record was not found.');
+                }
+            }
+            return $educationId;
+        }
+
+        $stmt = $this->conn->prepare("INSERT INTO em_education
+            (employee_id, level, school_name, course, year_graduated, honors)
+            VALUES (:employee_id, :level, :school_name, :course, :year_graduated, :honors)");
+        $stmt->execute([
+            ':employee_id' => $employeeId,
+            ':level' => $data['level'],
+            ':school_name' => $schoolName,
+            ':course' => $course,
+            ':year_graduated' => $yearGraduated,
+            ':honors' => $honors !== '' ? $honors : null,
+        ]);
+        return (int)$this->conn->lastInsertId();
+    }
+
     public function getFacultyTrainingSummary() {
         $sql = "SELECT 
                     cf.id AS faculty_id,
@@ -256,12 +308,14 @@ class FacultyProfileManager {
                     'title' => $record['cert_name'] ?? 'N/A',
                     'organization' => $record['issuing_organization'] ?? 'N/A',
                     'date_period' => $record['date_issued'] ?? 'N/A',
-                    'status' => 'Completed',
+                    'status' => !empty($record['archived_at']) ? 'Archived' : 'Completed',
                     'employment_type' => $employee['employment_type'] ?? 'N/A',
                     'employment_status' => $employee['employment_status'] ?? 'N/A',
                     'record_type' => 'training',
                     'record_source' => 'em_certifications',
                     'record_id' => $record['cert_id'] ?? null,
+                    'certificate_path' => $record['certificate_path'] ?? null,
+                    'archived_at' => $record['archived_at'] ?? null,
                     'outcome' => null,
                     'records' => [$record],
                 ];
@@ -286,6 +340,7 @@ class FacultyProfileManager {
                     'record_type' => 'engagement',
                     'record_source' => 'cc_certification_engagements',
                     'record_id' => $record['id'] ?? null,
+                    'certificate_path' => $record['certificate_path'] ?? null,
                     'outcome' => $record['outcome'] ?? null,
                     'records' => [$record],
                 ];
@@ -306,6 +361,7 @@ class FacultyProfileManager {
                     'record_type' => 'empty',
                     'record_source' => null,
                     'record_id' => null,
+                    'certificate_path' => null,
                     'outcome' => null,
                     'records' => [],
                 ];
@@ -323,6 +379,8 @@ class FacultyProfileManager {
                     issuing_organization,
                     date_issued,
                     expiry_date,
+                    archived_at,
+                    certificate_path,
                     created_at,
                     updated_at
                 FROM em_certifications
@@ -350,6 +408,7 @@ class FacultyProfileManager {
                     approved_at,
                     certificate_generated_at,
                     archived_at,
+                    certificate_path,
                     created_at,
                     updated_at
                 FROM cc_certification_engagements
@@ -360,6 +419,112 @@ class FacultyProfileManager {
         $stmt->bindParam(':employee_id', $employeeId, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function saveTrainingRecord($source, $recordId, array $data, $certificatePath = null) {
+        $recordId = (int)$recordId;
+        if ($recordId <= 0) {
+            throw new InvalidArgumentException('Invalid training record.');
+        }
+
+        if ($source === 'em_certifications') {
+            $certName = trim((string)($data['title'] ?? ''));
+            $organization = trim((string)($data['organization'] ?? ''));
+            $dateIssued = trim((string)($data['date_issued'] ?? ''));
+            $expiryDate = trim((string)($data['expiry_date'] ?? ''));
+            if ($certName === '' || $organization === '' || $dateIssued === '') {
+                throw new InvalidArgumentException('Certificate name, organization, and issue date are required.');
+            }
+
+            $sql = "UPDATE em_certifications
+                    SET cert_name = :cert_name,
+                        issuing_organization = :organization,
+                        date_issued = :date_issued,
+                        expiry_date = :expiry_date,
+                        updated_at = CURRENT_TIMESTAMP";
+            if ($certificatePath !== null) {
+                $sql .= ', certificate_path = :certificate_path';
+            }
+            $sql .= ' WHERE cert_id = :record_id';
+            $stmt = $this->conn->prepare($sql);
+            $params = [
+                ':cert_name' => $certName,
+                ':organization' => $organization,
+                ':date_issued' => $dateIssued,
+                ':expiry_date' => $expiryDate !== '' ? $expiryDate : null,
+                ':record_id' => $recordId,
+            ];
+            if ($certificatePath !== null) {
+                $params[':certificate_path'] = $certificatePath;
+            }
+            $stmt->execute($params);
+            return;
+        }
+
+        if ($source === 'cc_certification_engagements') {
+            $engagementType = trim((string)($data['engagement_type'] ?? ''));
+            $title = trim((string)($data['title'] ?? ''));
+            $organization = trim((string)($data['organization'] ?? ''));
+            $startDate = trim((string)($data['start_date'] ?? ''));
+            $endDate = trim((string)($data['end_date'] ?? ''));
+            if (!in_array($engagementType, ['Part-time', 'OJT/Training'], true) || $title === '' || $organization === '' || $startDate === '' || $endDate === '') {
+                throw new InvalidArgumentException('Engagement type, title, organization, and engagement dates are required.');
+            }
+
+            $sql = "UPDATE cc_certification_engagements
+                    SET engagement_type = :engagement_type, title = :title, organization = :organization,
+                        start_date = :start_date, end_date = :end_date,
+                        updated_at = CURRENT_TIMESTAMP";
+            if ($certificatePath !== null) {
+                $sql .= ', certificate_path = :certificate_path';
+            }
+            $sql .= ' WHERE id = :record_id';
+            $stmt = $this->conn->prepare($sql);
+            $params = [
+                ':engagement_type' => $engagementType,
+                ':title' => $title,
+                ':organization' => $organization,
+                ':start_date' => $startDate,
+                ':end_date' => $endDate,
+                ':record_id' => $recordId,
+            ];
+            if ($certificatePath !== null) {
+                $params[':certificate_path'] = $certificatePath;
+            }
+            $stmt->execute($params);
+            return;
+        }
+
+        throw new InvalidArgumentException('Unsupported training record source.');
+    }
+
+    public function archiveTrainingRecord($source, $recordId) {
+        $table = $source === 'em_certifications'
+            ? 'em_certifications'
+            : ($source === 'cc_certification_engagements' ? 'cc_certification_engagements' : null);
+        $idColumn = $source === 'em_certifications' ? 'cert_id' : 'id';
+        if ($table === null || (int)$recordId <= 0) {
+            throw new InvalidArgumentException('Invalid training record.');
+        }
+
+        $stmt = $this->conn->prepare("UPDATE {$table}
+            SET archived_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+            WHERE {$idColumn} = :record_id");
+        $stmt->execute([':record_id' => (int)$recordId]);
+        return $stmt->rowCount() > 0;
+    }
+
+    public function getTrainingCertificatePath($source, $recordId) {
+        if ($source === 'em_certifications') {
+            $stmt = $this->conn->prepare('SELECT certificate_path FROM em_certifications WHERE cert_id = :record_id LIMIT 1');
+        } elseif ($source === 'cc_certification_engagements') {
+            $stmt = $this->conn->prepare('SELECT certificate_path FROM cc_certification_engagements WHERE id = :record_id LIMIT 1');
+        } else {
+            return null;
+        }
+
+        $stmt->execute([':record_id' => (int)$recordId]);
+        return $stmt->fetchColumn() ?: null;
     }
 
     public function getEligibleEngagementEmployees() {

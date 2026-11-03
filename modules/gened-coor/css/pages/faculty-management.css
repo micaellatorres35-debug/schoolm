@@ -726,6 +726,140 @@ tbody tr:hover {
 #fmAddEngagementModal .modal-dialog {
     margin: 40px auto !important;
     max-height: none !important;
+
+    
+/* ===== Add Engagement Modal ===== */
+
+.modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.45);
+    overflow-y: auto;
+}
+
+.modal-content {
+    position: relative;
+    width: 100%;
+    max-width: 700px;
+    max-height: 95vh;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.2);
+    overflow-y: auto;
+}
+
+/* Modal Header */
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 26px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h2,
+.modal-header h3 {
+    margin: 0;
+    font-size: 23px;
+    font-weight: 700;
+    color: #202633;
+}
+
+/* Modal Body */
+.modal-body {
+    padding: 26px;
+}
+
+.modal-body .form-group {
+    margin-bottom: 18px;
+}
+
+.modal-body label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #374151;
+}
+
+/* Inputs and Dropdowns */
+.modal-body input,
+.modal-body select,
+.modal-body textarea {
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    min-height: 48px;
+    padding: 11px 15px;
+    font-family: inherit;
+    font-size: 16px;
+    color: #374151;
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.modal-body input:focus,
+.modal-body select:focus,
+.modal-body textarea:focus {
+    border-color: #263b99;
+    box-shadow: 0 0 0 3px rgba(38, 59, 153, 0.12);
+}
+
+/* Engagement Type - Read-only field */
+.modal-body input[readonly] {
+    background: #f9fafb;
+    color: #666666;
+}
+
+/* Modal Footer / Button */
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 26px 24px;
+}
+
+.modal-footer button,
+.modal-body button[type="submit"] {
+    min-height: 46px;
+    padding: 12px 28px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #ffffff;
+    background: #192d91;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+}
+
+.modal-footer button:hover,
+.modal-body button[type="submit"]:hover {
+    background: #142477;
+}
+
+.modal-footer button:active,
+.modal-body button[type="submit"]:active {
+    transform: scale(0.98);
+}
+
+/* ===== Responsive Layout ===== */
+@media (max-width: 768px) {
+    .modal {
+        align-items: center;
+        padding: 12px;
+    }
+
+  
+}
+
 }
 
 

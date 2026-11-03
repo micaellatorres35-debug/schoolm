@@ -39,32 +39,41 @@ class FacultyProfileManager {
         return $rankMap[$level] ?? 0;
     }
 
-    public function getAllFacultyCredentials() {
-        $sql = "SELECT 
-                    cf.id AS faculty_id,
-                    e.employee_id,
-                    e.employee_code,
-                    e.first_name,
-                    e.middle_name,
-                    e.last_name,
-                    e.suffix,
-                    e.email,
-                    d.department_name AS department,
-                    e.position_id,
-                    p.position_name,
-                    e.employment_type,
-                    e.employment_status,
-                    e.created_at
-                FROM cc_faculty cf
-                INNER JOIN em_employees e ON e.employee_id = cf.employee_id
-                LEFT JOIN em_departments d ON d.department_id = e.department_id
-                LEFT JOIN em_positions p ON p.position_id = e.position_id
-                WHERE e.is_archived = 0
-                ORDER BY e.last_name ASC, e.first_name ASC";
-
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+  $sql = "
+    SELECT
+        e.employee_id AS faculty_id,
+        e.employee_id,
+        e.employee_code,
+        e.first_name,
+        e.middle_name,
+        e.last_name,
+        e.suffix,
+        CONCAT_WS(' ',
+            e.first_name,
+            e.middle_name,
+            e.last_name,
+            e.suffix
+        ) AS employee_name,
+        e.email,
+        e.mobile_no AS contact_number,
+        d.department_name AS department,
+        e.position_id,
+        p.position_name,
+        e.employment_type,
+        e.employment_status,
+        e.created_at
+    FROM sms.em_employees e
+    LEFT JOIN sms.em_departments d
+        ON d.department_id = e.department_id
+    LEFT JOIN sms.em_positions p
+        ON p.position_id = e.position_id
+    WHERE e.is_archived = 0
+    ORDER BY e.last_name, e.first_name
+";$pdo = new PDO(
+    "mysql:host=localhost;dbname=sms;charset=utf8mb4",
+    $username,
+    $password
+);
     }
 
     public function getFacultyById($id) {
@@ -87,7 +96,13 @@ class FacultyProfileManager {
                 INNER JOIN em_employees e ON e.employee_id = cf.employee_id
                 LEFT JOIN em_departments d ON d.department_id = e.department_id
                 LEFT JOIN em_positions p ON p.position_id = e.position_id
-                WHERE cf.id = :id AND e.is_archived = 0
+                                WHERE e.employee_id = :id
+                                    AND e.is_archived = 0
+                                    AND (
+                                        LOWER(d.department_name) LIKE '%general education%'
+                                        OR LOWER(d.department_name) LIKE '%gen ed%'
+                                        OR LOWER(d.department_name) IN ('ge', 'g.e.')
+                                    )
                 LIMIT 1";
 
         $stmt = $this->conn->prepare($sql);

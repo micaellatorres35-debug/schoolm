@@ -574,7 +574,7 @@ function renderTrainingTableRows($trainingSummary, $term = '', $filter = 'all') 
 function renderCredentialsPanel($facultyList) {
     ob_start();
     ?>
-    <div class="academics-panel fm-panel active" id="fm-panel-credentials">
+    <div class="academics-panel fm-panel" id="fm-panel-credentials">
         <div class="section-header">
             <h3>Faculty Credentials</h3>
             <p class="text-muted" style="margin: 0;"><small>Browse faculty account details and employment status placeholders.</small></p>
@@ -669,7 +669,7 @@ function renderAttainmentPanel($educationSummary) {
 function renderTrainingsPanel($trainingSummary, $eligibleEmployees = []) {
     ob_start();
     ?>
-    <div class="academics-panel fm-panel" id="fm-panel-trainings">
+    <div class="academics-panel fm-panel active" id="fm-panel-trainings">
         <div class="section-header">
             <h3>Trainings & Certifications</h3>
                 <p class="text-muted" style="margin: 0;"><small>Record faculty trainings and certificates.</small></p>
@@ -752,13 +752,13 @@ function renderTrainingsPanel($trainingSummary, $eligibleEmployees = []) {
         <?php endif; ?>
 
         <div class="academics-tabs">
-            <button class="academics-tab active" data-fm-tab="credentials">
+            <button class="academics-tab" data-fm-tab="credentials">
                 <i class="fas fa-id-badge"></i> Faculty Credentials
             </button>
             <button class="academics-tab" data-fm-tab="attainment">
                 <i class="fas fa-graduation-cap"></i> Educational Attainment
             </button>
-            <button class="academics-tab" data-fm-tab="trainings">
+            <button class="academics-tab active" data-fm-tab="trainings">
                 <i class="fas fa-certificate"></i> Trainings & Certifications
             </button>
         </div>

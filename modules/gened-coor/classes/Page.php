@@ -7,6 +7,8 @@ class Page {
     /*Sidebar Content*/ 
     private $labels = [
         'dashboard-overview' => 'Dashboard Overview',
+        'academic activities' => 'Academic Activities',
+        'general-education-curriculum' => 'General Education Curriculum',
         'academics' => 'Academics Management',
         'events-management'  => 'Events Management',
         'faculty-management' => 'Faculty Management',
@@ -19,7 +21,7 @@ class Page {
     /*Content Sections*/ 
     private $sections = [
         'top'             => ['dashboard-overview'],
-        'academics'  => ['faculty-management', 'academics-management', 'class-scheduling', 'events-management'],
+        'academics'  => ['faculty-management', 'general-education-curriculum', 'academic activities', 'class-scheduling', 'events-management'],
         'requests-and-reports' => ['report-submission', 'concern-submission', 'approval-submission']
     ];
 

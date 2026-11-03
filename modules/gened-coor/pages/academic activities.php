@@ -66,8 +66,7 @@ $stats = [
     <!-- Page Header -->
     <div class="module-header">
         <div>
-            <h1>Academics Management</h1>
-            <p>Monitor programs, curriculum, subjects, sections, and faculty load</p>
+            <h1>Academic Activities</h1><p>Monitor programs, curriculum, subjects, sections, and faculty load</p>
         </div>
     </div>
 

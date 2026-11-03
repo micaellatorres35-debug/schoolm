@@ -184,44 +184,40 @@ function initFacultyManagementPage() {
     initializeSearch('searchCredentials', 'credentialsTable');
     initializeSearch('searchAttainment', 'attainmentTable');
     let trainingFilter = 'all';
-    initializeSearch('searchTrainings', 'trainingsTable', row => {
-        const status = (row.dataset.recordStatus || '').toLowerCase();
-        if (trainingFilter === 'archived') return status === 'archived';
-        if (trainingFilter === 'completed') return status === 'completed';
-        if (trainingFilter === 'active') return ['pending', 'ongoing', 'for review', 'approved'].includes(status);
-        // Archived engagements are shown only when the Archived filter is selected.
-        return status !== 'archived';
-    });
-
-    const trainingSearchInput = document.getElementById('searchTrainings');
     const trainingTable = document.getElementById('trainingsTable');
     const trainingFilterButtons = document.querySelectorAll('[data-training-filter]');
-    if (trainingSearchInput && trainingTable && trainingFilterButtons.length) {
-        console.log(`✓ Found ${trainingFilterButtons.length} training filter buttons`);
+    const trainingTbody = trainingTable?.querySelector('tbody');
+    const trainingRows = trainingTbody
+        ? Array.from(trainingTbody.querySelectorAll('tr')).filter(row => !row.classList.contains('no-data'))
+        : [];
+
+    function applyTrainingFilter() {
+        if (!trainingTbody) return;
+        const matchingRows = trainingRows.filter(row => {
+            const status = (row.dataset.recordStatus || '').toLowerCase();
+            if (trainingFilter === 'archived') return status === 'archived';
+            if (trainingFilter === 'completed') return status === 'completed';
+            if (trainingFilter === 'active') return ['pending', 'ongoing', 'for review', 'approved'].includes(status);
+            return status !== 'archived';
+        });
+        trainingTbody.replaceChildren(...matchingRows);
+        if (!matchingRows.length) {
+            const noDataRow = document.createElement('tr');
+            noDataRow.className = 'no-data';
+            noDataRow.innerHTML = `<td colspan="${trainingTable.querySelectorAll('thead th').length}" class="text-center text-muted" style="padding: 20px;">No trainings match this filter.</td>`;
+            trainingTbody.appendChild(noDataRow);
+        }
+    }
+
+    if (trainingTable && trainingFilterButtons.length) {
         trainingFilterButtons.forEach(button => {
             button.addEventListener('click', function () {
                 trainingFilter = this.dataset.trainingFilter || 'all';
-                console.log(`📋 FILTER CHANGED TO: "${trainingFilter}"`);
                 trainingFilterButtons.forEach(filterButton => filterButton.classList.toggle('active', filterButton === this));
-                trainingSearchInput.dispatchEvent(new Event('input'));
-                
-                // Debug: Log visible rows after filter
-                setTimeout(() => {
-                    const visibleRows = trainingTable.querySelectorAll('tbody tr:not([style*="display:none"])');
-                    console.log(`  Visible rows after filter: ${visibleRows.length}`);
-                    visibleRows.forEach((row, idx) => {
-                        const recordSource = row.dataset.recordSource;
-                        const recordStatus = row.dataset.recordStatus;
-                        const recordId = row.dataset.recordId;
-                        console.log(`    Row ${idx}: source=${recordSource}, status=${recordStatus}, id=${recordId}`);
-                    });
-                }, 100);
+                applyTrainingFilter();
             });
         });
-
-        // Apply the default All filter immediately. Archived engagements must
-        // never appear in All, Active, or Completed—only in Archived.
-        trainingSearchInput.dispatchEvent(new Event('input'));
+        applyTrainingFilter();
     }
 
     function openProfileModal(data) {
@@ -236,7 +232,6 @@ function initFacultyManagementPage() {
         document.getElementById('fmModalPosition').textContent = data.position || 'Not provided';
         document.getElementById('fmModalEmploymentType').textContent = data.employmentType || 'Not provided';
         document.getElementById('fmModalStatus').textContent = data.employmentStatus || 'Not provided';
-
         modal.classList.add('show');
     }
 
@@ -311,7 +306,7 @@ function initFacultyManagementPage() {
         modal.classList.remove('show');
     }
 
-    function openTrainingModal(employeeCode, facultyName, employmentType, employmentStatus, records) {
+    function openTrainingModal(employeeCode, facultyName, employmentType, employmentStatus, records, recordSource, recordId) {
         const modal = document.getElementById('fmTrainingModal');
         if (!modal) return;
 
@@ -326,8 +321,14 @@ function initFacultyManagementPage() {
         employmentTypeElement.textContent = employmentType || 'N/A';
         employmentStatusElement.textContent = employmentStatus || 'N/A';
 
+        const certificateContainer = document.getElementById('fmTrainingCertificate');
+        if (certificateContainer) {
+            certificateContainer.replaceChildren();
+            certificateContainer.className = 'mt-3 text-muted';
+        }
+
         if (!records || records.length === 0) {
-            historyBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted" style="padding: 18px;">No training or certification records found.</td></tr>';
+            historyBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted" style="padding: 18px;">No training or certification records found.</td></tr>';
             modal.classList.add('show');
             return;
         }
@@ -336,8 +337,9 @@ function initFacultyManagementPage() {
             const type = record.type || record.engagement_type || 'Training / Certification';
             const title = record.title || record.cert_name || 'N/A';
             const organization = record.organization || record.issuing_organization || 'N/A';
-            const datePeriod = record.date_period || record.date_issued || record.start_date || 'N/A';
+            const datePeriod = record.date_period || (record.start_date && record.end_date ? `${record.start_date} to ${record.end_date}` : record.date_issued || record.start_date || 'N/A');
             const status = record.status || 'Completed';
+            const outcome = record.outcome || 'N/A';
 
             return `
                 <tr>
@@ -346,9 +348,36 @@ function initFacultyManagementPage() {
                     <td>${organization}</td>
                     <td>${datePeriod}</td>
                     <td>${status}</td>
+                    <td>${outcome}</td>
                 </tr>
             `;
         }).join('');
+
+        if (certificateContainer) {
+            const certificate = records.find(record => record.certificate_path);
+            if (recordSource === 'cc_certification_engagements' && recordId) {
+                const link = document.createElement('a');
+                const url = new URL('/schoolm/modules/gened-coor/api/download_training_certificate.php', window.location.origin);
+                url.searchParams.set('source', recordSource);
+                url.searchParams.set('record_id', recordId);
+                link.href = url.toString();
+                link.className = 'btn btn-sm btn-primary';
+                link.textContent = 'Download Certificate';
+                certificateContainer.appendChild(link);
+            } else if (certificate && recordSource && recordId) {
+                const link = document.createElement('a');
+                const url = new URL('/schoolm/modules/gened-coor/api/download_training_certificate.php', window.location.origin);
+                url.searchParams.set('source', recordSource);
+                url.searchParams.set('record_id', recordId);
+                link.href = url.toString();
+                link.className = 'btn btn-sm btn-primary';
+                link.textContent = 'Download Certificate';
+                certificateContainer.appendChild(link);
+            } else {
+                certificateContainer.textContent = 'No certificate uploaded.';
+                certificateContainer.className = 'mt-3 text-muted';
+            }
+        }
 
         modal.classList.add('show');
     }
@@ -554,6 +583,23 @@ function initFacultyManagementPage() {
     const attainmentTable = document.getElementById('attainmentTable');
     if (attainmentTable) {
         attainmentTable.addEventListener('click', function (e) {
+            const editButton = e.target.closest('.edit-attainment-btn');
+            if (editButton) {
+                const row = editButton.closest('tr');
+                if (!row) return;
+                let records = [];
+                try {
+                    records = JSON.parse(row.dataset.records || '[]');
+                } catch (error) {
+                    records = [];
+                }
+                openEditEducationModal({
+                    employeeId: row.dataset.employeeId,
+                    facultyName: row.dataset.facultyName || row.cells[1]?.textContent || 'N/A'
+                }, records[0] || null);
+                return;
+            }
+
             const btn = e.target.closest('.view-attainment-btn');
             if (!btn) return;
             const row = btn.closest('tr');
@@ -608,6 +654,82 @@ function initFacultyManagementPage() {
         });
     }
 
+    function openEditEducationModal(faculty, record) {
+        const modal = document.getElementById('fmEditEducationModal');
+        const form = document.getElementById('fmEditEducationForm');
+        if (!modal || !form) return;
+
+        form.reset();
+        document.getElementById('fmEditEducationEmployeeId').value = faculty.employeeId || '';
+        document.getElementById('fmEditEducationRecordId').value = record?.education_id || '';
+        document.getElementById('fmEditEducationFacultyName').value = faculty.facultyName || 'N/A';
+        document.getElementById('fmEditEducationTitle').textContent = record ? 'Edit Educational Attainment' : 'Add Educational Attainment';
+        document.getElementById('fmSaveEducationButton').textContent = record ? 'Save Changes' : 'Add Record';
+        document.getElementById('fmEditEducationLevel').value = record?.level || '';
+        document.getElementById('fmEditEducationCourse').value = record?.course || '';
+        document.getElementById('fmEditEducationSchool').value = record?.school_name || '';
+        document.getElementById('fmEditEducationYear').value = record?.year_graduated || '';
+        document.getElementById('fmEditEducationHonors').value = record?.honors || '';
+        document.getElementById('fmEditEducationMessage').textContent = '';
+        modal.classList.add('show');
+    }
+
+    const editEducationModal = document.getElementById('fmEditEducationModal');
+    const editEducationForm = document.getElementById('fmEditEducationForm');
+    if (editEducationModal && !editEducationModal.dataset.handlersBound) {
+        editEducationModal.dataset.handlersBound = 'true';
+        editEducationModal.querySelectorAll('.modal-close').forEach(button => {
+            button.addEventListener('click', () => editEducationModal.classList.remove('show'));
+        });
+        editEducationModal.addEventListener('click', event => {
+            if (event.target === editEducationModal) editEducationModal.classList.remove('show');
+        });
+    }
+
+    if (editEducationForm && !editEducationForm.dataset.submitBound) {
+        editEducationForm.dataset.submitBound = 'true';
+        editEducationForm.addEventListener('submit', async event => {
+            event.preventDefault();
+            const saveButton = document.getElementById('fmSaveEducationButton');
+            const message = document.getElementById('fmEditEducationMessage');
+            const formData = new URLSearchParams(new FormData(editEducationForm));
+            formData.set('action', 'save_faculty_education');
+            saveButton.disabled = true;
+            message.textContent = 'Saving educational attainment...';
+            message.classList.remove('text-danger');
+            message.classList.add('text-muted');
+
+            try {
+                const response = await fetch(window.location.href, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                    body: formData
+                });
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || 'Unable to save educational attainment.');
+                }
+
+                editEducationModal.classList.remove('show');
+                const searchTerm = document.getElementById('searchAttainment')?.value || '';
+                const refreshResponse = await fetch(window.location.href, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                    body: new URLSearchParams({ action: 'search_records', table: 'attainmentTable', term: searchTerm })
+                });
+                const refreshed = await refreshResponse.json();
+                const tbody = document.querySelector('#attainmentTable tbody');
+                if (refreshed.success && tbody) tbody.innerHTML = refreshed.html;
+            } catch (error) {
+                message.textContent = error.message || 'Unable to save educational attainment.';
+                message.classList.remove('text-muted');
+                message.classList.add('text-danger');
+            } finally {
+                saveButton.disabled = false;
+            }
+        });
+    }
+
     // Trainings table: delegate all training-related action buttons
     const trainingsTable = document.getElementById('trainingsTable');
     if (trainingsTable) {
@@ -620,32 +742,7 @@ function initFacultyManagementPage() {
             // View training / archived engagement details
             if (btn.classList.contains('view-training-btn')) {
                 console.log('=== VIEW TRAINING (delegated) CLICKED ===');
-                const recordStatus = String(row.dataset.recordStatus || '').toLowerCase();
                 const recordSource = String(row.dataset.recordSource || '');
-                const engagementId = Number(row.dataset.recordId || 0);
-
-                if (recordSource === 'cc_certification_engagements' && recordStatus === 'archived' && engagementId > 0) {
-                    // Fetch engagement details and open modal
-                    fetch(window.location.href, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-                        body: new URLSearchParams({ action: 'get_engagement', engagement_id: String(engagementId) })
-                    })
-                    .then(response => response.text())
-                    .then(text => {
-                        let data = {};
-                        try { data = JSON.parse(text); } catch (err) { data = {}; }
-                        if (data.success && data.engagement && data.employee) {
-                            openEngagementDetailsModal(data.engagement, data.employee);
-                        } else {
-                            openEngagementDetailsModal(null, null);
-                        }
-                    })
-                    .catch(() => openEngagementDetailsModal(null, null));
-                    return;
-                }
-
-                // Non-archived: open training modal
                 let records = [];
                 try { records = JSON.parse(row.dataset.records || '[]'); } catch (err) { records = []; }
 
@@ -654,8 +751,62 @@ function initFacultyManagementPage() {
                     row.dataset.facultyName || row.cells[1]?.textContent || 'N/A',
                     row.dataset.employmentType || 'N/A',
                     row.dataset.employmentStatus || 'N/A',
-                    records
+                    records,
+                    recordSource,
+                    row.dataset.recordId
                 );
+                return;
+            }
+
+            if (btn.classList.contains('edit-training-btn') || btn.classList.contains('upload-training-certificate-btn')) {
+                let records = [];
+                try { records = JSON.parse(row.dataset.records || '[]'); } catch (err) { records = []; }
+                const record = records[0] || {};
+                const source = row.dataset.recordSource || '';
+                const isCertification = source === 'em_certifications';
+                const form = document.getElementById('fmEditTrainingForm');
+                form.reset();
+                document.getElementById('fmTrainingRecordId').value = row.dataset.recordId || '';
+                document.getElementById('fmTrainingRecordSource').value = source;
+                document.getElementById('fmEditTrainingFaculty').value = row.dataset.facultyName || '';
+                document.getElementById('fmEditTrainingTitle').value = record.cert_name || record.title || '';
+                document.getElementById('fmEditTrainingOrganization').value = record.issuing_organization || record.organization || '';
+                const engagementTypeGroup = document.getElementById('fmEditTrainingTypeGroup');
+                const engagementTypeSelect = document.getElementById('fmEditTrainingType');
+                engagementTypeGroup.hidden = isCertification;
+                engagementTypeSelect.disabled = isCertification;
+                engagementTypeSelect.required = !isCertification;
+                engagementTypeSelect.value = record.engagement_type || '';
+                const startInput = document.getElementById('fmEditTrainingStart');
+                const endInput = document.getElementById('fmEditTrainingEnd');
+                startInput.name = isCertification ? 'date_issued' : 'start_date';
+                endInput.name = isCertification ? 'expiry_date' : 'end_date';
+                startInput.value = record.date_issued || record.start_date || '';
+                endInput.value = record.expiry_date || record.end_date || '';
+                document.getElementById('fmEditTrainingStartLabel').textContent = isCertification ? 'Date Issued' : 'Start Date';
+                document.getElementById('fmEditTrainingEndLabel').textContent = isCertification ? 'Expiry Date' : 'End Date';
+                document.getElementById('fmEditTrainingMessage').textContent = '';
+                document.getElementById('fmEditTrainingModal').classList.add('show');
+                return;
+            }
+
+            if (btn.classList.contains('archive-training-btn')) {
+                if (!window.confirm('Archive this training record? It will be hidden from the active list but not deleted.')) return;
+                fetch(window.location.href, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'archive_training_record',
+                        record_source: row.dataset.recordSource,
+                        record_id: Number(row.dataset.recordId || 0)
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) throw new Error(data.message || 'Unable to archive record.');
+                    window.location.reload();
+                })
+                .catch(error => window.alert(error.message || 'Unable to archive record.'));
                 return;
             }
 
@@ -744,6 +895,44 @@ function initFacultyManagementPage() {
                 const url = origin + '/modules/college-coor/pages/engagement_certificate.php?engagement_id=' + encodeURIComponent(engagementId);
                 window.open(url, '_blank');
                 return;
+            }
+        });
+    }
+
+    const editTrainingModal = document.getElementById('fmEditTrainingModal');
+    const editTrainingForm = document.getElementById('fmEditTrainingForm');
+    if (editTrainingModal) {
+        editTrainingModal.querySelectorAll('.modal-close').forEach(button => {
+            button.addEventListener('click', () => editTrainingModal.classList.remove('show'));
+        });
+        editTrainingModal.addEventListener('click', event => {
+            if (event.target === editTrainingModal) editTrainingModal.classList.remove('show');
+        });
+    }
+
+    if (editTrainingForm) {
+        editTrainingForm.addEventListener('submit', async event => {
+            event.preventDefault();
+            const button = document.getElementById('fmSaveTrainingButton');
+            const message = document.getElementById('fmEditTrainingMessage');
+            button.disabled = true;
+            message.textContent = 'Saving training record...';
+            message.classList.remove('text-danger');
+            message.classList.add('text-muted');
+            try {
+                const response = await fetch(window.location.href, {
+                    method: 'POST',
+                    body: new FormData(editTrainingForm)
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) throw new Error(data.message || 'Unable to save training record.');
+                window.location.reload();
+            } catch (error) {
+                message.textContent = error.message || 'Unable to save training record.';
+                message.classList.remove('text-muted');
+                message.classList.add('text-danger');
+            } finally {
+                button.disabled = false;
             }
         });
     }
@@ -837,7 +1026,7 @@ function initFacultyManagementPage() {
 
             if (!confirm('Create this engagement record with status Pending?')) return;
 
-            fetch('/modules/college-coor/pages/faculty-management.php', {
+            fetch(window.location.href, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(payload)
@@ -904,7 +1093,7 @@ function initFacultyManagementPage() {
             payload.outcome = outcome || 'Not Applicable';
         }
 
-        fetch('/modules/college-coor/pages/faculty-management.php', {
+        fetch(window.location.href, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -1039,6 +1228,339 @@ function initFacultyManagementPage() {
             window.open(url, '_blank');
         });
     });
+
+    const assignmentTable = document.getElementById('facultyAssignmentsTable');
+    const sectionsModal = document.getElementById('fmAssignSectionsModal');
+    const subjectModal = document.getElementById('fmAssignSubjectModal');
+    const sectionsForm = document.getElementById('fmAssignSectionsForm');
+    const subjectForm = document.getElementById('fmAssignSubjectForm');
+    const assignmentApiUrl = endpoint => new URL(`api/${endpoint}`, window.location.href).toString();
+
+    async function requestAssignmentData(endpoint, options = {}) {
+        const response = await fetch(assignmentApiUrl(endpoint), options);
+        const data = await response.json();
+        if (!response.ok || data.success === false || data.error) {
+            throw new Error(data.message || data.error || 'Unable to complete faculty assignment request.');
+        }
+        return data;
+    }
+
+    function renderFacultyAssignmentRows(facultyLoads) {
+        const tbody = assignmentTable?.querySelector('tbody');
+        if (!tbody) return;
+        tbody.replaceChildren();
+
+        if (!Array.isArray(facultyLoads) || facultyLoads.length === 0) {
+            const row = document.createElement('tr');
+            row.innerHTML = '<td colspan="7" class="text-center text-muted">No faculty records available for assignment.</td>';
+            tbody.appendChild(row);
+            return;
+        }
+
+        facultyLoads.forEach(faculty => {
+            const row = document.createElement('tr');
+            const values = [
+                faculty.faculty_name || 'N/A',
+                faculty.department || 'Department not assigned',
+                faculty.assigned_sections ?? 0,
+                faculty.assigned_subjects ?? 0,
+                `${faculty.teaching_units ?? 0} / ${faculty.max_load ?? 15}`,
+                faculty.load_status || 'Underloaded'
+            ];
+            values.forEach(value => {
+                const cell = document.createElement('td');
+                cell.textContent = String(value);
+                row.appendChild(cell);
+            });
+
+            const actions = document.createElement('td');
+            actions.className = 'actions';
+            [
+                ['Assign Sections', 'fmAssignSections', 'btn btn-sm btn-outline-primary'],
+                ['Assign Subject', 'fmAssignSubject', 'btn btn-sm btn-outline-secondary']
+            ].forEach(([label, action, className]) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = className;
+                button.dataset[action] = 'true';
+                button.dataset.facultyId = String(faculty.id);
+                button.dataset.facultyName = faculty.faculty_name || '';
+                button.textContent = label;
+                actions.appendChild(button);
+            });
+            row.appendChild(actions);
+            tbody.appendChild(row);
+        });
+    }
+
+    async function reloadFacultyAssignments() {
+        if (!assignmentTable) return;
+        const tbody = assignmentTable.querySelector('tbody');
+        if (tbody) {
+            const row = document.createElement('tr');
+            row.innerHTML = '<td colspan="7" class="text-center text-muted">Refreshing assignments...</td>';
+            tbody.replaceChildren(row);
+        }
+        try {
+            const facultyLoads = await requestAssignmentData('get_faculty_load.php');
+            renderFacultyAssignmentRows(facultyLoads);
+        } catch (error) {
+            renderFacultyAssignmentRows([]);
+            if (tbody?.firstElementChild) {
+                tbody.firstElementChild.firstElementChild.textContent = error.message;
+                tbody.firstElementChild.firstElementChild.classList.add('text-danger');
+            }
+        }
+    }
+
+    function setAssignmentMessage(elementId, message, isError = false) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+        element.textContent = message;
+        element.classList.toggle('text-danger', isError);
+        element.classList.toggle('text-muted', !isError);
+    }
+
+    function closeAssignmentModal(modal) {
+        modal?.classList.remove('show');
+    }
+
+    async function loadAssignmentSections() {
+        const schoolYearId = document.getElementById('fmAssignSectionsSchoolYear')?.value;
+        const semesterId = document.getElementById('fmAssignSectionsSemester')?.value;
+        const facultyId = document.getElementById('fmAssignSectionsFacultyId')?.value;
+        const sectionSelect = document.getElementById('fmAssignSectionsList');
+        if (!sectionSelect) return;
+        sectionSelect.replaceChildren(new Option('Loading sections...', ''));
+        sectionSelect.disabled = true;
+        if (!schoolYearId || !semesterId || !facultyId) return;
+
+        try {
+            const query = new URLSearchParams({ school_year_id: schoolYearId, semester_id: semesterId, faculty_id: facultyId });
+            const data = await requestAssignmentData(`get_adviser_sections.php?${query}`);
+            sectionSelect.replaceChildren();
+            if (!data.sections?.length) {
+                sectionSelect.add(new Option('No unassigned sections for this period', ''));
+                return;
+            }
+            data.sections.forEach(section => {
+                const label = [section.section_code, section.program_code, section.grade_level].filter(Boolean).join(' | ');
+                sectionSelect.add(new Option(label, section.id));
+            });
+            sectionSelect.disabled = false;
+            setAssignmentMessage('fmAssignSectionsMessage', '');
+        } catch (error) {
+            sectionSelect.replaceChildren(new Option('Unable to load sections', ''));
+            setAssignmentMessage('fmAssignSectionsMessage', error.message, true);
+        }
+    }
+
+    async function loadAssignmentSemesters() {
+        const schoolYearId = document.getElementById('fmAssignSectionsSchoolYear')?.value;
+        const semesterSelect = document.getElementById('fmAssignSectionsSemester');
+        const sectionSelect = document.getElementById('fmAssignSectionsList');
+        if (!semesterSelect || !sectionSelect) return;
+        semesterSelect.replaceChildren(new Option('Loading semesters...', ''));
+        semesterSelect.disabled = true;
+        sectionSelect.replaceChildren(new Option('Select semester first', ''));
+        sectionSelect.disabled = true;
+        if (!schoolYearId) return;
+
+        try {
+            const data = await requestAssignmentData(`get_semesters.php?school_year_id=${encodeURIComponent(schoolYearId)}`);
+            semesterSelect.replaceChildren(new Option('Select semester', ''));
+            (data.semesters || []).forEach(semester => semesterSelect.add(new Option(semester.name, semester.id)));
+            if (!data.semesters?.length) {
+                semesterSelect.replaceChildren(new Option('No active semesters', ''));
+                return;
+            }
+            semesterSelect.disabled = false;
+        } catch (error) {
+            semesterSelect.replaceChildren(new Option('Unable to load semesters', ''));
+            setAssignmentMessage('fmAssignSectionsMessage', error.message, true);
+        }
+    }
+
+    async function openAssignSections(button) {
+        if (!sectionsModal) return;
+        document.getElementById('fmAssignSectionsFacultyId').value = button.dataset.facultyId || '';
+        document.getElementById('fmAssignSectionsFacultyName').value = button.dataset.facultyName || '';
+        setAssignmentMessage('fmAssignSectionsMessage', '');
+        const yearSelect = document.getElementById('fmAssignSectionsSchoolYear');
+        const semesterSelect = document.getElementById('fmAssignSectionsSemester');
+        const sectionSelect = document.getElementById('fmAssignSectionsList');
+        yearSelect.replaceChildren(new Option('Loading school years...', ''));
+        yearSelect.disabled = true;
+        semesterSelect.replaceChildren(new Option('Select school year first', ''));
+        semesterSelect.disabled = true;
+        sectionSelect.replaceChildren(new Option('Select semester first', ''));
+        sectionSelect.disabled = true;
+        sectionsModal.classList.add('show');
+
+        try {
+            const data = await requestAssignmentData('get_school_years.php');
+            yearSelect.replaceChildren(new Option('Select school year', ''));
+            (data.school_years || []).forEach(year => yearSelect.add(new Option(year.name, year.id)));
+            if (!data.school_years?.length) {
+                yearSelect.replaceChildren(new Option('No active school years', ''));
+                return;
+            }
+            yearSelect.disabled = false;
+            yearSelect.value = String(data.school_years[0].id);
+            await loadAssignmentSemesters();
+        } catch (error) {
+            yearSelect.replaceChildren(new Option('Unable to load school years', ''));
+            setAssignmentMessage('fmAssignSectionsMessage', error.message, true);
+        }
+    }
+
+    async function loadSubjectOptions(sectionId) {
+        const subjectSelect = document.getElementById('fmAssignSubjectSubject');
+        const submitButton = subjectForm?.querySelector('button[type="submit"]');
+        if (!subjectSelect) return;
+        subjectSelect.replaceChildren(new Option('Loading subjects...', ''));
+        subjectSelect.disabled = true;
+        if (submitButton) submitButton.disabled = true;
+        if (!sectionId) return;
+
+        try {
+            const data = await requestAssignmentData(`get_section_subjects.php?section_id=${encodeURIComponent(sectionId)}`);
+            subjectSelect.replaceChildren(new Option('Select subject', ''));
+            (data.subjects || []).forEach(subject => {
+                subjectSelect.add(new Option(`${subject.code} - ${subject.name} (${subject.units} units)`, subject.id));
+            });
+            if (!data.subjects?.length) {
+                subjectSelect.replaceChildren(new Option(data.message || 'No curriculum subjects found', ''));
+                setAssignmentMessage('fmAssignSubjectMessage', data.message || 'No curriculum subjects found for this section.');
+                return;
+            }
+            subjectSelect.disabled = false;
+            if (submitButton) submitButton.disabled = false;
+            setAssignmentMessage('fmAssignSubjectMessage', '');
+        } catch (error) {
+            subjectSelect.replaceChildren(new Option('Unable to load subjects', ''));
+            setAssignmentMessage('fmAssignSubjectMessage', error.message, true);
+        }
+    }
+
+    async function openAssignSubject(button) {
+        if (!subjectModal) return;
+        document.getElementById('fmAssignSubjectFacultyId').value = button.dataset.facultyId || '';
+        document.getElementById('fmAssignSubjectFacultyName').value = button.dataset.facultyName || '';
+        setAssignmentMessage('fmAssignSubjectMessage', '');
+        const sectionSelect = document.getElementById('fmAssignSubjectSection');
+        const subjectSelect = document.getElementById('fmAssignSubjectSubject');
+        const submitButton = subjectForm?.querySelector('button[type="submit"]');
+        sectionSelect.replaceChildren(new Option('Loading assigned sections...', ''));
+        sectionSelect.disabled = true;
+        subjectSelect.replaceChildren(new Option('Select a section first', ''));
+        subjectSelect.disabled = true;
+        if (submitButton) submitButton.disabled = true;
+        subjectModal.classList.add('show');
+
+        try {
+            const data = await requestAssignmentData(`get_instructor_sections.php?faculty_id=${encodeURIComponent(button.dataset.facultyId || '')}`);
+            sectionSelect.replaceChildren(new Option('Select section', ''));
+            (data.sections || []).forEach(section => {
+                const label = [section.section_code, section.program_code, section.semester, section.school_year].filter(Boolean).join(' | ');
+                sectionSelect.add(new Option(label, section.section_id));
+            });
+            if (!data.sections?.length) {
+                sectionSelect.replaceChildren(new Option('Assign faculty to a section first', ''));
+                setAssignmentMessage('fmAssignSubjectMessage', 'Assign this faculty member to a section before assigning subjects.');
+                return;
+            }
+            sectionSelect.disabled = false;
+        } catch (error) {
+            sectionSelect.replaceChildren(new Option('Unable to load sections', ''));
+            setAssignmentMessage('fmAssignSubjectMessage', error.message, true);
+        }
+    }
+
+    if (assignmentTable && !assignmentTable.dataset.handlersBound) {
+        assignmentTable.dataset.handlersBound = 'true';
+        assignmentTable.addEventListener('click', event => {
+            const sectionsButton = event.target.closest('[data-fm-assign-sections]');
+            const subjectButton = event.target.closest('[data-fm-assign-subject]');
+            if (sectionsButton) openAssignSections(sectionsButton);
+            if (subjectButton) openAssignSubject(subjectButton);
+        });
+    }
+
+    if (sectionsForm && !sectionsForm.dataset.assignmentBound) {
+        sectionsForm.dataset.assignmentBound = 'true';
+        document.getElementById('fmAssignSectionsSchoolYear').addEventListener('change', loadAssignmentSemesters);
+        document.getElementById('fmAssignSectionsSemester').addEventListener('change', loadAssignmentSections);
+        sectionsForm.addEventListener('submit', async event => {
+            event.preventDefault();
+            const sectionIds = Array.from(document.getElementById('fmAssignSectionsList').selectedOptions).map(option => option.value).filter(Boolean);
+            const facultyId = document.getElementById('fmAssignSectionsFacultyId').value;
+            const submitButton = sectionsForm.querySelector('button[type="submit"]');
+            if (!facultyId || !sectionIds.length) {
+                setAssignmentMessage('fmAssignSectionsMessage', 'Select at least one section.', true);
+                return;
+            }
+            submitButton.disabled = true;
+            try {
+                const result = await requestAssignmentData('add_section_faculty.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ faculty_id: facultyId, section_ids: sectionIds })
+                });
+                setAssignmentMessage('fmAssignSectionsMessage', result.message || 'Section assignments saved.');
+                closeAssignmentModal(sectionsModal);
+                await reloadFacultyAssignments();
+            } catch (error) {
+                setAssignmentMessage('fmAssignSectionsMessage', error.message, true);
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
+    }
+
+    if (subjectForm && !subjectForm.dataset.assignmentBound) {
+        subjectForm.dataset.assignmentBound = 'true';
+        document.getElementById('fmAssignSubjectSection').addEventListener('change', event => loadSubjectOptions(event.target.value));
+        subjectForm.addEventListener('submit', async event => {
+            event.preventDefault();
+            const facultyId = document.getElementById('fmAssignSubjectFacultyId').value;
+            const sectionId = document.getElementById('fmAssignSubjectSection').value;
+            const subjectId = document.getElementById('fmAssignSubjectSubject').value;
+            const submitButton = subjectForm.querySelector('button[type="submit"]');
+            if (!facultyId || !sectionId || !subjectId) {
+                setAssignmentMessage('fmAssignSubjectMessage', 'Select an assigned section and curriculum subject.', true);
+                return;
+            }
+            submitButton.disabled = true;
+            try {
+                const result = await requestAssignmentData('assign_subject_to_faculty.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ faculty_id: facultyId, assignments: [{ section_id: sectionId, subject_id: subjectId }] })
+                });
+                setAssignmentMessage('fmAssignSubjectMessage', result.message || 'Subject assignment saved.');
+                closeAssignmentModal(subjectModal);
+                await reloadFacultyAssignments();
+            } catch (error) {
+                setAssignmentMessage('fmAssignSubjectMessage', error.message, true);
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
+    }
+
+    [sectionsModal, subjectModal].forEach(modal => {
+        if (!modal || modal.dataset.closeBound) return;
+        modal.dataset.closeBound = 'true';
+        modal.querySelectorAll('.modal-close').forEach(button => {
+            button.addEventListener('click', () => closeAssignmentModal(modal));
+        });
+        modal.addEventListener('click', event => {
+            if (event.target === modal) closeAssignmentModal(modal);
+        });
+    });
+
+    reloadFacultyAssignments();
 }
 
 function initFacultyManagementWhenReady() {
