@@ -20,7 +20,7 @@ try {
     $sectionId = $_GET['section_id'];
     
     // First, get the section details (program, year level, semester id)
-    $sectionQuery = "SELECT program_id, grade_level, semester_id FROM cc_sections WHERE id = :section_id";
+    $sectionQuery = "SELECT program_id, grade_level, semester_id FROM gc_sections WHERE id = :section_id";
     $sectionStmt = $conn->prepare($sectionQuery);
     $sectionStmt->bindParam(':section_id', $sectionId);
     $sectionStmt->execute();

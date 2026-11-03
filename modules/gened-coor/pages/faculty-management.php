@@ -465,7 +465,6 @@ function renderCredentialsRow($faculty) {
         <td><?= htmlspecialchars($faculty['employment_status']) ?></td>
         <td class="actions">
             <button type="button" class="btn btn-sm btn-info view-profile-btn">View</button>
-            <button type="button" class="btn btn-sm btn-secondary shift-schedule-btn" data-employee-id="<?= (int)($faculty['employee_id'] ?? 0) ?>">Shift Schedule</button>
         </td>
     </tr>
     <?php
@@ -792,7 +791,7 @@ function renderTrainingsPanel($trainingSummary, $eligibleEmployees = []) {
     <div class="module-header">
         <div>
             <h1> Faculty Management</h1>
-            <p>View and manage faculty credentials, attainment, and trainings.</p>
+            <p>View and manage faculty credentials and educational attainment.</p>
         </div>
     </div>
 
@@ -824,9 +823,6 @@ function renderTrainingsPanel($trainingSummary, $eligibleEmployees = []) {
             <button class="academics-tab" data-fm-tab="attainment">
                 <i class="fas fa-graduation-cap"></i> Educational Attainment
             </button>
-            <button class="academics-tab" data-fm-tab="trainings">
-                <i class="fas fa-certificate"></i> Trainings & Certifications
-            </button>
             <button class="academics-tab" data-fm-tab="assignments">
                 <i class="fas fa-chalkboard-teacher"></i> Faculty Assignments
             </button>
@@ -835,8 +831,6 @@ function renderTrainingsPanel($trainingSummary, $eligibleEmployees = []) {
         <?php echo renderCredentialsPanel($facultyList); ?>
 
         <?php echo renderAttainmentPanel($educationSummary); ?>
-
-        <?php echo renderTrainingsPanel($trainingSummary, $eligibleEmployees); ?>
 
         <div class="academics-panel fm-panel" id="fm-panel-assignments">
             <div class="section-header">
@@ -940,6 +934,40 @@ function renderTrainingsPanel($trainingSummary, $eligibleEmployees = []) {
                     <button type="submit" class="btn btn-primary" disabled>Save Subject Assignment</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <div id="fmFacultyAssignmentsViewModal" class="modal">
+        <div class="modal-dialog" style="max-width: 1100px;">
+            <div class="modal-header">
+                <h5 class="modal-title">Faculty Assignments</h5>
+                <button type="button" class="modal-close" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3"><strong>Faculty:</strong> <span id="fmFacultyAssignmentsViewName"></span></p>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Section</th>
+                                <th>Subject</th>
+                                <th>Units</th>
+                                <th>Academic Period</th>
+                                <th>Days</th>
+                                <th>Time</th>
+                                <th>Room</th>
+                                <th>Schedule Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fmFacultyAssignmentsViewBody">
+                            <tr><td colspan="8" class="text-center text-muted">Select a faculty member to view assignments.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary modal-close">Close</button>
+            </div>
         </div>
     </div>
 
@@ -1402,4 +1430,3 @@ function renderTrainingsPanel($trainingSummary, $eligibleEmployees = []) {
         </div>
     </div>
 </div>
-

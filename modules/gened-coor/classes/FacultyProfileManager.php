@@ -55,7 +55,7 @@ class FacultyProfileManager {
                     e.employment_type,
                     e.employment_status,
                     e.created_at
-                FROM cc_faculty cf
+                FROM gc_faculty cf
                 INNER JOIN em_employees e ON e.employee_id = cf.employee_id
                 LEFT JOIN em_departments d ON d.department_id = e.department_id
                 LEFT JOIN em_positions p ON p.position_id = e.position_id
@@ -83,7 +83,7 @@ class FacultyProfileManager {
                     e.employment_type,
                     e.employment_status,
                     e.created_at
-                FROM cc_faculty cf
+                FROM gc_faculty cf
                 INNER JOIN em_employees e ON e.employee_id = cf.employee_id
                 LEFT JOIN em_departments d ON d.department_id = e.department_id
                 LEFT JOIN em_positions p ON p.position_id = e.position_id
@@ -106,7 +106,7 @@ class FacultyProfileManager {
                     e.last_name,
                     e.suffix,
                     d.department_name AS department
-                FROM cc_faculty cf
+                FROM gc_faculty cf
                 INNER JOIN em_employees e ON e.employee_id = cf.employee_id
                 LEFT JOIN em_departments d ON d.department_id = e.department_id
                 WHERE e.is_archived = 0
@@ -277,7 +277,7 @@ class FacultyProfileManager {
                     e.suffix,
                     e.employment_type,
                     e.employment_status
-                FROM cc_faculty cf
+                FROM gc_faculty cf
                 INNER JOIN em_employees e ON e.employee_id = cf.employee_id
                 WHERE e.is_archived = 0
                 ORDER BY e.last_name ASC, e.first_name ASC";
@@ -852,7 +852,7 @@ class FacultyProfileManager {
     public function getFacultyRequirementStatusSummary() {
         $sql = "SELECT er.status, COUNT(*) AS total
                 FROM em_requirements er
-                INNER JOIN cc_faculty cf ON cf.employee_id = er.employee_id
+                INNER JOIN gc_faculty cf ON cf.employee_id = er.employee_id
                 GROUP BY er.status
                 ORDER BY er.status ASC";
 

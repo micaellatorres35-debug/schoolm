@@ -50,7 +50,7 @@ foreach ($semesters as $semesterOption) {
     }
 }
 $semester = $semester ?: (!empty($semesters) ? (int)$semesters[0]['id'] : 0);
-$subjects = $db->query("SELECT id, code, name FROM rgr_subjects ORDER BY code")->fetchAll(PDO::FETCH_ASSOC);
+$subjects = $db->query("SELECT id, code, name FROM rgr_subjects WHERE UPPER(code) LIKE 'GE%' ORDER BY code")->fetchAll(PDO::FETCH_ASSOC);
 $faculty_loads = $db->query("SELECT
     fl.id,
     fl.faculty_id,
@@ -60,9 +60,9 @@ $faculty_loads = $db->query("SELECT
     fl.school_year_id,
     CONCAT(f.first_name, ' ', f.last_name) AS faculty_name,
     sec.section_code
-    FROM cc_faculty_load fl
-    INNER JOIN cc_faculty f ON f.id = fl.faculty_id
-    INNER JOIN cc_sections sec ON sec.id = fl.section_id
+    FROM gc_faculty_load fl
+    INNER JOIN gc_faculty f ON f.id = fl.faculty_id
+    INNER JOIN gc_sections sec ON sec.id = fl.section_id
     INNER JOIN rgr_school_years sy ON sy.id = fl.school_year_id AND sy.is_active = 1
     INNER JOIN rgr_semesters sem ON sem.id = fl.semester_id
         AND sem.school_year_id = fl.school_year_id
@@ -71,7 +71,7 @@ $faculty_loads = $db->query("SELECT
       AND fl.semester_id = {$semester}
       AND NOT EXISTS (
           SELECT 1
-          FROM cc_schedule cs
+          FROM gc_schedule cs
           WHERE cs.faculty_load_id = fl.id
             AND cs.schedule_type = 'Class'
             AND cs.status = 'Scheduled'
@@ -83,9 +83,9 @@ $edit_faculty_loads_stmt = $db->prepare("SELECT
     fl.id, fl.faculty_id, fl.subject_id, fl.section_id, fl.semester_id, fl.school_year_id,
     CONCAT(f.first_name, ' ', f.last_name) AS faculty_name,
     sec.section_code
-    FROM cc_faculty_load fl
-    INNER JOIN cc_faculty f ON f.id = fl.faculty_id
-    INNER JOIN cc_sections sec ON sec.id = fl.section_id
+    FROM gc_faculty_load fl
+    INNER JOIN gc_faculty f ON f.id = fl.faculty_id
+    INNER JOIN gc_sections sec ON sec.id = fl.section_id
     INNER JOIN rgr_school_years sy ON sy.id = fl.school_year_id AND sy.is_active = 1
     INNER JOIN rgr_semesters sem ON sem.id = fl.semester_id
         AND sem.school_year_id = fl.school_year_id
@@ -96,7 +96,7 @@ $edit_faculty_loads = $edit_faculty_loads_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $getActiveFacultyLoad = static function (PDO $db, int $facultyLoadId, int $schoolYearId, int $semesterId): ?array {
     $stmt = $db->prepare("SELECT fl.faculty_id, fl.subject_id, fl.section_id, fl.semester_id, fl.school_year_id
-        FROM cc_faculty_load fl
+        FROM gc_faculty_load fl
         INNER JOIN rgr_school_years sy ON sy.id = fl.school_year_id AND sy.is_active = 1
         INNER JOIN rgr_semesters sem ON sem.id = fl.semester_id
             AND sem.school_year_id = fl.school_year_id
@@ -111,6 +111,25 @@ $getActiveFacultyLoad = static function (PDO $db, int $facultyLoadId, int $schoo
     $stmt->execute();
     $load = $stmt->fetch(PDO::FETCH_ASSOC);
     return $load ?: null;
+};
+
+$isActiveFacultyAssignment = static function (PDO $db, int $facultyId, int $schoolYearId, int $semesterId): bool {
+    $stmt = $db->prepare("SELECT 1
+        FROM gc_faculty_load fl
+        INNER JOIN rgr_school_years sy ON sy.id = fl.school_year_id AND sy.is_active = 1
+        INNER JOIN rgr_semesters sem ON sem.id = fl.semester_id
+            AND sem.school_year_id = fl.school_year_id
+            AND sem.is_active = 1
+        WHERE fl.faculty_id = :faculty_id
+          AND fl.school_year_id = :school_year_id
+          AND fl.semester_id = :semester_id
+        LIMIT 1");
+    $stmt->execute([
+        ':faculty_id' => $facultyId,
+        ':school_year_id' => $schoolYearId,
+        ':semester_id' => $semesterId,
+    ]);
+    return (bool)$stmt->fetchColumn();
 };
 
 // Remaining filter values use IDs from the selected academic period.
@@ -168,11 +187,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     throw new Exception('Break Time requires an Assigned Faculty.');
                 }
 
-                $facultyStmt = $db->prepare('SELECT id FROM cc_faculty WHERE id = :faculty_id LIMIT 1');
-                $facultyStmt->bindValue(':faculty_id', (int)$schedule->faculty_id, PDO::PARAM_INT);
-                $facultyStmt->execute();
-                if (!$facultyStmt->fetchColumn()) {
-                    throw new Exception('The selected Assigned Faculty does not exist.');
+                if (!$isActiveFacultyAssignment($db, (int)$schedule->faculty_id, (int)$school_year, (int)$semester)) {
+                    throw new Exception('Break Time requires a faculty member assigned to the selected active school year and semester.');
                 }
             } elseif (empty($schedule->room_id)) {
                 throw new Exception('Class schedules require a Room.');
@@ -237,6 +253,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $schedule->faculty_load_id = 0;
                 $schedule->subject_id = 0;
                 $schedule->grade_section_id = 0;
+                if (!$isActiveFacultyAssignment($db, (int)$schedule->faculty_id, (int)$schedule->school_year_id, (int)$schedule->semester_id)) {
+                    throw new Exception('Break Time requires a faculty member assigned to the selected active school year and semester.');
+                }
             }
 
             // If a faculty load was selected, auto-fill faculty, subject, section
@@ -299,12 +318,31 @@ $distinct_days = $distinct_days_result ? $distinct_days_result->fetchAll() : [];
 
 $distinct_rooms_result = $schedule->getDistinctRooms($semester, $school_year);
 $distinct_rooms = $distinct_rooms_result ? $distinct_rooms_result->fetchAll() : [];
-$all_rooms = $db->query("SELECT id AS room_id, room_name AS room FROM cc_room WHERE status = 'Available' ORDER BY room_name")->fetchAll(PDO::FETCH_ASSOC);
+$all_rooms = $db->query("SELECT id AS room_id, room_name AS room FROM gc_room WHERE status = 'Available' ORDER BY room_name")->fetchAll(PDO::FETCH_ASSOC);
+$schedule_rooms = $db->query("SELECT id AS room_id, room_name AS room FROM gc_room
+    WHERE status = 'Available'
+      AND room_type NOT IN ('Computer Laboratory', 'Science Laboratory')
+    ORDER BY room_name")->fetchAll(PDO::FETCH_ASSOC);
 
 // Get data for dropdowns
-$all_faculty = $db->query("SELECT id, faculty_code, first_name, last_name FROM cc_faculty ORDER BY last_name")->fetchAll();
+$all_faculty = $db->query("SELECT id, faculty_code, first_name, last_name FROM gc_faculty ORDER BY last_name")->fetchAll();
+$assigned_faculty_stmt = $db->prepare("SELECT DISTINCT f.id, f.faculty_code, f.first_name, f.last_name
+    FROM gc_faculty_load fl
+    INNER JOIN gc_faculty f ON f.id = fl.faculty_id
+    INNER JOIN rgr_school_years sy ON sy.id = fl.school_year_id AND sy.is_active = 1
+    INNER JOIN rgr_semesters sem ON sem.id = fl.semester_id
+        AND sem.school_year_id = fl.school_year_id
+        AND sem.is_active = 1
+    WHERE fl.school_year_id = :school_year_id
+      AND fl.semester_id = :semester_id
+    ORDER BY f.last_name, f.first_name");
+$assigned_faculty_stmt->execute([
+    ':school_year_id' => $school_year,
+    ':semester_id' => $semester,
+]);
+$assigned_faculty = $assigned_faculty_stmt->fetchAll(PDO::FETCH_ASSOC);
 $all_courses = $db->query("SELECT id, code, name FROM rgr_courses ORDER BY code")->fetchAll(PDO::FETCH_ASSOC);
-$all_sections = $db->query("SELECT cs.id, cs.section_code, cs.grade_level, c.code AS program FROM cc_sections cs LEFT JOIN rgr_courses c ON cs.program_id = c.id ORDER BY cs.section_code")->fetchAll();
+$all_sections = $db->query("SELECT cs.id, cs.section_code, cs.grade_level, c.code AS program FROM gc_sections cs LEFT JOIN rgr_courses c ON cs.program_id = c.id ORDER BY cs.section_code")->fetchAll();
 
 // Calculate statistics using the new method
 $stats = $schedule->getStatistics($semester, $school_year);
@@ -378,11 +416,8 @@ $school_year_map = array_column($school_years, 'name', 'id');
 
         <!-- Tabs -->
         <div class="tabs">
-            <button type="button" class="tab <?= !isset($_GET['action']) || $_GET['action'] == 'add' ? 'active' : '' ?>" data-tab="add">
+            <button type="button" class="tab <?= !isset($_GET['action']) || in_array($_GET['action'], ['add', 'proctoring'], true) ? 'active' : '' ?>" data-tab="add">
                 <i class="fas fa-plus-circle"></i> Add Schedule
-            </button>
-            <button type="button" class="tab <?= isset($_GET['action']) && $_GET['action'] == 'proctoring' ? 'active' : '' ?>" data-tab="proctoring">
-                <i class="fas fa-user-shield"></i> Exam Proctoring
             </button>
         </div>
 
@@ -442,7 +477,7 @@ $school_year_map = array_column($school_years, 'name', 'id');
         </div>
 
         <!-- Add Schedule Tab -->
-        <div id="add-tab" class="tab-content <?= isset($_GET['action']) && $_GET['action'] == 'add' ? 'active' : '' ?>">
+        <div id="add-tab" class="tab-content <?= !isset($_GET['action']) || in_array($_GET['action'], ['add', 'proctoring'], true) ? 'active' : '' ?>">
             <h2><i class="fas fa-plus-circle"></i> Add New Schedule</h2>
             
             <form id="addForm" method="POST" class="form-grid" data-custom-submit onsubmit="return validateForm()">
@@ -452,7 +487,7 @@ $school_year_map = array_column($school_years, 'name', 'id');
                         <label for="room_id">Room</label>
                         <select id="room_id" name="room_id" required>
                             <option value="">Select Room</option>
-                            <?php foreach ($all_rooms as $room_item): ?>
+                            <?php foreach ($schedule_rooms as $room_item): ?>
                                 <option value="<?= (int)$room_item['room_id'] ?>"><?= htmlspecialchars($room_item['room']) ?></option>
                             <?php endforeach; ?>
                         </select>
@@ -532,7 +567,7 @@ $school_year_map = array_column($school_years, 'name', 'id');
                         <label for="faculty_id">Assigned Faculty</label>
                         <select id="faculty_id" name="faculty_id" required>
                             <option value="">Select Faculty</option>
-                            <?php foreach ($all_faculty as $fac): ?>
+                            <?php foreach ($assigned_faculty as $fac): ?>
                                 <option value="<?= (int)$fac['id'] ?>">
                                     <?= htmlspecialchars($fac['last_name']) ?>, <?= htmlspecialchars($fac['first_name']) ?> (<?= htmlspecialchars($fac['faculty_code']) ?>)
                                 </option>
@@ -671,106 +706,6 @@ $school_year_map = array_column($school_years, 'name', 'id');
             </div>
         </div>
 
-        <!-- Exam Proctoring Tab -->
-        <div id="proctoring-tab" class="tab-content <?= isset($_GET['action']) && $_GET['action'] == 'proctoring' ? 'active' : '' ?>">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 15px; flex-wrap: wrap;">
-                <h2><i class="fas fa-user-shield"></i> Exam Proctoring Assignment</h2>
-                <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                    <button type="button" class="btn btn-success" onclick="openExamModal()"><i class="fas fa-file-medical"></i> Create Exam</button>
-                    <button type="button" class="btn btn-primary" onclick="openExamScheduleModal()"><i class="fas fa-calendar-plus"></i> Add Exam Schedule</button>
-                    <button type="button" class="btn btn-primary" onclick="openProctorModal()"><i class="fas fa-plus"></i> Assign Proctor</button>
-                    <button type="button" class="btn btn-secondary" onclick="printProctorSchedule()"><i class="fas fa-print"></i> Print Schedule</button>
-                </div>
-            </div>
-            <div class="filters" style="margin-bottom: 20px;">
-                <div class="filter-group">
-                    <div class="filter-item"><label for="proctorSemesterFilter">Semester</label><select id="proctorSemesterFilter">
-                        <option value="">All Semesters</option>
-                        <?php foreach ($semesters as $sem): ?><option value="<?= (int)$sem['id'] ?>" <?= $semester == $sem['id'] ? 'selected' : '' ?>><?= htmlspecialchars($sem['name']) ?></option><?php endforeach; ?>
-                    </select></div>
-                    <div class="filter-item"><label for="proctorSchoolYearFilter">School Year</label><select id="proctorSchoolYearFilter">
-                        <option value="">All School Years</option>
-                        <?php foreach ($school_years as $sy): ?><option value="<?= (int)$sy['id'] ?>" <?= $school_year == $sy['id'] ? 'selected' : '' ?>><?= htmlspecialchars($sy['name']) ?></option><?php endforeach; ?>
-                    </select></div>
-                    <div class="filter-item"><label for="proctorExamFilter">Exam</label><select id="proctorExamFilter"><option value="">All Exams</option></select></div>
-                    <div class="filter-item"><label for="proctorStatusFilter">Status</label><select id="proctorStatusFilter"><option value="Assigned" selected>Assigned</option><option value="Confirmed">Confirmed</option><option value="Completed">Completed</option><option value="Cancelled">Cancelled</option><option value="">All Statuses</option></select></div>
-                    <div class="filter-item"><button type="button" class="btn btn-primary" onclick="loadProctorAssignments()"><i class="fas fa-filter"></i> Apply Filters</button> <button type="button" class="btn btn-warning" onclick="clearProctorFilters()"><i class="fas fa-times"></i> Clear</button></div>
-                </div>
-            </div>
-            <div class="table-container"><table class="data-table"><thead><tr>
-                <th>Exam</th><th>Subject</th><th>Section</th><th>Room</th><th>Exam Date</th><th>Time</th><th>Proctor</th><th>Role</th><th>Status</th><th>Actions</th>
-            </tr></thead><tbody id="proctorAssignmentsBody"><tr><td colspan="10" style="text-align:center;">Loading assignments...</td></tr></tbody></table></div>
-            <h3 style="margin: 25px 0 12px;"><i class="fas fa-calendar-alt"></i> Exam Schedule List</h3>
-            <div class="table-container"><table class="data-table"><thead><tr>
-                <th>Type</th><th>Exam</th><th>Subject</th><th>Section</th><th>Room</th><th>Date</th><th>Time</th><th>Status</th>
-            </tr></thead><tbody id="examSchedulesBody"><tr><td colspan="8" style="text-align:center;">Loading schedules...</td></tr></tbody></table></div>
-        </div>
-    </div>
-
-    <!-- Create Examination Modal -->
-    <div id="examModal" class="modal">
-        <div class="modal-content" style="max-width: 760px;">
-            <div class="modal-header"><h2><i class="fas fa-file-medical"></i> Create Examination</h2><button class="close-modal" type="button" onclick="closeExamModal()">&times;</button></div>
-            <form id="examForm" onsubmit="submitExam(event)">
-                <div class="form-grid">
-                    <div class="form-group"><label for="examName">Exam Name</label><input type="text" name="exam_name" id="examName" required></div>
-                    <div class="form-group"><label for="examType">Exam Type</label><select name="exam_type" id="examType" required><option value="">Select Exam Type</option><option value="Preliminary">Prelim</option><option value="Midterm">Midterm</option><option value="Final">Final</option><option value="Special">Special</option></select></div>
-                    <div class="form-group"><label for="examSchoolYear">School Year</label><select name="school_year_id" id="examSchoolYear" required><?php foreach ($school_years as $sy): ?><option value="<?= (int)$sy['id'] ?>" <?= $school_year == $sy['id'] ? 'selected' : '' ?>><?= htmlspecialchars($sy['name']) ?></option><?php endforeach; ?></select></div>
-                    <div class="form-group"><label for="examSemester">Semester</label><select name="semester_id" id="examSemester" required><?php foreach ($semesters as $sem): ?><option value="<?= (int)$sem['id'] ?>" <?= $semester == $sem['id'] ? 'selected' : '' ?>><?= htmlspecialchars($sem['name']) ?></option><?php endforeach; ?></select></div>
-                    <div class="form-group"><label for="examStartDate">Start Date</label><input type="date" name="start_date" id="examStartDate" required></div>
-                    <div class="form-group"><label for="examEndDate">End Date</label><input type="date" name="end_date" id="examEndDate" required></div>
-                    <div class="form-group"><label for="examStatus">Status</label><select name="status" id="examStatus" required><option value="Scheduled">Scheduled</option><option value="Draft">Draft</option><option value="Completed">Completed</option><option value="Cancelled">Cancelled</option></select></div>
-                </div>
-                <div style="text-align:center; margin-top:15px;"><button type="button" class="btn btn-warning" onclick="closeExamModal()">Cancel</button> <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Save Examination</button></div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Add Exam Schedule Modal -->
-    <div id="examScheduleModal" class="modal">
-        <div class="modal-content" style="max-width: 760px;">
-            <div class="modal-header"><h2><i class="fas fa-calendar-plus"></i> Add Exam Schedule</h2><button class="close-modal" type="button" onclick="closeExamScheduleModal()">&times;</button></div>
-            <form id="examScheduleForm" onsubmit="submitExamSchedule(event)">
-                <div class="form-grid">
-                    <div class="form-group" style="grid-column:1/-1;"><label for="scheduleExamId">Exam</label><select name="exam_id" id="scheduleExamId" required></select><small id="scheduleExamContext" style="display:block;margin-top:5px;color:#666;"></small></div>
-                    <div class="form-group"><label for="scheduleType">Schedule Type</label><select name="schedule_type" id="scheduleType" required><option value="Exam">Exam</option><option value="Break Time">Break Time</option></select></div>
-                    <div id="examScheduleClassFields" style="display: contents;">
-                        <div class="form-group"><label for="scheduleCourseId">Course</label><select id="scheduleCourseId"><option value="">Select Course</option>
-<?php foreach ($all_courses as $course): ?>
-<option value="<?= (int)$course['id'] ?>"><?= htmlspecialchars($course['code']) ?> - <?= htmlspecialchars($course['name']) ?></option>
-<?php endforeach; ?>
-</select></div>
-                        <div class="form-group"><label for="scheduleYearLevel">Year Level</label><select id="scheduleYearLevel"><option value="">Select Year Level</option><option value="1st Year">1st Year</option><option value="2nd Year">2nd Year</option><option value="3rd Year">3rd Year</option><option value="4th Year">4th Year</option></select></div>
-                        <div class="form-group"><label for="scheduleSubjectId">Subject</label><select name="subject_id" id="scheduleSubjectId" required></select></div>
-                        <div class="form-group"><label for="scheduleSectionId">Section</label><select name="section_id" id="scheduleSectionId" required></select></div>
-                        <div class="form-group"><label for="scheduleRoomId">Room</label><select name="room_id" id="scheduleRoomId" required></select></div>
-                    </div>
-                    <div class="form-group"><label for="scheduleExamDate">Exam Date</label><input type="date" name="exam_date" id="scheduleExamDate" required></div>
-                    <div class="form-group"><label for="scheduleStartTime">Start Time</label><input type="time" name="start_time" id="scheduleStartTime" required></div>
-                    <div class="form-group"><label for="scheduleEndTime">End Time</label><input type="time" name="end_time" id="scheduleEndTime" required></div>
-                    <div class="form-group"><label for="scheduleStatus">Status</label><select name="status" id="scheduleStatus" required><option value="Scheduled">Scheduled</option><option value="Draft">Draft</option><option value="Completed">Completed</option><option value="Cancelled">Cancelled</option></select></div>
-                </div>
-                <div style="text-align:center; margin-top:15px;"><button type="button" class="btn btn-warning" onclick="closeExamScheduleModal()">Cancel</button> <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Save Schedule</button></div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Exam Proctor Modal -->
-    <div id="proctorModal" class="modal">
-        <div class="modal-content" style="max-width: 700px;">
-            <div class="modal-header"><h2 id="proctorModalTitle"><i class="fas fa-user-shield"></i> Assign Exam Proctor</h2><button class="close-modal" type="button" onclick="closeProctorModal()">&times;</button></div>
-            <form id="proctorForm" onsubmit="submitProctor(event)">
-                <input type="hidden" name="id" id="proctorAssignmentId">
-                <div class="form-group"><label for="proctorScheduleId">Exam Schedule</label><select name="exam_schedule_id" id="proctorScheduleId" required><option value="">Select Exam Schedule</option></select></div>
-                <div id="proctorScheduleInfo" class="form-card" style="margin-bottom: 15px; min-height: 20px;"></div>
-                <div class="form-grid" style="margin-bottom: 10px;">
-                    <div class="form-group"><label for="proctorFacultyId">Faculty / Proctor</label><select name="faculty_id" id="proctorFacultyId" required><option value="">Select Faculty</option></select></div>
-                    <div class="form-group"><label for="proctorRole">Role</label><select name="role" id="proctorRole" required><option value="Proctor">Proctor</option><option value="Lead Proctor">Lead Proctor</option><option value="Reliever">Reliever</option></select></div>
-                    <div class="form-group"><label for="proctorStatus">Status</label><select name="status" id="proctorStatus" required><option value="Assigned">Assigned</option><option value="Confirmed">Confirmed</option><option value="Completed">Completed</option><option value="Cancelled">Cancelled</option></select></div>
-                </div>
-                <div style="text-align: center; margin-top: 15px;"><button type="button" class="btn btn-warning" onclick="closeProctorModal()">Cancel</button> <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Save Assignment</button></div>
-            </form>
-        </div>
     </div>
 
     <!-- Edit Modal -->
@@ -790,7 +725,7 @@ $school_year_map = array_column($school_years, 'name', 'id');
                         <label>Room</label>
                         <select name="room_id" id="edit_room" required>
                             <option value="">Select Room</option>
-                            <?php foreach ($all_rooms as $room_item): ?>
+                            <?php foreach ($schedule_rooms as $room_item): ?>
                                 <option value="<?= (int)$room_item['room_id'] ?>"><?= htmlspecialchars($room_item['room']) ?></option>
                             <?php endforeach; ?>
                         </select>
@@ -866,7 +801,7 @@ $school_year_map = array_column($school_years, 'name', 'id');
                     <div class="form-group">
                         <label>Assigned Faculty</label>
                         <select name="faculty_id" id="edit_faculty_id" required>
-                            <?php foreach ($all_faculty as $fac): ?>
+                            <?php foreach ($assigned_faculty as $fac): ?>
                                 <option value="<?= (int)$fac['id'] ?>"><?= htmlspecialchars($fac['last_name']) ?>, <?= htmlspecialchars($fac['first_name']) ?> (<?= htmlspecialchars($fac['faculty_code']) ?>)</option>
                             <?php endforeach; ?>
                         </select>

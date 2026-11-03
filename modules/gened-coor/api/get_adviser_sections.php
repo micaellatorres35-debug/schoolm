@@ -28,14 +28,14 @@ try {
         sec.program_id,
         c.code AS program_code,
         c.name AS program_name
-    FROM cc_sections sec
+    FROM gc_sections sec
     LEFT JOIN rgr_courses c ON sec.program_id = c.id
     WHERE sec.school_year_id = :school_year_id
     AND sec.semester_id = :semester_id";
 
     if ($facultyId) {
         $sql .= " AND NOT EXISTS (
-            SELECT 1 FROM cc_section_faculty sf
+            SELECT 1 FROM gc_section_faculty sf
             WHERE sf.section_id = sec.id
             AND sf.faculty_id = :faculty_id
             AND sf.role = 'Instructor'

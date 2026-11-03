@@ -35,7 +35,7 @@ try {
     $db = $database->getConnection();
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    $sectionQuery = "SELECT school_year_id, semester_id FROM cc_sections WHERE id = :section_id LIMIT 1";
+    $sectionQuery = "SELECT school_year_id, semester_id FROM gc_sections WHERE id = :section_id LIMIT 1";
     $sectionStmt = $db->prepare($sectionQuery);
 
     $semesterCheckQuery = "SELECT school_year_id FROM rgr_semesters WHERE id = :semester_id LIMIT 1";
@@ -45,7 +45,7 @@ try {
     $db->beginTransaction();
 
     // Check for existing duplicates and insert using section period values
-    $checkQuery = "SELECT COUNT(*) as cnt FROM cc_faculty_load 
+    $checkQuery = "SELECT COUNT(*) as cnt FROM gc_faculty_load 
                    WHERE faculty_id = :faculty_id 
                    AND section_id = :section_id 
                    AND subject_id = :subject_id 
@@ -53,7 +53,7 @@ try {
                    AND semester_id = :semester_id";
     $checkStmt = $db->prepare($checkQuery);
 
-    $insertQuery = "INSERT INTO cc_faculty_load (faculty_id, section_id, subject_id, school_year_id, semester_id, created_at) 
+    $insertQuery = "INSERT INTO gc_faculty_load (faculty_id, section_id, subject_id, school_year_id, semester_id, created_at) 
                     VALUES (:faculty_id, :section_id, :subject_id, :school_year_id, :semester_id, NOW())";
     $insertStmt = $db->prepare($insertQuery);
 
@@ -108,7 +108,7 @@ try {
     // Calculate Classes Assigned (COUNT DISTINCT section_id)
     $school_year_id = (int)$section['school_year_id'];
     $classesQuery = "SELECT COUNT(DISTINCT section_id) as classes_assigned 
-                     FROM cc_faculty_load 
+                     FROM gc_faculty_load 
                      WHERE faculty_id = :faculty_id 
                      AND school_year_id = :school_year_id 
                      AND semester_id = :semester_id";
@@ -125,7 +125,7 @@ try {
 
     // Calculate Total Units (SUM rgr_subjects.units)
     $unitsQuery = "SELECT COALESCE(SUM(s.units), 0) as total_units 
-                   FROM cc_faculty_load fl
+                   FROM gc_faculty_load fl
                    JOIN rgr_subjects s ON fl.subject_id = s.id
                    WHERE fl.faculty_id = :faculty_id 
                    AND fl.school_year_id = :school_year_id 

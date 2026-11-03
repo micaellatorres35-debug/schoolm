@@ -1,7 +1,7 @@
 <?php
 class Schedule {
     private $conn;
-    private $table = "cc_schedule";
+    private $table = "gc_schedule";
 
     public $id;
     public $room_id;
@@ -79,8 +79,8 @@ class Schedule {
                          sem.name AS semester_name, sy.name AS school_year_name,
                          {$this->roomSelectExpression()}
                   FROM {$this->table} s
-                  LEFT JOIN cc_faculty f ON s.faculty_id = f.id
-                  LEFT JOIN cc_sections sec ON s.section_id = sec.id
+                  LEFT JOIN gc_faculty f ON s.faculty_id = f.id
+                  LEFT JOIN gc_sections sec ON s.section_id = sec.id
                   LEFT JOIN rgr_semesters sem ON s.semester_id = sem.id
                   LEFT JOIN rgr_school_years sy ON s.school_year_id = sy.id
                   {$this->roomJoinClause()}
@@ -268,7 +268,7 @@ class Schedule {
 
         // delete schedule
         $stmt2 = $this->conn->prepare(
-            "DELETE FROM cc_schedule WHERE id = ?"
+            "DELETE FROM gc_schedule WHERE id = ?"
         );
         return $stmt2->execute([$this->id]);
 
@@ -289,8 +289,8 @@ class Schedule {
                          {$this->roomSelectExpression()}";
 
         $from = " FROM {$this->table} s
-                  LEFT JOIN cc_faculty f ON s.faculty_id = f.id
-                  LEFT JOIN cc_sections sec ON s.section_id = sec.id
+                  LEFT JOIN gc_faculty f ON s.faculty_id = f.id
+                  LEFT JOIN gc_sections sec ON s.section_id = sec.id
                   LEFT JOIN rgr_courses c ON sec.program_id = c.id
                   LEFT JOIN rgr_subjects subj ON s.subject_id = subj.id
                   LEFT JOIN rgr_semesters sem ON s.semester_id = sem.id
@@ -360,7 +360,7 @@ class Schedule {
     // NEW: Get distinct rooms for a semester and school year
     public function getDistinctRooms($semester, $school_year) {
         $query = "SELECT DISTINCT cr.id AS room_id, cr.room_name AS room
-                  FROM cc_room cr
+                  FROM gc_room cr
                   INNER JOIN {$this->table} s ON s.room_id = cr.id
                   WHERE cr.status = 'Available'
                   AND s.semester_id = ?
@@ -380,9 +380,9 @@ class Schedule {
         $query = "SELECT s.*, sec.section_code, sec.grade_level, subj.code AS subject_code, subj.name AS subject_name,
                          cr.room_name AS room
                   FROM " . $this->table . " s
-                  LEFT JOIN cc_sections sec ON s.section_id = sec.id
+                  LEFT JOIN gc_sections sec ON s.section_id = sec.id
                   LEFT JOIN rgr_subjects subj ON s.subject_id = subj.id
-                  LEFT JOIN cc_room cr ON s.room_id = cr.id
+                  LEFT JOIN gc_room cr ON s.room_id = cr.id
                   LEFT JOIN rgr_semesters sem ON s.semester_id = sem.id
                   LEFT JOIN rgr_school_years sy ON s.school_year_id = sy.id
                   WHERE s.faculty_id = ?
@@ -404,9 +404,9 @@ class Schedule {
         $query = "SELECT s.*, f.first_name, f.last_name, f.faculty_code, subj.code AS subject_code, subj.name AS subject_name,
                          cr.room_name AS room
                   FROM " . $this->table . " s
-                  LEFT JOIN cc_faculty f ON s.faculty_id = f.id
+                  LEFT JOIN gc_faculty f ON s.faculty_id = f.id
                   LEFT JOIN rgr_subjects subj ON s.subject_id = subj.id
-                  LEFT JOIN cc_room cr ON s.room_id = cr.id
+                  LEFT JOIN gc_room cr ON s.room_id = cr.id
                   LEFT JOIN rgr_semesters sem ON s.semester_id = sem.id
                   LEFT JOIN rgr_school_years sy ON s.school_year_id = sy.id
                   WHERE s.section_id = ?
@@ -428,10 +428,10 @@ class Schedule {
         $query = "SELECT s.*, f.first_name, f.last_name, sec.section_code, subj.code AS subject_code, subj.name AS subject_name,
                          cr.room_name AS room
                   FROM " . $this->table . " s
-                  LEFT JOIN cc_faculty f ON s.faculty_id = f.id
-                  LEFT JOIN cc_sections sec ON s.section_id = sec.id
+                  LEFT JOIN gc_faculty f ON s.faculty_id = f.id
+                  LEFT JOIN gc_sections sec ON s.section_id = sec.id
                   LEFT JOIN rgr_subjects subj ON s.subject_id = subj.id
-                  LEFT JOIN cc_room cr ON s.room_id = cr.id
+                  LEFT JOIN gc_room cr ON s.room_id = cr.id
                   LEFT JOIN rgr_semesters sem ON s.semester_id = sem.id
                   LEFT JOIN rgr_school_years sy ON s.school_year_id = sy.id
                   WHERE s.room_id = ?
@@ -547,7 +547,7 @@ class Schedule {
                     MIN(s.start_time) as earliest_start,
                     MAX(s.end_time) as latest_end
                   FROM " . $this->table . " s
-                  LEFT JOIN cc_room cr ON s.room_id = cr.id";
+                  LEFT JOIN gc_room cr ON s.room_id = cr.id";
 
         if ($useIds) {
             $query .= " WHERE s.semester_id = ? AND s.school_year_id = ?";
@@ -573,10 +573,10 @@ class Schedule {
                          sec.section_code, sec.grade_level, subj.code AS subject_code, subj.name AS subject_name,
                         cr.room_name AS room
                   FROM " . $this->table . " s
-                  LEFT JOIN cc_faculty f ON s.faculty_id = f.id
-                  LEFT JOIN cc_sections sec ON s.section_id = sec.id
+                  LEFT JOIN gc_faculty f ON s.faculty_id = f.id
+                  LEFT JOIN gc_sections sec ON s.section_id = sec.id
                   LEFT JOIN rgr_subjects subj ON s.subject_id = subj.id
-                  LEFT JOIN cc_room cr ON s.room_id = cr.id";
+                  LEFT JOIN gc_room cr ON s.room_id = cr.id";
 
             if ($useIds) {
                 $query .= " WHERE (cr.room_name LIKE ? OR subj.code LIKE ? OR f.first_name LIKE ? OR f.last_name LIKE ? OR sec.section_code LIKE ?) AND s.semester_id = ? AND s.school_year_id = ? ORDER BY s.day_of_week, s.start_time";
@@ -666,21 +666,21 @@ class Schedule {
     }
 
     private function roomJoinClause() {
-        if ($this->tableExists('cc_room')) {
-            return ' LEFT JOIN cc_room cr ON cr.id = s.room_id ';
+        if ($this->tableExists('gc_room')) {
+            return ' LEFT JOIN gc_room cr ON cr.id = s.room_id ';
         }
         return '';
     }
 
     private function roomSelectExpression() {
-        if ($this->tableExists('cc_room')) {
+        if ($this->tableExists('gc_room')) {
             return 'cr.room_name AS room';
         }
         return 'NULL AS room';
     }
 
     private function roomReferenceExpression() {
-        if ($this->tableExists('cc_room')) {
+        if ($this->tableExists('gc_room')) {
             return 's.room_id';
         }
         return '\'\'';

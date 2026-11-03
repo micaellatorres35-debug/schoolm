@@ -1,5 +1,5 @@
 ALTER TABLE rgr_subjects
-    ADD COLUMN description TEXT NULL AFTER name;
+    ADD COLUMN IF NOT EXISTS description TEXT NULL AFTER name;
 
 CREATE TABLE IF NOT EXISTS enr_prerequisites (
     id INT NOT NULL AUTO_INCREMENT,

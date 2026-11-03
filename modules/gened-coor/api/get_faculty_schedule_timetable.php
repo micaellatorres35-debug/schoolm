@@ -34,9 +34,9 @@ try {
                 f.first_name,
                 f.last_name,
                 f.faculty_code
-              FROM cc_schedule cs
-              LEFT JOIN cc_faculty f ON cs.faculty_id = f.id
-              LEFT JOIN cc_sections sec ON cs.section_id = sec.id
+              FROM gc_schedule cs
+              LEFT JOIN gc_faculty f ON cs.faculty_id = f.id
+              LEFT JOIN gc_sections sec ON cs.section_id = sec.id
               LEFT JOIN rgr_subjects subj ON cs.subject_id = subj.id
               LEFT JOIN cc_room cr ON cs.room_id = cr.id
               LEFT JOIN rgr_semesters sem ON cs.semester_id = sem.id

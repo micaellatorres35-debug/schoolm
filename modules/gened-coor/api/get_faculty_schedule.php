@@ -21,10 +21,10 @@ try {
                                 cs.schedule_type,
                                 CONCAT(cr.room_code, ' - ', cr.room_name) AS room,
                                 sec.section_code
-              FROM cc_schedule cs
-                            LEFT JOIN cc_sections sec ON cs.section_id = sec.id
+              FROM gc_schedule cs
+                            LEFT JOIN gc_sections sec ON cs.section_id = sec.id
                             LEFT JOIN rgr_subjects subj ON cs.subject_id = subj.id
-                            LEFT JOIN cc_room cr ON cs.room_id = cr.id
+                            LEFT JOIN gc_room cr ON cs.room_id = cr.id
               WHERE cs.faculty_id = :faculty_id
               ORDER BY 
                 FIELD(cs.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'),

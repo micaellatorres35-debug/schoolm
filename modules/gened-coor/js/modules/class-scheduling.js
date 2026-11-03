@@ -124,11 +124,6 @@ function showTab(tabName, clickedElement = null) {
     const target = document.getElementById(tabName + '-tab');
     if (target) target.classList.add('active');
 
-    const classScheduleFilters = document.getElementById('classScheduleFilters');
-    if (classScheduleFilters) {
-        classScheduleFilters.style.display = tabName === 'proctoring' ? 'none' : '';
-    }
-
     if (clickedElement) {
         clickedElement.classList.add('active');
     }
@@ -152,11 +147,7 @@ document.addEventListener('click', function (event) {
 // Set active tab based on URL
 const urlParams = new URLSearchParams(window.location.search);
 const actionParam = urlParams.get('action');
-const classScheduleFilters = document.getElementById('classScheduleFilters');
-if (classScheduleFilters && actionParam === 'proctoring') {
-    classScheduleFilters.style.display = 'none';
-}
-if (actionParam && ['view', 'add', 'proctoring'].includes(actionParam)) {
+if (actionParam && ['view', 'add'].includes(actionParam)) {
     document.querySelectorAll('.tab-content').forEach(tab => {
         tab.classList.remove('active');
     });
@@ -1252,61 +1243,14 @@ window.addEventListener('page:loaded', function (event) {
     const editScheduleType = document.getElementById('edit_schedule_type');
     if (editScheduleType) editScheduleType.dispatchEvent(new Event('change'));
 
-    initProctoringTab();
+    initClassScheduling();
 });
 
-function initProctoringTab() {
-    const scheduleIdSelect = document.getElementById('proctorScheduleId');
-    if (scheduleIdSelect && !scheduleIdSelect.dataset.listenerAttached) {
-        scheduleIdSelect.dataset.listenerAttached = 'true';
-        scheduleIdSelect.addEventListener('change', updateProctorScheduleInfo);
-    }
-
-    const examIdSelect = document.getElementById('scheduleExamId');
-    if (examIdSelect && !examIdSelect.dataset.listenerAttached) {
-        examIdSelect.dataset.listenerAttached = 'true';
-        examIdSelect.addEventListener('change', updateExamScheduleContext);
-    }
-
+function initClassScheduling() {
     const scheduleTypeSelect = document.getElementById('schedule_type');
     if (scheduleTypeSelect && !scheduleTypeSelect.dataset.listenerAttached) {
         scheduleTypeSelect.dataset.listenerAttached = 'true';
         scheduleTypeSelect.addEventListener('change', updateScheduleTypeFields);
-    }
-
-    // Ensure the Add Exam Schedule modal's Schedule Type has a change listener
-    const scheduleTypeModal = document.getElementById('scheduleType');
-    console.log('scheduleType element found:', scheduleTypeModal);
-    if (scheduleTypeModal && !scheduleTypeModal.dataset.listenerAttached) {
-        scheduleTypeModal.dataset.listenerAttached = 'true';
-        scheduleTypeModal.addEventListener('change', updateExamScheduleTypeFields);
-    }
-
-    ['scheduleCourseId', 'scheduleYearLevel'].forEach(function (id) {
-        const el = document.getElementById(id);
-        if (el && !el.dataset.listenerAttached) {
-            el.dataset.listenerAttached = 'true';
-            el.addEventListener('change', function () {
-                updateScheduleSectionOptions();
-                updateScheduleSubjectOptions();
-            });
-        }
-    });
-
-    ['proctorSemesterFilter', 'proctorSchoolYearFilter'].forEach(function (id) {
-        const el = document.getElementById(id);
-        if (el && !el.dataset.listenerAttached) {
-            el.dataset.listenerAttached = 'true';
-            el.addEventListener('change', function () {
-                loadProctorReferenceData().catch(function (error) {
-                    alert(error.message);
-                });
-            });
-        }
-    });
-
-    if (document.getElementById('proctoring-tab')) {
-        loadProctorReferenceData().then(loadProctorAssignments).catch(console.error);
     }
 }
 
@@ -1314,20 +1258,6 @@ const classSchedulingExports = [
     'showTab',
     'printSchedule',
     'deleteSchedule',
-    'openExamModal',
-    'closeExamModal',
-    'openExamScheduleModal',
-    'closeExamScheduleModal',
-    'openProctorModal',
-    'closeProctorModal',
-    'submitExam',
-    'submitExamSchedule',
-    'submitProctor',
-    'editProctor',
-    'cancelProctor',
-    'clearProctorFilters',
-    'printProctorSchedule',
-    'loadProctorAssignments',
     'exportToCSV',
     'editSchedule',
     'closeEditModal',

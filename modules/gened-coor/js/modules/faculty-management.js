@@ -1232,6 +1232,7 @@ function initFacultyManagementPage() {
     const assignmentTable = document.getElementById('facultyAssignmentsTable');
     const sectionsModal = document.getElementById('fmAssignSectionsModal');
     const subjectModal = document.getElementById('fmAssignSubjectModal');
+    const assignmentsViewModal = document.getElementById('fmFacultyAssignmentsViewModal');
     const sectionsForm = document.getElementById('fmAssignSectionsForm');
     const subjectForm = document.getElementById('fmAssignSubjectForm');
     const assignmentApiUrl = endpoint => new URL(`api/${endpoint}`, window.location.href).toString();
@@ -1276,6 +1277,7 @@ function initFacultyManagementPage() {
             const actions = document.createElement('td');
             actions.className = 'actions';
             [
+                ['View', 'fmViewAssignments', 'btn btn-sm btn-info'],
                 ['Assign Sections', 'fmAssignSections', 'btn btn-sm btn-outline-primary'],
                 ['Assign Subject', 'fmAssignSubject', 'btn btn-sm btn-outline-secondary']
             ].forEach(([label, action, className]) => {
@@ -1310,6 +1312,57 @@ function initFacultyManagementPage() {
                 tbody.firstElementChild.firstElementChild.textContent = error.message;
                 tbody.firstElementChild.firstElementChild.classList.add('text-danger');
             }
+        }
+    }
+
+    async function openFacultyAssignments(button) {
+        if (!assignmentsViewModal) return;
+        const facultyName = button.dataset.facultyName || 'Faculty';
+        document.getElementById('fmFacultyAssignmentsViewName').textContent = facultyName;
+        const tbody = document.getElementById('fmFacultyAssignmentsViewBody');
+        tbody.replaceChildren();
+        const loadingRow = tbody.insertRow();
+        const loadingCell = loadingRow.insertCell();
+        loadingCell.colSpan = 8;
+        loadingCell.className = 'text-center text-muted';
+        loadingCell.textContent = 'Loading assignments...';
+        assignmentsViewModal.classList.add('show');
+
+        try {
+            const facultyId = button.dataset.facultyId || '';
+            const data = await requestAssignmentData(`get_faculty_assignments.php?faculty_id=${encodeURIComponent(facultyId)}`);
+            tbody.replaceChildren();
+            if (!data.assignments?.length) {
+                const row = tbody.insertRow();
+                const cell = row.insertCell();
+                cell.colSpan = 8;
+                cell.className = 'text-center text-muted';
+                cell.textContent = 'No subject assignments found for this faculty.';
+                return;
+            }
+
+            data.assignments.forEach(assignment => {
+                const row = tbody.insertRow();
+                [
+                    assignment.section_code,
+                    [assignment.subject_code, assignment.subject_name].filter(Boolean).join(' - '),
+                    assignment.units,
+                    [assignment.semester, assignment.school_year].filter(Boolean).join(' / '),
+                    assignment.day_of_week,
+                    assignment.time_range,
+                    assignment.room_code,
+                    assignment.schedule_status
+                ].forEach(value => {
+                    row.insertCell().textContent = value === null || value === undefined || value === '' ? 'N/A' : String(value);
+                });
+            });
+        } catch (error) {
+            tbody.replaceChildren();
+            const row = tbody.insertRow();
+            const cell = row.insertCell();
+            cell.colSpan = 8;
+            cell.className = 'text-center text-danger';
+            cell.textContent = error.message || 'Unable to load faculty assignments.';
         }
     }
 
@@ -1480,8 +1533,10 @@ function initFacultyManagementPage() {
     if (assignmentTable && !assignmentTable.dataset.handlersBound) {
         assignmentTable.dataset.handlersBound = 'true';
         assignmentTable.addEventListener('click', event => {
+            const viewButton = event.target.closest('[data-fm-view-assignments]');
             const sectionsButton = event.target.closest('[data-fm-assign-sections]');
             const subjectButton = event.target.closest('[data-fm-assign-subject]');
+            if (viewButton) openFacultyAssignments(viewButton);
             if (sectionsButton) openAssignSections(sectionsButton);
             if (subjectButton) openAssignSubject(subjectButton);
         });
@@ -1549,7 +1604,7 @@ function initFacultyManagementPage() {
         });
     }
 
-    [sectionsModal, subjectModal].forEach(modal => {
+    [sectionsModal, subjectModal, assignmentsViewModal].forEach(modal => {
         if (!modal || modal.dataset.closeBound) return;
         modal.dataset.closeBound = 'true';
         modal.querySelectorAll('.modal-close').forEach(button => {

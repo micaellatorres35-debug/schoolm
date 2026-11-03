@@ -30,13 +30,13 @@ try {
         throw new Exception('Database connection failed');
     }
 
-    $sectionQuery = $conn->prepare("SELECT school_year_id, semester_id FROM cc_sections WHERE id = :section_id LIMIT 1");
+    $sectionQuery = $conn->prepare("SELECT school_year_id, semester_id FROM gc_sections WHERE id = :section_id LIMIT 1");
     $semesterCheckStmt = $conn->prepare("SELECT school_year_id FROM rgr_semesters WHERE id = :semester_id LIMIT 1");
 
     $conn->beginTransaction();
 
-    $checkStmt = $conn->prepare("SELECT COUNT(*) AS count FROM cc_section_faculty WHERE section_id = :section_id AND faculty_id = :faculty_id AND role = 'Instructor' AND school_year_id = :school_year_id AND semester_id = :semester_id AND (status = 'Active' OR status IS NULL)");
-    $insertStmt = $conn->prepare("INSERT INTO cc_section_faculty (section_id, faculty_id, role, school_year_id, semester_id, status, assigned_at, created_at, updated_at) VALUES (:section_id, :faculty_id, 'Instructor', :school_year_id, :semester_id, 'Active', NOW(), NOW(), NOW())");
+    $checkStmt = $conn->prepare("SELECT COUNT(*) AS count FROM gc_section_faculty WHERE section_id = :section_id AND faculty_id = :faculty_id AND role = 'Instructor' AND school_year_id = :school_year_id AND semester_id = :semester_id AND status = 'Active'");
+    $insertStmt = $conn->prepare("INSERT INTO gc_section_faculty (section_id, faculty_id, role, school_year_id, semester_id, status, assigned_at, created_at, updated_at) VALUES (:section_id, :faculty_id, 'Instructor', :school_year_id, :semester_id, 'Active', NOW(), NOW(), NOW())");
 
     $inserted = 0;
 

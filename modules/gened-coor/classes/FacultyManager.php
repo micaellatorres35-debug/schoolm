@@ -12,14 +12,14 @@ class FacultyManager {
             CONCAT(f.first_name, ' ', f.last_name) AS faculty_name,
             COALESCE(d.department_name, f.department, 'Department not assigned') AS department,
             (SELECT COUNT(DISTINCT sf.section_id)
-             FROM cc_section_faculty sf
+             FROM gc_section_faculty sf
              INNER JOIN rgr_school_years sy ON sf.school_year_id = sy.id AND sy.is_active = 1
              INNER JOIN rgr_semesters sem ON sf.semester_id = sem.id AND sem.is_active = 1
              WHERE sf.faculty_id = f.id
                AND sf.role = 'Instructor'
                AND (sf.status = 'Active' OR sf.status IS NULL)) AS assigned_sections,
             (SELECT COUNT(*)
-             FROM cc_faculty_load fl
+             FROM gc_faculty_load fl
              INNER JOIN rgr_school_years sy ON fl.school_year_id = sy.id AND sy.is_active = 1
              INNER JOIN rgr_semesters sem ON fl.semester_id = sem.id AND sem.is_active = 1
              WHERE fl.faculty_id = f.id) AS assigned_subjects,
@@ -31,7 +31,7 @@ class FacultyManager {
                 WHEN COALESCE(t.teaching_units, 0) = COALESCE(t.max_load, f.max_load, 15) THEN 'Fully Loaded'
                 ELSE 'Underloaded'
             END AS load_status
-        FROM cc_faculty f
+        FROM gc_faculty f
         INNER JOIN em_employees e ON e.employee_id = f.employee_id
         LEFT JOIN em_departments d ON d.department_id = e.department_id
         LEFT JOIN (
@@ -39,8 +39,8 @@ class FacultyManager {
                 fl.faculty_id,
                 COALESCE(fac.max_load, 15) AS max_load,
                 COALESCE(SUM(COALESCE(s.units, 0)), 0) AS teaching_units
-            FROM cc_faculty_load fl
-            INNER JOIN cc_faculty fac ON fac.id = fl.faculty_id
+            FROM gc_faculty_load fl
+            INNER JOIN gc_faculty fac ON fac.id = fl.faculty_id
             INNER JOIN rgr_school_years sy ON fl.school_year_id = sy.id AND sy.is_active = 1
             INNER JOIN rgr_semesters sem ON fl.semester_id = sem.id AND sem.is_active = 1
             LEFT JOIN rgr_subjects s ON fl.subject_id = s.id
@@ -59,14 +59,14 @@ class FacultyManager {
             CONCAT(f.first_name, ' ', f.last_name) AS faculty_name,
             COALESCE(d.department_name, f.department, 'Department not assigned') AS department,
             (SELECT COUNT(DISTINCT sf.section_id)
-             FROM cc_section_faculty sf
+             FROM gc_section_faculty sf
              INNER JOIN rgr_school_years sy ON sf.school_year_id = sy.id AND sy.is_active = 1
              INNER JOIN rgr_semesters sem ON sf.semester_id = sem.id AND sem.is_active = 1
              WHERE sf.faculty_id = f.id
                AND sf.role = 'Instructor'
                AND (sf.status = 'Active' OR sf.status IS NULL)) AS assigned_sections,
             (SELECT COUNT(*)
-             FROM cc_faculty_load fl
+             FROM gc_faculty_load fl
              INNER JOIN rgr_school_years sy ON fl.school_year_id = sy.id AND sy.is_active = 1
              INNER JOIN rgr_semesters sem ON fl.semester_id = sem.id AND sem.is_active = 1
              WHERE fl.faculty_id = f.id) AS assigned_subjects,
@@ -78,7 +78,7 @@ class FacultyManager {
                 WHEN COALESCE(t.teaching_units, 0) = COALESCE(t.max_load, f.max_load, 15) THEN 'Fully Loaded'
                 ELSE 'Underloaded'
             END AS load_status
-        FROM cc_faculty f
+        FROM gc_faculty f
         INNER JOIN em_employees e ON e.employee_id = f.employee_id
         LEFT JOIN em_departments d ON d.department_id = e.department_id
         LEFT JOIN (
@@ -86,8 +86,8 @@ class FacultyManager {
                 fl.faculty_id,
                 COALESCE(fac.max_load, 15) AS max_load,
                 COALESCE(SUM(COALESCE(s.units, 0)), 0) AS teaching_units
-            FROM cc_faculty_load fl
-            INNER JOIN cc_faculty fac ON fac.id = fl.faculty_id
+            FROM gc_faculty_load fl
+            INNER JOIN gc_faculty fac ON fac.id = fl.faculty_id
             INNER JOIN rgr_school_years sy ON fl.school_year_id = sy.id AND sy.is_active = 1
             INNER JOIN rgr_semesters sem ON fl.semester_id = sem.id AND sem.is_active = 1
             LEFT JOIN rgr_subjects s ON fl.subject_id = s.id
@@ -115,8 +115,8 @@ class FacultyManager {
             'Assigned' AS assignment_status,
             sy.name AS school_year,
             sem.name AS semester
-        FROM cc_faculty_load fl
-        LEFT JOIN cc_sections sec ON fl.section_id = sec.id
+        FROM gc_faculty_load fl
+        LEFT JOIN gc_sections sec ON fl.section_id = sec.id
         LEFT JOIN rgr_subjects s ON fl.subject_id = s.id
         INNER JOIN rgr_school_years sy ON fl.school_year_id = sy.id AND sy.is_active = 1
         INNER JOIN rgr_semesters sem ON fl.semester_id = sem.id AND sem.is_active = 1
@@ -134,8 +134,8 @@ class FacultyManager {
             start_time,
             end_time,
             r.room_code
-        FROM cc_schedule cs
-        LEFT JOIN cc_room r ON cs.room_id = r.id
+        FROM gc_schedule cs
+        LEFT JOIN gc_room r ON cs.room_id = r.id
         WHERE cs.faculty_load_id = :faculty_load_id 
         AND cs.status = 'Scheduled'
         ORDER BY FIELD(cs.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'),
@@ -191,8 +191,8 @@ class FacultyManager {
                 ELSE 'Academic Period Inactive'
             END AS reason,
             fl.created_at AS assignment_date
-        FROM cc_faculty_load fl
-        LEFT JOIN cc_sections sec ON fl.section_id = sec.id
+        FROM gc_faculty_load fl
+        LEFT JOIN gc_sections sec ON fl.section_id = sec.id
         LEFT JOIN rgr_subjects s ON fl.subject_id = s.id
         LEFT JOIN rgr_school_years sy ON fl.school_year_id = sy.id
         LEFT JOIN rgr_semesters sem ON fl.semester_id = sem.id
@@ -226,11 +226,11 @@ class FacultyManager {
             sem.name AS semester,
             sem.school_year_id AS semester_school_year_id,
             CASE WHEN sem.school_year_id IS NOT NULL AND sem.school_year_id != sf.school_year_id THEN 1 ELSE 0 END AS period_mismatch
-        FROM cc_section_faculty sf
-        INNER JOIN cc_sections sec ON sf.section_id = sec.id
-        LEFT JOIN rgr_courses c ON sec.program_id = c.id
-        INNER JOIN rgr_school_years sy ON sf.school_year_id = sy.id AND sy.is_active = 1
-        INNER JOIN rgr_semesters sem ON sf.semester_id = sem.id AND sem.is_active = 1
+        FROM gc_section_faculty sf
+        INNER JOIN gc_sections sec ON sf.section_id = sec.id
+        LEFT JOIN gc_courses c ON sec.program_id = c.id
+        INNER JOIN gc_school_years sy ON sf.school_year_id = sy.id AND sy.is_active = 1
+        INNER JOIN gc_semesters sem ON sf.semester_id = sem.id AND sem.is_active = 1
         WHERE sf.faculty_id = :faculty_id
         ORDER BY sy.name DESC, sem.name DESC, sec.section_code";
         $stmt = $this->conn->prepare($sql);
@@ -244,10 +244,10 @@ class FacultyManager {
             $this->conn->beginTransaction();
 
             // Prepare reusable queries
-            $sectionQuery = "SELECT id, program_id, grade_level, school_year_id, semester_id FROM cc_sections WHERE id = :section_id LIMIT 1";
+            $sectionQuery = "SELECT id, program_id, grade_level, school_year_id, semester_id FROM gc_sections WHERE id = :section_id LIMIT 1";
             $sectionStmt = $this->conn->prepare($sectionQuery);
 
-            $sectionFacultyQuery = "SELECT COUNT(*) AS count FROM cc_section_faculty WHERE section_id = :section_id AND faculty_id = :faculty_id AND role = 'Instructor' AND (status = 'Active' OR status IS NULL)";
+            $sectionFacultyQuery = "SELECT COUNT(*) AS count FROM gc_section_faculty WHERE section_id = :section_id AND faculty_id = :faculty_id AND role = 'Instructor' AND (status = 'Active' OR status IS NULL)";
             $sectionFacultyStmt = $this->conn->prepare($sectionFacultyQuery);
 
             $semesterCheckQuery = "SELECT name, school_year_id FROM rgr_semesters WHERE id = :semester_id LIMIT 1";
@@ -266,13 +266,13 @@ class FacultyManager {
                                        LIMIT 1";
             $curriculumSubjectStmt = $this->conn->prepare($curriculumSubjectQuery);
 
-            $duplicateCheckQuery = "SELECT COUNT(*) AS count FROM cc_faculty_load 
+            $duplicateCheckQuery = "SELECT COUNT(*) AS count FROM gc_faculty_load 
                                     WHERE section_id = :section_id 
                                     AND subject_id = :subject_id 
                                     LIMIT 1";
             $duplicateCheckStmt = $this->conn->prepare($duplicateCheckQuery);
 
-            $insertSql = "INSERT INTO cc_faculty_load 
+            $insertSql = "INSERT INTO gc_faculty_load 
                     (faculty_id, section_id, subject_id, school_year_id, semester_id) 
                     VALUES (:faculty_id, :section_id, :subject_id, :school_year_id, :semester_id)";
             $insertStmt = $this->conn->prepare($insertSql);
@@ -414,14 +414,14 @@ class FacultyManager {
     public function deleteAssignment($facultyLoadId) {
         try {
             // First, retrieve the assignment details before deletion
-            $selectSql = "SELECT faculty_id, school_year_id, semester_id FROM cc_faculty_load WHERE id = :id";
+            $selectSql = "SELECT faculty_id, school_year_id, semester_id FROM gc_faculty_load WHERE id = :id";
             $selectStmt = $this->conn->prepare($selectSql);
             $selectStmt->bindParam(':id', $facultyLoadId);
             $selectStmt->execute();
             $assignment = $selectStmt->fetch(PDO::FETCH_ASSOC);
             
             // Delete the assignment
-            $deleteSql = "DELETE FROM cc_faculty_load WHERE id = :id";
+            $deleteSql = "DELETE FROM gc_faculty_load WHERE id = :id";
             $deleteStmt = $this->conn->prepare($deleteSql);
             $deleteStmt->bindParam(':id', $facultyLoadId);
             $deleteStmt->execute();
@@ -439,7 +439,7 @@ class FacultyManager {
 
     public function generateFacultyLoadSummary($schoolYearId, $semesterId) {
         try {
-            $sql = "INSERT INTO cc_faculty_load_summary 
+            $sql = "INSERT INTO gc_faculty_load_summary 
                     (faculty_id, school_year_id, semester_id, total_units, max_load, load_status, computed_at)
                     SELECT 
                         f.id,
@@ -453,8 +453,8 @@ class FacultyManager {
                             ELSE 'Underloaded'
                         END AS load_status,
                         NOW() AS computed_at
-                    FROM cc_faculty f
-                    LEFT JOIN cc_faculty_load fl ON f.id = fl.faculty_id
+                    FROM gc_faculty f
+                    LEFT JOIN gc_faculty_load fl ON f.id = fl.faculty_id
                     LEFT JOIN rgr_subjects s ON fl.subject_id = s.id
                     WHERE fl.school_year_id = :school_year_id
                       AND fl.semester_id = :semester_id
@@ -489,8 +489,8 @@ class FacultyManager {
             f.first_name,
             f.last_name,
             f.department
-        FROM cc_faculty_load_summary fls
-        INNER JOIN cc_faculty f ON fls.faculty_id = f.id
+        FROM gc_faculty_load_summary fls
+        INNER JOIN gc_faculty f ON fls.faculty_id = f.id
         WHERE fls.school_year_id = :school_year_id
           AND fls.semester_id = :semester_id
         ORDER BY f.first_name, f.last_name";

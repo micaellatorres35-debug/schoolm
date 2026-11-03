@@ -29,8 +29,8 @@ try {
             sy.name AS school_year,
             sem.name AS semester,
             c.code AS program_code
-        FROM cc_section_faculty sf
-        JOIN cc_sections s ON sf.section_id = s.id
+        FROM gc_section_faculty sf
+        JOIN gc_sections s ON sf.section_id = s.id
         JOIN rgr_semesters sem ON s.semester_id = sem.id
         JOIN rgr_school_years sy ON s.school_year_id = sy.id
         LEFT JOIN rgr_courses c ON s.program_id = c.id

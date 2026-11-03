@@ -9,7 +9,7 @@ class Page {
         'dashboard-overview' => 'Dashboard Overview',
         'academic activities' => 'Academic Activities',
         'general-education-curriculum' => 'General Education Curriculum',
-        'academics' => 'Academics Management',
+    
         'events-management'  => 'Events Management',
         'faculty-management' => 'Faculty Management',
         'class-scheduling'   => 'Class Scheduling',
