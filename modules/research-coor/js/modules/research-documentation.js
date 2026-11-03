@@ -1,3 +1,5 @@
+import { fetchResearchProjects } from "./research-project-data.js";
+
 const RESEARCH_DOCUMENTS_KEY = "researchCoor_documents";
 const RESEARCH_DOCUMENTS_DB = "researchCoor_documentFiles";
 const RESEARCH_DOCUMENTS_STORE = "files";
@@ -217,7 +219,7 @@ function formatDocumentDate(value, includeTime = false) {
 
 function documentRelatedLabel(record) {
   const proposal = linkedProposals.find((item) => item.id === record.proposalId);
-  const project = linkedProjects.find((item) => item.id === record.projectId);
+  const project = linkedProjects.find((item) => String(item.id) === String(record.projectId));
   const labels = [];
   if (proposal) labels.push(`Proposal: ${proposal.reference || proposal.title}`);
   else if (record.proposalTitle) labels.push(`Proposal: ${record.proposalTitle}`);
@@ -320,7 +322,7 @@ function renderDocumentArchive() {
     .join("");
 }
 
-function fillDocumentLinkOptions() {
+async function fillDocumentLinkOptions() {
   const proposalSelect = document.getElementById("documentProposalSelect");
   const projectSelect = document.getElementById("documentProjectSelect");
   if (!proposalSelect || !projectSelect) return;
@@ -328,25 +330,27 @@ function fillDocumentLinkOptions() {
   const selectedProjectId = projectSelect.value;
   try {
     const proposals = JSON.parse(window.localStorage.getItem("researchCoor_proposals") || "[]");
-    const projects = JSON.parse(window.localStorage.getItem("researchCoor_projects") || "[]");
     if (
       !Array.isArray(proposals) ||
-      !proposals.every((item) => item && typeof item === "object" && typeof item.id === "string") ||
-      !Array.isArray(projects) ||
-      !projects.every((item) => item && typeof item === "object" && typeof item.id === "string")
+      !proposals.every((item) => item && typeof item === "object" && typeof item.id === "string")
     ) {
-      throw new Error("Linked project or proposal records must be lists.");
+      throw new Error("Linked proposal records must be a list.");
     }
     linkedProposals = proposals;
-    linkedProjects = projects;
   } catch (error) {
     linkedProposals = [];
-    linkedProjects = [];
-    console.error("Unable to load research document links:", error);
+    console.error("Unable to load research proposal links:", error);
     showDocumentationNotice(
-      "Hindi ma-load ang proposal/project links. Maaari pa ring mag-upload ng unlinked documents.",
+      "Hindi ma-load ang proposal links. Maaari pa ring mag-upload ng unlinked documents.",
       "error",
     );
+  }
+  try {
+    linkedProjects = await fetchResearchProjects();
+  } catch (error) {
+    linkedProjects = [];
+    console.error("Unable to load research project links:", error);
+    showDocumentationNotice(error.message || "Hindi ma-load ang project links mula sa database.", "error");
   }
   proposalSelect.innerHTML =
     '<option value="">No proposal linked</option>' +
@@ -361,7 +365,7 @@ function fillDocumentLinkOptions() {
   if (linkedProposals.some((proposal) => proposal.id === selectedProposalId)) {
     proposalSelect.value = selectedProposalId;
   }
-  if (linkedProjects.some((project) => project.id === selectedProjectId && project.archived !== true)) {
+  if (linkedProjects.some((project) => String(project.id) === selectedProjectId && project.archived !== true)) {
     projectSelect.value = selectedProjectId;
   }
 }
@@ -654,12 +658,12 @@ function updateDocumentArchive(documentId, shouldArchive) {
   switchDocumentationTab(shouldArchive ? "library" : "archive");
 }
 
-function initializeResearchDocumentationPage() {
+async function initializeResearchDocumentationPage() {
   const root = getDocumentationRoot();
   if (!root || root.dataset.initialized === "true") return;
   root.dataset.initialized = "true";
   loadResearchDocuments();
-  fillDocumentLinkOptions();
+  await fillDocumentLinkOptions();
   renderDocumentationPage();
   if (documentHandlersBound) return;
   documentHandlersBound = true;
@@ -728,17 +732,19 @@ function initializeResearchDocumentationPage() {
     if (event.key === RESEARCH_DOCUMENTS_KEY) {
       if (loadResearchDocuments()) renderDocumentationPage();
     }
-    if (["researchCoor_projects", "researchCoor_proposals"].includes(event.key)) {
-      fillDocumentLinkOptions();
-      renderDocumentTable();
-      renderDocumentArchive();
+    if (event.key === "researchCoor_proposals") {
+      void fillDocumentLinkOptions().then(() => {
+        renderDocumentTable();
+        renderDocumentArchive();
+      });
     }
   });
   window.addEventListener("research-projects-updated", () => {
     if (!getDocumentationRoot()) return;
-    fillDocumentLinkOptions();
-    renderDocumentTable();
-    renderDocumentArchive();
+    void fillDocumentLinkOptions().then(() => {
+      renderDocumentTable();
+      renderDocumentArchive();
+    });
   });
 }
 

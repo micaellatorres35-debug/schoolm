@@ -6,8 +6,8 @@
 
     /*User Class*/
     $userClass = new User();
-    $userInfo = $userClass->userSession();
-    $isDirectress = ($userInfo['role'] === 'School Directress');
+    $roleName = $_SESSION['role_name'] ?? ($userInfo['role'] ?? '');
+    $isDirectress = trim((string) $roleName) === 'School Directress';
 
     /*Approval Class*/
     $approvalClass = new Approval();

@@ -91,15 +91,15 @@ try {
                 ? $_GET['status']
                 : null;
 
+            $submittedBy = null;
             if ($isDirectress) {
-                // School Directress can view approvals across all departments.
                 $departmentId = null;
-            } elseif ($departmentId === null) {
-                // Other users default to their own department.
-                $departmentId = $userInfo['department_id'] ?? null;
+            } else {
+                $submittedBy = (int) ($userInfo['employee_id'] ?? $_SESSION['employee_id'] ?? 0);
+                $departmentId = null;
             }
 
-            $approvals = $approvalClass->getApprovals($departmentId, $status);
+            $approvals = $approvalClass->getApprovals($departmentId, $status, $submittedBy);
             approval_respond(['success' => true, 'data' => array_map('approval_public', $approvals)]);
             break;
 

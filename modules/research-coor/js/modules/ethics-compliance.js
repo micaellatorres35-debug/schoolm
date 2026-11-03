@@ -1,9 +1,10 @@
+import { fetchResearchProjects } from "./research-project-data.js";
+
 (function () {
   "use strict";
 
   const ETHICS_KEY = "researchCoor_ethics";
   const DOCUMENTS_KEY = "researchCoor_documents";
-  const PROJECTS_KEY = "researchCoor_projects";
   const PROPOSALS_KEY = "researchCoor_proposals";
   const DOCUMENT_DB = "researchCoor_documentFiles";
   const DOCUMENT_STORE = "files";
@@ -76,12 +77,12 @@
     return records;
   }
 
-  function loadEthicsData() {
+  async function loadEthicsData() {
     storageReady = false;
     try {
       ethicsRecords = readList(ETHICS_KEY, "Ethics");
       ethicsDocuments = readList(DOCUMENTS_KEY, "Document");
-      linkedProjects = readList(PROJECTS_KEY, "Research project");
+      linkedProjects = await fetchResearchProjects();
       linkedProposals = readList(PROPOSALS_KEY, "Research proposal");
       storageReady = true;
       return true;
@@ -723,9 +724,9 @@
     }
   }
 
-  function refreshConnectedProjects() {
+  async function refreshConnectedProjects() {
     try {
-      linkedProjects = readList(PROJECTS_KEY, "Research project");
+      linkedProjects = await fetchResearchProjects();
       linkedProposals = readList(PROPOSALS_KEY, "Research proposal");
       refreshLinkedOptions();
       renderPage();
@@ -735,11 +736,11 @@
     }
   }
 
-  function initialize() {
+  async function initialize() {
     const root = getRoot();
     if (!root || root.dataset.initialized === "true") return;
     root.dataset.initialized = "true";
-    if (!loadEthicsData()) return;
+    if (!await loadEthicsData()) return;
     refreshLinkedOptions();
     renderPage();
 
@@ -797,14 +798,16 @@
     window.addEventListener("storage", (event) => {
       if (!getRoot()) return;
       if (event.key === ETHICS_KEY || event.key === DOCUMENTS_KEY) {
-        if (loadEthicsData()) renderPage();
+        void loadEthicsData().then((loaded) => { if (loaded) renderPage(); });
       }
-      if (event.key === PROJECTS_KEY || event.key === PROPOSALS_KEY) refreshConnectedProjects();
+      if (event.key === PROPOSALS_KEY) void refreshConnectedProjects();
     });
     window.addEventListener("research-projects-updated", refreshConnectedProjects);
     window.addEventListener("research-proposals-updated", refreshConnectedProjects);
     window.addEventListener("research-documents-updated", () => {
-      if (getRoot() && loadEthicsData()) renderPage();
+      if (getRoot()) {
+        void loadEthicsData().then((loaded) => { if (loaded) renderPage(); });
+      }
     });
   }
 

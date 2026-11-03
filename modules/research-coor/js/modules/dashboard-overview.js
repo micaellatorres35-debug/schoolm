@@ -1,3 +1,5 @@
+import { fetchResearchProjects } from "./research-project-data.js";
+
 (function () {
     'use strict';
 
@@ -6,11 +8,12 @@
     let dashboardTimer = null;
     const urgentToastShownKey = 'ccUrgentToastShownIds';
     const readNotificationKey = 'ccReadNotificationIds';
-    const researchProjectsStorageKey = 'researchCoor_projects';
     const researchProposalsStorageKey = 'researchCoor_proposals';
     const researchDocumentsStorageKey = 'researchCoor_documents';
     const researchEthicsStorageKey = 'researchCoor_ethics';
     const researchProjectStatuses = ['Draft', 'Submitted', 'Under Review', 'Approved', 'Ongoing', 'Completed', 'Rejected'];
+    let researchProjects = [];
+    let researchProjectsError = null;
 
     const dashboard = () => ({
         eventsByDate: window.eventsByDate || {},
@@ -43,19 +46,21 @@
     }
 
     function getResearchProjects() {
-        try {
-            const storedProjects = localStorage.getItem(researchProjectsStorageKey);
-            if (storedProjects === null) return {projects: [], error: null};
-            const projects = JSON.parse(storedProjects);
-            if (!Array.isArray(projects)) throw new Error('Stored research project data must be a list.');
-            if (!projects.every(project => project && typeof project === 'object' && !Array.isArray(project))) {
-                throw new Error('Stored research project data contains an invalid record.');
-            }
+        return {projects: researchProjects, error: researchProjectsError};
+    }
 
-            return {projects, error: null};
+    async function refreshResearchProjects() {
+        try {
+            researchProjects = await fetchResearchProjects();
+            researchProjectsError = null;
         } catch (error) {
             console.error('Unable to load research dashboard project data:', error);
-            return {projects: [], error: 'Research project totals could not be loaded from this browser.'};
+            researchProjects = [];
+            researchProjectsError = error.message || 'Research project data could not be loaded from the database.';
+        }
+        if (document.getElementById('calendarDays')) {
+            renderResearchOverview();
+            renderCalendar();
         }
     }
 
@@ -684,11 +689,12 @@
         });
     }
 
-    function initializeDashboard() {
+    async function initializeDashboard() {
         if (!document.getElementById('calendarDays')) return;
         initializeEmbeddedDashboardData();
         window.dashboardClientLoadTs = window.dashboardClientLoadTs || Date.now();
         readNotificationIds = getStoredIds(readNotificationKey);
+        await refreshResearchProjects();
         renderResearchOverview();
         renderCalendar();
         renderNotificationBell();
@@ -705,8 +711,9 @@
     window.closeEventsModal = closeEventsModal;
     window.viewAlertDetails = viewAlertDetails;
     window.viewAllPriorityAlerts = viewAllPriorityAlerts;
-    window.reinitializeDashboard = function () {
+    window.reinitializeDashboard = async function () {
         initializeEmbeddedDashboardData();
+        await refreshResearchProjects();
         renderResearchOverview();
         renderCalendar();
         renderNotificationBell();
@@ -720,12 +727,9 @@
     });
 
     window.addEventListener('storage', event => {
-        if ([researchProjectsStorageKey, researchProposalsStorageKey, researchDocumentsStorageKey, researchEthicsStorageKey].includes(event.key) &&
+        if ([researchProposalsStorageKey, researchDocumentsStorageKey, researchEthicsStorageKey].includes(event.key) &&
             document.getElementById('calendarDays')) {
             renderResearchOverview();
-        }
-        if (event.key === researchProjectsStorageKey && document.getElementById('calendarDays')) {
-            renderCalendar();
         }
         if (event.key === readNotificationKey) {
             readNotificationIds = getStoredIds(readNotificationKey);
@@ -735,8 +739,7 @@
 
     window.addEventListener('research-projects-updated', () => {
         if (document.getElementById('calendarDays')) {
-            renderResearchOverview();
-            renderCalendar();
+            void refreshResearchProjects();
         }
     });
 
