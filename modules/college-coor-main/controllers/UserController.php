@@ -49,11 +49,10 @@ try {
     include_once __DIR__ . '/../../../auth/guard.php';
     require_once __DIR__ . '/../classes/User.php';
 
-    // Authorization on EVERY request, not just in the view
-// Authorization on EVERY request, not just in the view
-if (!in_array($_SESSION['role_name'] ?? '', UM_ALLOWED_ROLES, true)) {
-    um_respond(['success' => false, 'message' => 'You are not authorized to manage user accounts.'], 403);
-}
+    // Authorization on EVERY request, not just in the view.
+    if (!in_array($_SESSION['role_name'] ?? '', UM_ALLOWED_ROLES, true)) {
+        um_respond(['success' => false, 'message' => 'You are not authorized to manage user accounts.'], 403);
+    }
 
     $action = (string) ($_GET['action'] ?? '');
     $writeActions = ['update', 'deactivate', 'reactivate', 'unlock'];

@@ -18,7 +18,6 @@ if (!in_array($umRole, ['School Directress', 'Admin College Coordinator'], true)
     return;
 }
 
-// CSRF token for the write actions (checked in UserController.php)
 if (empty($_SESSION['um_csrf'])) {
     $_SESSION['um_csrf'] = bin2hex(random_bytes(32));
 }
@@ -26,7 +25,6 @@ if (empty($_SESSION['um_csrf'])) {
 $umModel = new User();
 $umOpts  = $umModel->getFormOptions();
 
-/* Option renderers (closures so repeated includes never redeclare a function) */
 $umRoleOptions = function (string $placeholder) use ($umOpts, $h) {
     $out = '<option value="">' . $h($placeholder) . '</option>';
     foreach ($umOpts['roles'] as $r) {
@@ -58,180 +56,170 @@ $umUnitOptions = function (string $placeholder) use ($umOpts, $h) {
 
 <div class="module-content um-page" id="umRoot" data-csrf="<?= $h($_SESSION['um_csrf']) ?>">
 
-    <!-- ── Summary ── -->
-    <section class="um-stat-grid" aria-label="Account summary">
-        <article class="um-stat-card">
-            <div>
-                <strong id="umStatTotal">—</strong>
-                <span class="um-stat-label">Total users</span>
-                <span class="um-stat-note">All registered accounts</span>
-            </div>
-        </article>
-        <article class="um-stat-card">
-            <div>
-                <strong id="umStatActive">—</strong>
-                <span class="um-stat-label">Active accounts</span>
-                <span class="um-stat-note">Can access the system</span>
-            </div>
-        </article>
-        <article class="um-stat-card">
-            <div>
-                <strong id="umStatInactive">—</strong>
-                <span class="um-stat-label">Inactive accounts</span>
-                <span class="um-stat-note">Access disabled</span>
-            </div>
-        </article>
-    </section>
-
-    <!-- ── Actions + filters (one panel) ── -->
-    <section class="um-directory-panel um-control-panel" aria-label="Directory controls">
-        <div class="um-directory-toolbar">
-            <div>
-                <h2>Coordinator directory</h2>
-                <p>Search and manage registered user accounts.</p>
-            </div>
-            <div class="um-toolbar-actions">
-                <button type="button" class="um-btn um-btn-secondary" id="umExportBtn" data-um-action="export">Export CSV</button>
-            </div>
-        </div>
-
-        <div class="um-filters">
-            <label class="um-search">
-                <span class="um-sr-only">Search users</span>
-                <span aria-hidden="true">⌕</span>
-                <input id="umSearch" type="search" placeholder="Search name, employee ID, email, or role..." autocomplete="off">
-            </label>
-            <label class="um-filter-field">
-                <span class="um-sr-only">Filter by account status</span>
-                <select id="umStatus">
-                    <option value="">All statuses</option>
-                    <option value="active">Active</option>
-                    <option value="deactivated">Inactive</option>
-                </select>
-            </label>
-            <label class="um-filter-field">
-                <span class="um-sr-only">Filter by role</span>
-                <select id="umRole"><?= $umRoleOptions('All roles') ?></select>
-            </label>
-            <button type="button" class="um-btn um-btn-quiet" data-um-action="clear-filters">Clear filters</button>
-        </div>
-    </section>
-
-    <!-- ── Results: cards / table (separate from the controls) ── -->
-    <section class="um-results" aria-label="Employee directory results">
-        <p class="um-empty-state" id="umEmpty" role="status" aria-live="polite">Loading users…</p>
-
-        <!-- Cards and table rows are rendered by user_management.js -->
-        <div class="um-card-grid" id="umCardGrid" hidden></div>
-
-        <div class="um-table-wrap" id="umTableWrap" hidden>
-            <table class="um-table">
-                <thead>
-                    <tr>
-                        <th scope="col">Employee</th>
-                        <th scope="col">Role</th>
-                        <th scope="col">Department / Unit</th>
-                        <th scope="col">Status</th>
-                        <th scope="col"><span class="um-sr-only">Actions</span></th>
-                    </tr>
-                </thead>
-                <tbody id="umTableBody"></tbody>
-            </table>
-        </div>
-
-        <div class="um-footer">
-            <span class="um-showing" id="umShowing"></span>
-            <div class="um-page-nav" id="umPageNav"></div>
-        </div>
-    </section>
-
-    <!-- ══ Modal 1: Employee details ══ -->
-    <div class="um-modal-backdrop" id="umDetailsModal" hidden>
-        <section class="um-modal um-modal-large" role="dialog" aria-modal="true" aria-labelledby="umDetailsTitle" tabindex="-1">
-            <header class="um-modal-header">
-                <div class="um-profile-heading">
-                    <div class="um-avatar um-avatar-large" id="umDetailAvatar" aria-hidden="true">?</div>
-                    <div>
-                        <p class="um-eyebrow">Employee profile</p>
-                        <h2 id="umDetailsTitle">Employee details</h2>
-                        <p class="um-subtitle" id="umDetailSubline"></p>
-                    </div>
+    <div id="umOverview">
+        <section class="um-stat-grid" aria-label="Account summary">
+            <article class="um-stat-card">
+                <div>
+                    <strong id="umStatTotal">—</strong>
+                    <span class="um-stat-label">Total users</span>
+                    <span class="um-stat-note">All registered accounts</span>
                 </div>
-                <button class="um-icon-btn" type="button" data-um-action="close-modal" aria-label="Close employee details">×</button>
-            </header>
+            </article>
+            <article class="um-stat-card">
+                <div>
+                    <strong id="umStatActive">—</strong>
+                    <span class="um-stat-label">Active accounts</span>
+                    <span class="um-stat-note">Can access the system</span>
+                </div>
+            </article>
+            <article class="um-stat-card">
+                <div>
+                    <strong id="umStatInactive">—</strong>
+                    <span class="um-stat-label">Inactive accounts</span>
+                    <span class="um-stat-note">Access disabled</span>
+                </div>
+            </article>
+        </section>
 
-            <nav class="um-modal-tabs" aria-label="Employee details sections" role="tablist">
-                <button type="button" class="um-tab is-active" role="tab" aria-selected="true" aria-controls="umTabOverview" id="umTabBtnOverview" data-um-action="tab" data-tab="overview">Overview</button>
-                <button type="button" class="um-tab" role="tab" aria-selected="false" aria-controls="umTabActivity" id="umTabBtnActivity" data-um-action="tab" data-tab="activity" tabindex="-1">Recent activity</button>
-                <button type="button" class="um-tab" role="tab" aria-selected="false" aria-controls="umTabAccess" id="umTabBtnAccess" data-um-action="tab" data-tab="access" tabindex="-1">Access</button>
-            </nav>
-
-            <div class="um-modal-body">
-                <p class="um-notice-text" id="umDetailsNotice" role="status" aria-live="polite">Loading details…</p>
-
-                <div id="umDetailsContent" hidden>
-                    <section class="um-tab-panel" id="umTabOverview" role="tabpanel" aria-labelledby="umTabBtnOverview">
-                        <div class="um-modal-summary-grid">
-                            <article class="um-summary-tile"><span>Last successful login</span><strong id="umDetailLastLogin"></strong></article>
-                            <article class="um-summary-tile"><span>Account created</span><strong id="umDetailCreated"></strong></article>
-                        </div>
-                        <div class="um-info-section">
-                            <h3>Employee information</h3>
-                            <dl class="um-info-grid">
-                                <div><dt>Full name</dt><dd id="umInfoName"></dd></div>
-                                <div><dt>Employee ID</dt><dd id="umInfoId"></dd></div>
-                                <div><dt>Email address</dt><dd id="umInfoEmail"></dd></div>
-                                <div><dt>Contact number</dt><dd id="umInfoContact"></dd></div>
-                                <div><dt>Department</dt><dd id="umInfoDepartment"></dd></div>
-                                <div><dt>Position</dt><dd id="umInfoPosition"></dd></div>
-                            </dl>
-                        </div>
-                    </section>
-
-                    <section class="um-tab-panel" id="umTabActivity" role="tabpanel" aria-labelledby="umTabBtnActivity" hidden>
-                        <div class="um-section-heading">
-                            <div>
-                                <h3>Recent activity</h3>
-                                <p>Most recent actions recorded in the audit log for this account.</p>
-                            </div>
-                        </div>
-                        <p class="um-notice-text" id="umActivityNotice" role="status" aria-live="polite" hidden></p>
-                        <ol class="um-activity-list" id="umActivityList"></ol>
-                        <div class="um-activity-more">
-                            <button class="um-btn um-btn-secondary" type="button" id="umActivityMore" data-um-action="activity-more" hidden>Load more</button>
-                        </div>
-                        <p class="um-footnote">Only actions that were recorded are shown. Passwords and session data are never logged.</p>
-                    </section>
-
-                    <section class="um-tab-panel" id="umTabAccess" role="tabpanel" aria-labelledby="umTabBtnAccess" hidden>
-                        <div class="um-info-section">
-                            <h3>Account access</h3>
-                            <dl class="um-info-grid">
-                                <div><dt>Assigned role</dt><dd id="umAccessRole"></dd></div>
-                                <div><dt>Account status</dt><dd id="umAccessStatus"></dd></div>
-                                <div><dt>Department scope</dt><dd id="umAccessDepartment"></dd></div>
-                                <div><dt>Lock status</dt><dd id="umAccessLock"></dd></div>
-                            </dl>
-                        </div>
-                        <div class="um-info-section" id="umAccessDeactWrap" hidden>
-                            <h3>Deactivation</h3>
-                            <dl class="um-info-grid">
-                                <div><dt>Deactivated on</dt><dd id="umAccessDeactAt"></dd></div>
-                                <div><dt>Deactivated by</dt><dd id="umAccessDeactBy"></dd></div>
-                                <div class="um-field-full"><dt>Reason</dt><dd id="umAccessDeactReason"></dd></div>
-                            </dl>
-                        </div>
-                    </section>
+        <section class="um-directory-panel um-control-panel" aria-label="Directory controls">
+            <div class="um-directory-toolbar">
+                <div>
+                    <h2>Coordinator directory</h2>
+                    <p>Search and manage registered user accounts.</p>
+                </div>
+                <div class="um-toolbar-actions">
+                    <button type="button" class="um-btn um-btn-secondary" id="umExportBtn" data-um-action="export">Export CSV</button>
                 </div>
             </div>
 
-            <footer class="um-modal-footer">
-                <button class="um-btn um-btn-secondary" type="button" data-um-action="close-modal">Close</button>
-            </footer>
+            <div class="um-filters">
+                <label class="um-search">
+                    <span class="um-sr-only">Search users</span>
+                    <span aria-hidden="true">⌕</span>
+                    <input id="umSearch" type="search" placeholder="Search name, employee ID, email, or role..." autocomplete="off">
+                </label>
+                <label class="um-filter-field">
+                    <span class="um-sr-only">Filter by account status</span>
+                    <select id="umStatus">
+                        <option value="">All statuses</option>
+                        <option value="active">Active</option>
+                        <option value="deactivated">Inactive</option>
+                    </select>
+                </label>
+                <label class="um-filter-field">
+                    <span class="um-sr-only">Filter by role</span>
+                    <select id="umRole"><?= $umRoleOptions('All roles') ?></select>
+                </label>
+                <button type="button" class="um-btn um-btn-quiet" data-um-action="clear-filters">Clear filters</button>
+            </div>
+        </section>
+
+        <section class="um-results" aria-label="Employee directory results">
+            <p class="um-empty-state" id="umEmpty" role="status" aria-live="polite">Loading users…</p>
+
+            <div class="um-table-wrap" id="umTableWrap" hidden>
+                <table class="um-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Employee</th>
+                            <th scope="col">Role</th>
+                            <th scope="col">Department / Unit</th>
+                            <th scope="col">Status</th>
+                            <th scope="col"><span class="um-sr-only">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="umTableBody"></tbody>
+                </table>
+            </div>
+
+            <div class="um-footer">
+                <span class="um-showing" id="umShowing"></span>
+                <div class="um-page-nav" id="umPageNav"></div>
+            </div>
         </section>
     </div>
 
-    <!-- ══ Modal 3: Update user ══ -->
+    <div id="umDetail" hidden>
+        <button type="button" class="um-btn um-btn-outline um-back" id="umBackBtn" data-um-action="back">
+            <span aria-hidden="true">←</span> Back to users
+        </button>
+
+        <p class="um-state" id="umDetailState" role="status" aria-live="polite" hidden></p>
+
+        <div id="umDetailContent" hidden>
+            <section class="um-panel um-detail-head">
+                <div class="um-detail-title">
+                    <div class="um-avatar um-avatar-large" id="umDetailAvatar" aria-hidden="true">?</div>
+                    <div>
+                        <h2 id="umDetailName" tabindex="-1"></h2>
+                        <div class="um-status-row">
+                            <span class="um-status" id="umDetailStatus"></span>
+                            <span class="um-status um-status-is-locked" id="umDetailLockStatus" hidden></span>
+                        </div>
+                        <p class="um-detail-desc" id="umDetailSubline"></p>
+                    </div>
+                </div>
+                <div class="um-detail-actions">
+                    <button type="button" class="um-btn um-btn-secondary" id="umDetailEditBtn" data-um-action="edit-user">Edit user</button>
+                    <button type="button" class="um-btn um-btn-primary" id="umDetailStatusBtn" data-um-action="toggle-status">Deactivate</button>
+                    <button type="button" class="um-btn um-btn-quiet" id="umDetailUnlockBtn" data-um-action="unlock" hidden>Unlock</button>
+                </div>
+            </section>
+
+            <section class="um-detail-stats" aria-label="Account summary details">
+                <article class="um-mini-stat"><span>Last successful login</span><strong id="umDetailLastLogin">—</strong></article>
+                <article class="um-mini-stat"><span>Account created</span><strong id="umDetailCreated">—</strong></article>
+            </section>
+
+            <section class="um-panel">
+                <h3 class="um-section-title">Employee information</h3>
+                <dl class="um-info-grid">
+                    <div><dt>Full name</dt><dd id="umInfoName"></dd></div>
+                    <div><dt>Employee ID</dt><dd id="umInfoId"></dd></div>
+                    <div><dt>Email address</dt><dd id="umInfoEmail"></dd></div>
+                    <div><dt>Contact number</dt><dd id="umInfoContact"></dd></div>
+                    <div><dt>Department</dt><dd id="umInfoDepartment"></dd></div>
+                    <div><dt>Position</dt><dd id="umInfoPosition"></dd></div>
+                </dl>
+            </section>
+
+            <section class="um-panel">
+                <h3 class="um-section-title">Access</h3>
+                <dl class="um-info-grid">
+                    <div><dt>Assigned role</dt><dd id="umAccessRole"></dd></div>
+                    <div><dt>Account status</dt><dd id="umAccessStatus"></dd></div>
+                    <div><dt>Department scope</dt><dd id="umAccessDepartment"></dd></div>
+                    <div><dt>Lock status</dt><dd id="umAccessLock"></dd></div>
+                </dl>
+                <div id="umAccessDeactWrap" hidden>
+                    <div class="um-info-section">
+                        <h4>Deactivation</h4>
+                        <dl class="um-info-grid">
+                            <div><dt>Deactivated on</dt><dd id="umAccessDeactAt"></dd></div>
+                            <div><dt>Deactivated by</dt><dd id="umAccessDeactBy"></dd></div>
+                            <div class="um-field-full"><dt>Reason</dt><dd id="umAccessDeactReason"></dd></div>
+                        </dl>
+                    </div>
+                </div>
+            </section>
+
+            <section class="um-panel">
+                <div class="um-section-heading">
+                    <div>
+                        <h3>Recent activity</h3>
+                        <p>Most recent actions recorded in the audit log for this account.</p>
+                    </div>
+                </div>
+                <p class="um-notice-text" id="umActivityNotice" role="status" aria-live="polite" hidden></p>
+                <ol class="um-activity-list" id="umActivityList"></ol>
+                <div class="um-activity-more">
+                    <button class="um-btn um-btn-secondary" type="button" id="umActivityMore" data-um-action="activity-more" hidden>Load more</button>
+                </div>
+                <p class="um-footnote">Only actions that were recorded are shown. Passwords and session data are never logged.</p>
+            </section>
+        </div>
+    </div>
+
     <div class="um-modal-backdrop" id="umEditModal" hidden>
         <section class="um-modal" role="dialog" aria-modal="true" aria-labelledby="umEditTitle" tabindex="-1">
             <header class="um-modal-header">
@@ -281,7 +269,6 @@ $umUnitOptions = function (string $placeholder) use ($umOpts, $h) {
         </section>
     </div>
 
-    <!-- ══ Modal 4: Deactivate / reactivate ══ -->
     <div class="um-modal-backdrop" id="umStatusModal" hidden>
         <section class="um-modal um-modal-small" role="alertdialog" aria-modal="true" aria-labelledby="umStatusTitle" aria-describedby="umStatusText" tabindex="-1">
             <header class="um-modal-header">

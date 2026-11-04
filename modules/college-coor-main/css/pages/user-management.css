@@ -923,7 +923,65 @@ body.um-modal-open {
     overflow-wrap: anywhere;
 }
 
+.um-section-title,
+.um-info-section h3,
+.um-section-heading h3 {
+    margin: 0 0 14px;
+    color: var(--color2);
+    font-size: 1rem;
+}
+
+.um-info-section {
+    margin-top: 24px;
+}
+
+.um-info-section h4 {
+    margin: 0 0 12px;
+    color: var(--color2);
+    font-size: 0.9rem;
+}
+
+.um-access-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 22px;
+}
+
+.um-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 24px;
+    margin: 0;
+}
+
+.um-info-grid > div {
+    min-width: 0;
+}
+
+.um-info-grid dt {
+    margin-bottom: 5px;
+    color: var(--color5);
+    font-size: 0.78rem;
+}
+
+.um-info-grid dd {
+    margin: 0;
+    color: var(--color2);
+    font-size: 0.88rem;
+    font-weight: 650;
+    overflow-wrap: anywhere;
+}
+
+.um-field-full {
+    grid-column: 1 / -1;
+}
+
 .um-section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
     margin-bottom: 18px;
 }
 
@@ -947,12 +1005,16 @@ body.um-modal-open {
     border-bottom: 1px solid var(--color9);
 }
 
-.um-activity-item:first-child { padding-top: 0; }
-.um-activity-item:last-child  { border-bottom: 0; }
+.um-activity-item:first-child {
+    padding-top: 0;
+}
+
+.um-activity-item:last-child {
+    border-bottom: 0;
+}
 
 .um-activity-icon {
     display: inline-flex;
-    flex: 0 0 auto;
     align-items: center;
     justify-content: center;
     width: 34px;
@@ -989,161 +1051,135 @@ body.um-modal-open {
     margin-top: 14px;
 }
 
-.um-access-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 22px;
-}
-
 .um-footnote {
     margin: 18px 0 0;
     color: var(--color5);
     font-size: 0.76rem;
 }
 
-.um-notice {
-    margin-top: 20px;
-    padding: 14px;
-    border: 1px solid rgba(32, 0, 130, 0.15);
-    border-radius: 12px;
-    background: rgba(32, 0, 130, 0.04);
+.um-status-is-locked {
+    color: #b45309;
+    background: rgba(217, 119, 6, 0.14);
 }
 
-.um-notice strong {
-    color: var(--color2);
-    font-size: 0.85rem;
+.um-status-is-locked::before {
+    content: "🔒";
+    font-size: 0.7rem;
 }
 
-.um-notice p {
-    margin: 5px 0 0;
-    color: var(--color5);
-    font-size: 0.82rem;
+.um-back {
+    margin-bottom: 16px;
 }
 
-.um-modal-footer {
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    padding: 14px 24px;
-    border-top: 1px solid var(--color9);
-    background: rgba(32, 0, 130, 0.015);
-}
-
-/* ── Forms ──────────────────────────────────────── */
-.um-form-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
-}
-
-.um-form-field {
-    display: grid;
-    gap: 7px;
-    align-content: start;
-    min-width: 0;
-    color: var(--color2);
-    font-size: 0.82rem;
-    font-weight: 700;
-}
-
-.um-field-full {
-    grid-column: 1 / -1;
-}
-
-.um-form-field input,
-.um-form-field select {
-    width: 100%;
-    min-height: 44px;
-    padding: 10px 12px;
-    border: 1px solid var(--color4);
-    border-radius: 9px;
-    outline: none;
-    color: var(--color2);
+.um-state {
+    padding: 12px 14px;
+    border: 1px solid var(--color9);
+    border-radius: 10px;
     background: var(--color3);
-    font-size: 0.88rem;
-    font-weight: 400;
-}
-
-.um-form-field input:focus,
-.um-form-field select:focus {
-    border-color: var(--color1);
-    box-shadow: 0 0 0 3px rgba(32, 0, 130, 0.1);
-}
-
-.um-form-field [aria-invalid="true"] {
-    border-color: var(--color10);
-}
-
-.um-form-field .um-lookup-list {
-    min-height: 0;
-    padding: 4px;
-}
-
-.um-lookup-list option {
-    padding: 8px 10px;
-    border-radius: 6px;
-}
-
-.um-lookup-list option:disabled {
-    color: var(--color4);
-}
-
-.um-lookup-list:empty {
-    display: none;
-}
-
-.um-field-hint {
-    margin: 0;
     color: var(--color5);
-    font-size: 0.76rem;
-    font-weight: 400;
+    font-size: 0.85rem;
+    line-height: 1.5;
 }
 
-.um-pw-row {
-    display: flex;
-    gap: 8px;
+.um-state[hidden] {
+    display: none !important;
 }
 
-.um-pw-row input {
-    flex: 1 1 auto;
-    min-width: 0;
-}
-
-.um-pw-row .um-btn {
-    flex: 0 0 auto;
-    min-height: 44px;
-}
-
-.um-form-message {
-    margin: 12px 0 0;
+.um-state--error {
     color: var(--color10);
-    font-size: 0.82rem;
+    border-color: rgba(198, 40, 40, 0.2);
+    background: rgba(198, 40, 40, 0.04);
 }
 
-.um-form-message:empty {
-    display: none;
+.um-panel {
+    padding: 20px;
+    background: var(--color3);
+    border: 1px solid var(--color9);
+    border-radius: 14px;
 }
 
-.um-status-reason {
+.um-panel + .um-panel,
+.um-detail-stats + .um-panel {
     margin-top: 16px;
 }
 
-/* ── Toast ──────────────────────────────────────── */
-.um-toast {
-    position: fixed;
-    z-index: 1200;
-    right: 24px;
-    bottom: 24px;
-    max-width: min(420px, calc(100vw - 32px));
-    padding: 13px 16px;
-    border-radius: 12px;
-    color: #fff;
-    background: var(--color2);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
-    font-size: 0.88rem;
+.um-detail-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
 }
 
-/* ── Responsive ─────────────────────────────────── */
+.um-detail-title {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    min-width: 0;
+}
+
+.um-detail-title > div:last-child {
+    min-width: 0;
+}
+
+.um-detail-title h2 {
+    margin: 0 0 8px;
+    color: var(--color2);
+    font-size: 1.35rem;
+    overflow-wrap: anywhere;
+    outline: none;
+}
+
+.um-status-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.um-detail-desc {
+    margin: 12px 0 0;
+    color: var(--color2);
+    font-size: 0.88rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.um-detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.um-detail-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 16px;
+}
+
+.um-mini-stat {
+    padding: 16px 18px;
+    border: 1px solid var(--color9);
+    border-radius: 14px;
+    background: var(--color3);
+}
+
+.um-mini-stat span {
+    display: block;
+    color: var(--color5);
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.um-mini-stat strong {
+    display: block;
+    margin-top: 4px;
+    color: var(--color2);
+    font-size: 1.5rem;
+    font-weight: 800;
+}
+
 @media (max-width: 1200px) {
     .um-filters {
         grid-template-columns: repeat(3, minmax(0, 1fr));

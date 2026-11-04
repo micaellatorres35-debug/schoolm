@@ -16,7 +16,7 @@ let umPage = 1;
 let umTotalPages = 1;
 let umRequestId = 0;
 let umSearchTimer = null;
-let umView = 'table';
+let umView = 'overview';
 let umRows = [];
 let umBusy = false;
 let umToastTimer = null;
@@ -27,7 +27,8 @@ let umDetailData = null;
 let umActivityOffset = 0;
 let umActivityTotal = 0;
 let umActivityLoaded = false;
-let umActivityReq = 0;
+let umDetailReq = 0;
+let umLastOpened = null;
 
 let umStatusTarget = null;
 let umModalStack = [];
@@ -62,7 +63,7 @@ function umInit() {
     if (!root.dataset.umLoaded) {
         root.dataset.umLoaded = '1';
         umPage = 1;
-        umView = 'table';
+        umView = 'overview';
         umRows = [];
         umBusy = false;
         umDetailUserId = null;
@@ -289,8 +290,19 @@ function umShowMessage(text, isError) {
     msg.textContent = text;
     msg.classList.toggle('um-empty-state--error', !!isError);
     msg.hidden = false;
-    umEl('umCardGrid').hidden = true;
-    umEl('umTableWrap').hidden = true;
+    const tableWrap = umEl('umTableWrap');
+    if (tableWrap) tableWrap.hidden = true;
+}
+
+function umSetView(view) {
+    umView = view;
+    const overview = umEl('umOverview');
+    const detail = umEl('umDetail');
+    if (overview) overview.hidden = view !== 'overview';
+    if (detail) detail.hidden = view !== 'detail';
+    if (view === 'detail' && umEl('umRoot')) {
+        umEl('umRoot').scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }
 }
 
 function umRenderStats(stats) {
@@ -300,26 +312,30 @@ function umRenderStats(stats) {
     umSet('umStatInactive', String(stats.deactivated));
 }
 
-function umRenderDirectory() {
-    if (!umRows.length) {
-        umShowMessage('No users match your search or filters.');
-        return;
-    }
-    umEl('umEmpty').hidden = true;
-    umEl('umCardGrid').innerHTML = '';
-    umEl('umTableBody').innerHTML = umRows.map(umRowHtml).join('');
-    umApplyView();
+function umApplyView() {
+    const tableWrap = umEl('umTableWrap');
+    const cardGrid = umEl('umCardGrid');
+    if (tableWrap) tableWrap.hidden = !(umRows.length > 0);
+    if (cardGrid) cardGrid.hidden = true;
 }
 
-function umApplyView() {
-    const has = umRows.length > 0;
-    umView = 'table';
-    umEl('umCardGrid').hidden = true;
-    umEl('umTableWrap').hidden = !(has && umView === 'table');
-    document.querySelectorAll('#umRoot .um-view-btn').forEach(function (b) {
-        b.classList.remove('is-active');
-        b.setAttribute('aria-pressed', 'false');
-    });
+function umRenderDirectory() {
+    const tableWrap = umEl('umTableWrap');
+    const empty = umEl('umEmpty');
+
+    if (!umRows.length) {
+        if (empty) {
+            empty.textContent = 'No users match your search or filters.';
+            empty.hidden = false;
+        }
+        if (tableWrap) tableWrap.hidden = true;
+        return;
+    }
+
+    if (empty) empty.hidden = true;
+    if (tableWrap) tableWrap.hidden = false;
+    umEl('umTableBody').innerHTML = umRows.map(umRowHtml).join('');
+    umApplyView();
 }
 
 function umMenuHtml(r) {
@@ -357,7 +373,7 @@ function umRowHtml(r) {
     const name = umFullName(r);
     const place = [r.department_name, r.unit_name].filter(function (x) { return x && String(x).trim() !== ''; }).join(' / ');
     return '' +
-    '<tr data-user-id="' + umEsc(r.user_id) + '">' +
+    '<tr data-user-id="' + umEsc(r.user_id) + '" data-um-action="view-details" data-user="' + umEsc(r.user_id) + '" tabindex="0" role="button" aria-label="Open ' + umEsc(name) + '">' +
         '<td><div class="um-table-person"><span class="um-avatar um-avatar-small' + umAvatarClass(r) + '" aria-hidden="true">' + umEsc(umInitials(r)) + '</span>' +
             '<span><strong>' + umEsc(name) + '</strong><small>' + umEsc(umNA(r.email, umNA(r.employee_code, 'No email'))) + '</small></span></div></td>' +
         '<td><span class="um-role-pill">' + umEsc(umNA(r.role_name, 'No role')) + '</span></td>' +
@@ -400,6 +416,20 @@ function umRenderPager() {
     nav.innerHTML = html;
 }
 
+function umBack() {
+    const focusTarget = umLastOpened || (umDetailUserId ? document.querySelector('tr[data-user-id="' + umDetailUserId + '"]') : null);
+    umDetailReq++;
+    umDetailUserId = null;
+    umDetailData = null;
+    umActivityOffset = 0;
+    umActivityTotal = 0;
+    umActivityLoaded = false;
+    umSetView('overview');
+    umLoad().then(function () {
+        if (focusTarget && document.body.contains(focusTarget)) focusTarget.focus();
+    });
+}
+
 /* ── Event delegation ───────────────────────────── */
 
 function umOnClick(e) {
@@ -428,8 +458,8 @@ function umOnClick(e) {
 
     switch (action) {
         case 'menu':           umToggleMenu(btn); break;
-        case 'view-switch':    umView = btn.dataset.view === 'table' ? 'table' : 'cards'; umApplyView(); break;
         case 'page':           umPage = parseInt(btn.dataset.page, 10) || 1; umLoad(); break;
+        case 'back':           umBack(); break;
         case 'clear-filters':  umClearFilters(); break;
         case 'export':         umExportCsv(); break;
         case 'view-details':   umOpenDetails(userId); break;
@@ -519,6 +549,34 @@ function umTrapTab(e) {
         first.focus();
     }
 }
+
+/* ── Filters ────────────────────────────────────── */
+
+function umClearFilters() {
+    ['umSearch', 'umStatus', 'umRole', 'umDepartment', 'umUnit'].forEach(function (id) {
+        const el = umEl(id);
+        if (el) el.value = '';
+    });
+    umFilterUnits(umEl('umDepartment'), umEl('umUnit'));
+    umPage = 1;
+    umLoad();
+}
+
+// Show only the units that belong to the chosen department
+function umFilterUnits(deptSel, unitSel) {
+    if (!deptSel || !unitSel) return;
+    const dept = deptSel.value;
+    Array.from(unitSel.options).forEach(function (o) {
+        const d = o.dataset.department;
+        const hide = !!(dept && d && d !== dept);
+        o.hidden = hide;
+        o.disabled = hide;
+    });
+    const sel = unitSel.selectedOptions[0];
+    if (sel && sel.disabled) unitSel.value = '';
+}
+
+/* ── Row menu ───────────────────────────────────── */
 
 function umToggleMenu(btn) {
     const wrap = btn.closest('.um-menu-wrap');
@@ -628,63 +686,81 @@ async function umOpenDetails(userId) {
 
     umDetailUserId = id;
     umDetailData = null;
-    umActivityLoaded = false;
     umActivityOffset = 0;
     umActivityTotal = 0;
-    umActivityReq++;
+    umActivityLoaded = false;
+    umDetailReq++;
 
-    umEl('umDetailsContent').hidden = true;
-    umSetNotice('umDetailsNotice', 'Loading details…');
+    const row = document.querySelector('tr[data-user-id="' + id + '"]');
+    umLastOpened = row || umLastOpened;
+
+    umSetView('detail');
+    umEl('umDetailContent').hidden = true;
+    const st = umEl('umDetailState');
+    if (st) {
+        st.textContent = 'Loading details…';
+        st.classList.remove('um-state--error');
+        st.hidden = false;
+    }
     umEl('umActivityList').innerHTML = '';
     umEl('umActivityMore').hidden = true;
-    umSetNotice('umActivityNotice', '');
-    umSet('umDetailsTitle', 'Employee details');
-    umSet('umDetailSubline', '');
-    const statusBadge = umEl('umDetailStatus');
-    if (statusBadge) {
-        statusBadge.className = 'um-status';
-        statusBadge.textContent = '';
-    }
-    umSelectTab('overview', false);
-    umOpenModal('umDetailsModal');
-
-    await umReloadDetails();
+    umSet('umActivityNotice', '');
+    umEl('umRoot').scrollIntoView({ block: 'start', behavior: 'smooth' });
+    umLoadDetail();
 }
 
-async function umReloadDetails() {
+async function umLoadDetail() {
     const id = umDetailUserId;
     if (!id) return;
+    const reqId = ++umDetailReq;
     try {
         const data = await umRequest('details', { user_id: id });
-        if (id !== umDetailUserId) return;
+        if (reqId !== umDetailReq || id !== umDetailUserId) return;
         umDetailData = data;
-        umRenderDetails(data);
-        umSetNotice('umDetailsNotice', '');
-        umEl('umDetailsContent').hidden = false;
-
-        umActivityLoaded = false;
-        if (umEl('umTabBtnActivity').getAttribute('aria-selected') === 'true') umLoadActivity(true);
+        umRenderDetail(data);
+        umLoadActivity(true);
     } catch (err) {
-        if (id !== umDetailUserId) return;
-        umSetNotice('umDetailsNotice', err.message || 'Unable to load details.', true);
+        if (reqId !== umDetailReq || id !== umDetailUserId) return;
+        const state = umEl('umDetailState');
+        if (state) {
+            state.innerHTML = umEsc(err.message || 'Unable to load this account.') +
+                ' <button type="button" class="um-link-btn" data-um-action="retry-detail">Try again</button>';
+            state.classList.add('um-state--error');
+            state.hidden = false;
+        }
+        umEl('umDetailContent').hidden = true;
     }
 }
 
-function umRenderDetails(d) {
+function umRenderDetail(d) {
     const name = umFullName(d);
     const off = umIsDeactivated(d);
+    const locked = umIsLocked(d);
 
     const av = umEl('umDetailAvatar');
-    av.textContent = umInitials(d);
-    av.className = 'um-avatar um-avatar-large' + umAvatarClass(d);
-
-    umSet('umDetailsTitle', name);
-    umSet('umDetailSubline', umNA(d.employee_code, 'No employee ID') + ' · ' + umNA(d.role_name, 'No role'));
-    const st = umEl('umDetailStatus');
-    if (st) {
-        st.className = 'um-status ' + (off ? 'is-inactive' : 'is-active');
-        st.textContent = off ? 'Inactive' : 'Active';
+    if (av) {
+        av.textContent = umInitials(d);
+        av.className = 'um-avatar um-avatar-large' + umAvatarClass(d);
     }
+
+    const heading = umEl('umDetailName');
+    if (heading) heading.textContent = name;
+
+    const status = umEl('umDetailStatus');
+    if (status) {
+        status.className = 'um-status ' + (off ? 'is-inactive' : 'is-active');
+        status.textContent = off ? 'Inactive' : 'Active';
+    }
+
+    const lockStatus = umEl('umDetailLockStatus');
+    if (lockStatus) {
+        lockStatus.className = 'um-status ' + (locked ? 'um-status-is-locked' : '');
+        lockStatus.hidden = !locked;
+        lockStatus.textContent = 'Locked';
+    }
+
+    const subline = umEl('umDetailSubline');
+    if (subline) subline.textContent = umNA(d.employee_code, 'No employee ID') + ' · ' + umNA(d.role_name, 'No role');
 
     umSet('umDetailLastLogin', umFormatWhen(d.last_login, 'No login recorded'));
     umSet('umDetailCreated', umFormatDate(d.account_created_at));
@@ -701,14 +777,10 @@ function umRenderDetails(d) {
     umSet('umAccessDepartment', umNA(d.department_name));
 
     const accessLock = umEl('umAccessLock');
-    if (accessLock) {
-        accessLock.textContent = umIsLocked(d) ? 'Locked until ' + umFormatWhen(d.locked_until) : 'Not locked';
-    }
+    if (accessLock) accessLock.textContent = locked ? 'Locked until ' + umFormatWhen(d.locked_until) : 'Not locked';
 
     const accessDeactWrap = umEl('umAccessDeactWrap');
-    if (accessDeactWrap) {
-        accessDeactWrap.hidden = !off;
-    }
+    if (accessDeactWrap) accessDeactWrap.hidden = !off;
     const accessDeactAt = umEl('umAccessDeactAt');
     if (accessDeactAt) accessDeactAt.textContent = umFormatWhen(d.deactivated_at);
     const accessDeactBy = umEl('umAccessDeactBy');
@@ -716,33 +788,21 @@ function umRenderDetails(d) {
     const accessDeactReason = umEl('umAccessDeactReason');
     if (accessDeactReason) accessDeactReason.textContent = umNA(d.deactivation_reason, 'No reason given');
 
-    const detailUnlock = umEl('umDetailUnlockBtn');
-    if (detailUnlock) detailUnlock.hidden = !umIsLocked(d);
+    const unlockBtn = umEl('umDetailUnlockBtn');
+    if (unlockBtn) unlockBtn.hidden = !locked;
 
-    const sb = umEl('umDetailStatusBtn');
-    if (sb) {
-        sb.textContent = off ? 'Reactivate' : 'Deactivate';
-        sb.dataset.mode = off ? 'reactivate' : 'deactivate';
-        sb.dataset.user = String(d.user_id);
+    const statusBtn = umEl('umDetailStatusBtn');
+    if (statusBtn) {
+        statusBtn.textContent = off ? 'Reactivate' : 'Deactivate';
+        statusBtn.dataset.mode = off ? 'reactivate' : 'deactivate';
+        statusBtn.dataset.user = String(d.user_id);
     }
-}
 
-function umSelectTab(name, focus) {
-    document.querySelectorAll('#umDetailsModal .um-tab').forEach(function (t) {
-        const on = t.dataset.tab === name;
-        t.classList.toggle('is-active', on);
-        t.setAttribute('aria-selected', on ? 'true' : 'false');
-        t.tabIndex = on ? 0 : -1;
-        if (on && focus) t.focus();
-    });
-    ['overview', 'activity', 'access'].forEach(function (n) {
-        const panel = umEl('umTab' + n.charAt(0).toUpperCase() + n.slice(1));
-        if (panel) panel.hidden = n !== name;
-    });
-    if (name === 'activity' && !umActivityLoaded && umDetailUserId) umLoadActivity(true);
+    const detailState = umEl('umDetailState');
+    if (detailState) detailState.hidden = true;
+    umEl('umDetailContent').hidden = false;
+    if (umEl('umDetailName')) umEl('umDetailName').focus();
 }
-
-/* ── Activity tab ───────────────────────────────── */
 
 function umActivityIcon(action) {
     const a = String(action || '').toLowerCase();
@@ -779,24 +839,31 @@ async function umLoadActivity(reset) {
         umActivityOffset = 0;
         umEl('umActivityList').innerHTML = '';
     }
-    const reqId = ++umActivityReq;
-    umSetNotice('umActivityNotice', reset ? 'Loading activity…' : 'Loading more…');
+    const reqId = ++umDetailReq;
+    const notice = umEl('umActivityNotice');
+    if (notice) notice.textContent = reset ? 'Loading activity…' : 'Loading more…';
+    if (notice) notice.hidden = false;
     umEl('umActivityMore').hidden = true;
 
     try {
         const data = await umRequest('activity', { user_id: id, offset: umActivityOffset, limit: UM_ACTIVITY_LIMIT });
-        if (reqId !== umActivityReq || id !== umDetailUserId) return;
+        if (reqId !== umDetailReq || id !== umDetailUserId) return;
 
         umEl('umActivityList').insertAdjacentHTML('beforeend', data.rows.map(function (a) { return umActivityHtml(a, id); }).join(''));
         umActivityOffset += data.rows.length;
         umActivityTotal = data.total;
         umActivityLoaded = true;
 
-        umSetNotice('umActivityNotice', data.total === 0 ? 'No activity has been recorded for this account yet.' : '');
+        if (notice) notice.textContent = data.total === 0 ? 'No activity has been recorded for this account yet.' : '';
+        if (notice) notice.hidden = data.total !== 0;
         umEl('umActivityMore').hidden = umActivityOffset >= umActivityTotal;
     } catch (err) {
-        if (reqId !== umActivityReq || id !== umDetailUserId) return;
-        umSetNotice('umActivityNotice', err.message || 'Unable to load activity.', true);
+        if (reqId !== umDetailReq || id !== umDetailUserId) return;
+        if (notice) {
+            notice.textContent = err.message || 'Unable to load activity.';
+            notice.classList.add('um-notice-text--error');
+            notice.hidden = false;
+        }
         umEl('umActivityMore').hidden = umActivityOffset >= umActivityTotal && umActivityLoaded;
         if (!umActivityLoaded) umEl('umActivityMore').hidden = true;
     }
