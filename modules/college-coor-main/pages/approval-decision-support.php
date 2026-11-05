@@ -122,9 +122,6 @@ $isDirectress = in_array($roleName, ['School Directress', 'Admin College Coordin
                     </label>
 
                     <button type="button" class="sd-approval-btn sd-approval-btn--ghost" data-action="clear-filters">Clear filters</button>
-                        <button type="button" class="sd-approval-btn sd-approval-btn--primary" data-action="open-create">
-                            Submit for Approval
-                        </button>
                 </div>
 
                 <div id="sd-approval-queue-list" class="sd-approval-list" aria-busy="true">

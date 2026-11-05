@@ -82,7 +82,8 @@ class FacultyProfileManager {
                     p.position_name,
                     e.employment_type,
                     e.employment_status,
-                    e.created_at
+                    e.created_at,
+                    e.department_id
                 FROM cc_faculty cf
                 INNER JOIN em_employees e ON e.employee_id = cf.employee_id
                 LEFT JOIN em_departments d ON d.department_id = e.department_id
@@ -94,6 +95,134 @@ class FacultyProfileManager {
         $stmt->bindParam(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function getFacultyDirectory($search = '', $employmentType = '') {
+        $searchTerm = trim((string)$search);
+        $typeFilter = trim((string)$employmentType);
+
+        $sql = "SELECT
+                    cf.id AS faculty_id,
+                    e.employee_id,
+                    e.employee_code,
+                    e.first_name,
+                    e.middle_name,
+                    e.last_name,
+                    e.suffix,
+                    e.email,
+                    d.department_name AS department,
+                    p.position_name,
+                    e.employment_type,
+                    e.employment_status,
+                    e.created_at,
+                    COALESCE((
+                        SELECT ed.level
+                        FROM em_education ed
+                        WHERE ed.employee_id = e.employee_id
+                        ORDER BY CASE ed.level
+                            WHEN 'Doctoral' THEN 6
+                            WHEN 'Masteral' THEN 5
+                            WHEN 'College' THEN 4
+                            WHEN 'Senior High School' THEN 3
+                            WHEN 'High School' THEN 2
+                            WHEN 'Elementary' THEN 1
+                            ELSE 0
+                        END DESC,
+                        CAST(ed.year_graduated AS UNSIGNED) DESC,
+                        ed.education_id DESC
+                        LIMIT 1
+                    ), 'No record yet') AS highest_degree,
+                    (
+                        SELECT COUNT(*)
+                        FROM em_certifications ec
+                        WHERE ec.employee_id = e.employee_id
+                    ) + (
+                        SELECT COUNT(*)
+                        FROM cc_certification_engagements ce
+                        WHERE ce.employee_id = e.employee_id
+                    ) AS trainings_count
+                FROM cc_faculty cf
+                INNER JOIN em_employees e ON e.employee_id = cf.employee_id
+                LEFT JOIN em_departments d ON d.department_id = e.department_id
+                LEFT JOIN em_positions p ON p.position_id = e.position_id
+                WHERE e.is_archived = 0";
+
+        $params = [];
+
+        if ($searchTerm !== '') {
+            $sql .= " AND (
+                e.employee_code LIKE :search
+                OR e.first_name LIKE :search
+                OR e.middle_name LIKE :search
+                OR e.last_name LIKE :search
+                OR d.department_name LIKE :search
+                OR p.position_name LIKE :search
+                OR CONCAT_WS(' ', e.first_name, e.middle_name, e.last_name) LIKE :search
+            )";
+            $params[':search'] = '%' . $searchTerm . '%';
+        }
+
+        if ($typeFilter !== '' && $typeFilter !== 'All') {
+            $sql .= " AND e.employment_type = :employment_type";
+            $params[':employment_type'] = $typeFilter;
+        }
+
+        $sql .= " ORDER BY e.last_name ASC, e.first_name ASC";
+
+        $stmt = $this->conn->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getFacultyFullProfile($employeeId) {
+        $employee = $this->getEmployeeById((int)$employeeId);
+        if (!$employee) {
+            return null;
+        }
+
+        $departmentName = null;
+        $positionName = null;
+
+        if (!empty($employee['department_id'])) {
+            $deptStmt = $this->conn->prepare("SELECT department_name FROM em_departments WHERE department_id = :department_id LIMIT 1");
+            $deptStmt->bindValue(':department_id', (int)$employee['department_id'], PDO::PARAM_INT);
+            $deptStmt->execute();
+            $departmentName = $deptStmt->fetchColumn();
+        }
+
+        if (!empty($employee['position_id'])) {
+            $posStmt = $this->conn->prepare("SELECT position_name FROM em_positions WHERE position_id = :position_id LIMIT 1");
+            $posStmt->bindValue(':position_id', (int)$employee['position_id'], PDO::PARAM_INT);
+            $posStmt->execute();
+            $positionName = $posStmt->fetchColumn();
+        }
+
+        $employee['department'] = $departmentName ?: 'Not provided';
+        $employee['position_name'] = $positionName ?: 'Not provided';
+        $employee['full_name'] = $this->formatFacultyName(
+            $employee['first_name'] ?? '',
+            $employee['middle_name'] ?? '',
+            $employee['last_name'] ?? '',
+            $employee['suffix'] ?? null
+        );
+
+        $educationRecords = $this->getFacultyEducationRecords((int)$employeeId);
+        $requirements = $this->getFacultyRequirements((int)$employeeId);
+        $trainingRecords = $this->getFacultyTrainingRecords((int)$employeeId);
+        $engagementRecords = $this->getFacultyEngagementRecords((int)$employeeId);
+
+        $employee['highest_degree'] = !empty($educationRecords) ? ($educationRecords[0]['level'] ?? 'No record yet') : 'No record yet';
+
+        return [
+            'employee' => $employee,
+            'education_records' => $educationRecords,
+            'requirements' => $requirements,
+            'training_records' => $trainingRecords,
+            'engagement_records' => $engagementRecords,
+        ];
     }
 
     public function getFacultyEducationSummary() {

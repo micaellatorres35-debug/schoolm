@@ -66,10 +66,6 @@
                     <h2 class="sd-issue-panel-title" id="sd-issue-attn-title">Needs Attention</h2>
                     <p class="sd-issue-panel-sub">Unresolved concerns, longest-waiting first.</p>
                 </div>
-
-                <?php if ($canCreate) : ?>
-                    <button type="button" id="sd-issue-create" class="sd-issue-btn sd-issue-btn-primary">+ Create Concern</button>
-                <?php endif; ?>
             </div>
 
             <ul class="sd-issue-attn-list" id="sd-issue-attn-list">
