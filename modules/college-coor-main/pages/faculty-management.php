@@ -835,87 +835,87 @@ function renderTrainingsPanel($trainingSummary, $eligibleEmployees = []) {
             </div>
         </div>
     </section>
-</div>
 
-<div id="fmAddEngagementModal" class="modal" hidden>
-    <div class="modal-dialog" style="max-width: 560px;">
-        <div class="modal-header">
-            <h5 class="modal-title">Add Engagement</h5>
-            <button type="button" class="modal-close" data-fm-action="close-add-engagement" aria-label="Close">&times;</button>
-        </div>
-        <div class="modal-body">
-            <form id="fmAddEngagementForm" data-custom-submit>
-                <div class="form-group">
-                    <label for="fmAddEngagementEmployee">Employee</label>
-                    <input id="fmAddEngagementEmployee" class="form-control" type="text" readonly />
-                    <input id="fmAddEngagementEmployeeId" type="hidden" />
-                </div>
-
-                <div class="form-group">
-                    <label for="fmAddEngagementTitle">Title</label>
-                    <input id="fmAddEngagementTitle" name="title" class="form-control" required />
-                </div>
-
-                <div class="form-group">
-                    <label for="fmAddEngagementOrganization">Organization</label>
-                    <input id="fmAddEngagementOrganization" name="organization" class="form-control" required />
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group col-md-6">
-                        <label for="fmAddEngagementStartDate">Start Date</label>
-                        <input id="fmAddEngagementStartDate" name="start_date" type="date" class="form-control" required />
+    <div id="fmAddEngagementModal" class="modal" hidden>
+        <div class="modal-dialog" style="max-width: 560px;">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Engagement</h5>
+                <button type="button" class="modal-close" data-fm-action="close-add-engagement" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="fmAddEngagementForm" data-custom-submit>
+                    <div class="form-group">
+                        <label for="fmAddEngagementEmployee">Employee</label>
+                        <input id="fmAddEngagementEmployee" class="form-control" type="text" readonly />
+                        <input id="fmAddEngagementEmployeeId" type="hidden" />
                     </div>
-                    <div class="form-group col-md-6">
-                        <label for="fmAddEngagementEndDate">End Date</label>
-                        <input id="fmAddEngagementEndDate" name="end_date" type="date" class="form-control" required />
+
+                    <div class="form-group">
+                        <label for="fmAddEngagementTitle">Title</label>
+                        <input id="fmAddEngagementTitle" name="title" class="form-control" required />
                     </div>
-                </div>
 
-                <div style="margin-top:12px; text-align:right;">
-                    <button type="button" class="btn btn-secondary" data-fm-action="close-add-engagement">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Create Engagement</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+                    <div class="form-group">
+                        <label for="fmAddEngagementOrganization">Organization</label>
+                        <input id="fmAddEngagementOrganization" name="organization" class="form-control" required />
+                    </div>
 
-<div id="fmShiftScheduleModal" class="modal" hidden>
-    <div class="modal-dialog" style="max-width: 760px;">
-        <div class="modal-header">
-            <h5 class="modal-title">Shift Schedule</h5>
-            <button type="button" class="modal-close" data-fm-action="close-shift-schedule" aria-label="Close">&times;</button>
-        </div>
-        <div class="modal-body">
-            <div id="fmShiftScheduleContent" class="fm-shift-content"></div>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-fm-action="close-shift-schedule">Close</button>
-        </div>
-    </div>
-</div>
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label for="fmAddEngagementStartDate">Start Date</label>
+                            <input id="fmAddEngagementStartDate" name="start_date" type="date" class="form-control" required />
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label for="fmAddEngagementEndDate">End Date</label>
+                            <input id="fmAddEngagementEndDate" name="end_date" type="date" class="form-control" required />
+                        </div>
+                    </div>
 
-<div id="fmOutcomeModal" class="modal" hidden>
-    <div class="modal-dialog" style="max-width: 420px;">
-        <div class="modal-header">
-            <h5 class="modal-title">Complete Engagement</h5>
-            <button type="button" class="modal-close" data-fm-action="close-outcome-modal" aria-label="Close">&times;</button>
-        </div>
-        <div class="modal-body">
-            <div class="form-group">
-                <label for="fmOutcomeSelect">Outcome</label>
-                <select id="fmOutcomeSelect" class="form-control">
-                    <option value="Continue">Continue</option>
-                    <option value="Regularize">Regularize</option>
-                    <option value="End Engagement">End Engagement</option>
-                    <option value="Not Applicable">Not Applicable</option>
-                </select>
+                    <div style="margin-top:12px; text-align:right;">
+                        <button type="button" class="btn btn-secondary" data-fm-action="close-add-engagement">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create Engagement</button>
+                    </div>
+                </form>
             </div>
         </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-fm-action="close-outcome-modal">Cancel</button>
-            <button id="fmOutcomeConfirmBtn" type="button" class="btn btn-primary">Confirm</button>
+    </div>
+
+    <div id="fmShiftScheduleModal" class="modal" hidden>
+        <div class="modal-dialog" style="max-width: 760px;">
+            <div class="modal-header">
+                <h5 class="modal-title">Shift Schedule</h5>
+                <button type="button" class="modal-close" data-fm-action="close-shift-schedule" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="fmShiftScheduleContent" class="fm-shift-content"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-fm-action="close-shift-schedule">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="fmOutcomeModal" class="modal" hidden>
+        <div class="modal-dialog" style="max-width: 420px;">
+            <div class="modal-header">
+                <h5 class="modal-title">Complete Engagement</h5>
+                <button type="button" class="modal-close" data-fm-action="close-outcome-modal" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="fmOutcomeSelect">Outcome</label>
+                    <select id="fmOutcomeSelect" class="form-control">
+                        <option value="Continue">Continue</option>
+                        <option value="Regularize">Regularize</option>
+                        <option value="End Engagement">End Engagement</option>
+                        <option value="Not Applicable">Not Applicable</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-fm-action="close-outcome-modal">Cancel</button>
+                <button id="fmOutcomeConfirmBtn" type="button" class="btn btn-primary">Confirm</button>
+            </div>
         </div>
     </div>
 </div>

@@ -53,6 +53,27 @@ function fmDepartmentName(value) {
     return value && String(value).trim() ? String(value).trim() : 'Not provided';
 }
 
+function fmFormatTime(value) {
+    if (value === null || value === undefined || value === '') return '--';
+
+    const timeText = String(value).trim();
+    if (!timeText) return '--';
+
+    const match = timeText.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    if (!match) {
+        return timeText;
+    }
+
+    let hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    const suffix = hours >= 12 ? 'PM' : 'AM';
+
+    if (hours === 0) hours = 12;
+    else if (hours > 12) hours -= 12;
+
+    return hours + ':' + (minutes < 10 ? '0' + minutes : minutes) + ' ' + suffix;
+}
+
 function fmRenderDirectory(list) {
     fmListData = Array.isArray(list) ? list : [];
     const tbody = fmEl('fmTableBody');
@@ -291,6 +312,7 @@ function fmRenderDetail(data) {
         if (filter === 'active') filtered = combined.filter((r) => ['Pending', 'Approved', 'Ongoing', 'For Review'].includes(String(r.status)));
         if (filter === 'completed') filtered = combined.filter((r) => String(r.status).toLowerCase() === 'completed');
         if (filter === 'archived') filtered = combined.filter((r) => String(r.status).toLowerCase() === 'archived');
+        if (filter === 'all') filtered = combined.filter((r) => String(r.status).toLowerCase() !== 'archived');
 
         if (!filtered.length) {
             trainingBody.innerHTML = '<tr><td colspan="7">No training records match the selected status.</td></tr>';
@@ -474,15 +496,41 @@ function fmOpenShiftSchedule(employeeId) {
         }
 
         const schedule = data.schedule;
+        const weekly = schedule.weekly_schedule || {};
+        const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const rows = dayOrder.map((day) => {
+            const daySchedule = weekly[day] || {};
+            return '<tr>' +
+                '<td>' + fmEsc(day) + '</td>' +
+                '<td>' + fmEsc(fmFormatTime(daySchedule.start_time)) + '</td>' +
+                '<td>' + fmEsc(fmFormatTime(daySchedule.break_start)) + '</td>' +
+                '<td>' + fmEsc(fmFormatTime(daySchedule.break_end)) + '</td>' +
+                '<td>' + fmEsc(fmFormatTime(daySchedule.end_time)) + '</td>' +
+            '</tr>';
+        }).join('');
+
+        const breakDuration = schedule.break_duration;
+        let breakLabel = '--';
+        if (breakDuration !== null && breakDuration !== undefined && breakDuration !== '') {
+            const value = Number(breakDuration);
+            breakLabel = Number.isFinite(value) ? value + ' minutes' : String(breakDuration);
+        }
+
         content.innerHTML = '<div class="fm-shift-grid">' +
             '<div><strong>Faculty Name</strong><span>' + fmEsc(schedule.faculty_name || 'N/A') + '</span></div>' +
             '<div><strong>Employee ID</strong><span>' + fmEsc(schedule.employee_id || 'N/A') + '</span></div>' +
             '<div><strong>Department</strong><span>' + fmEsc(schedule.department || 'Not provided') + '</span></div>' +
             '<div><strong>Shift Name</strong><span>' + fmEsc(schedule.shift_name || 'N/A') + '</span></div>' +
-            '<div><strong>Break Duration</strong><span>' + fmEsc(schedule.break_duration || 'N/A') + '</span></div>' +
+            '<div><strong>Break Duration</strong><span>' + fmEsc(breakLabel) + '</span></div>' +
             '<div><strong>Status</strong><span>' + fmEsc(schedule.status || 'Active') + '</span></div>' +
             '<div><strong>Effective From</strong><span>' + fmEsc(schedule.effective_from || 'N/A') + '</span></div>' +
             '<div><strong>Effective To</strong><span>' + fmEsc(schedule.effective_to || 'Ongoing') + '</span></div>' +
+        '</div>' +
+        '<div class="fm-shift-table-wrap">' +
+            '<table class="fm-shift-table">' +
+                '<thead><tr><th>Day</th><th>Start</th><th>Break Start</th><th>Break End</th><th>End</th></tr></thead>' +
+                '<tbody>' + rows + '</tbody>' +
+            '</table>' +
         '</div>';
         modal.hidden = false;
     }).catch(() => {

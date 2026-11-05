@@ -149,6 +149,12 @@
     text-align: center;
 }
 
+.fm-page .fm-empty-state-inline {
+    color: var(--fm-muted);
+    text-align: center;
+    padding: 20px 0;
+}
+
 .fm-page .fm-table-shell {
     background: var(--fm-white);
     border: 1px solid var(--fm-border);
@@ -440,10 +446,11 @@
     inset: 0;
     background: rgba(15, 23, 42, 0.5);
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
-    padding: 20px;
-    z-index: 2000;
+    padding: 90px 20px 30px;
+    z-index: 10000;
+    overflow-y: auto;
 }
 
 .fm-page .modal[hidden] {
@@ -452,6 +459,9 @@
 
 .fm-page .modal-dialog {
     width: min(100%, 560px);
+    max-height: calc(100vh - 120px);
+    display: flex;
+    flex-direction: column;
     background: var(--fm-white);
     border-radius: 12px;
     border: 1px solid var(--fm-border);
@@ -466,6 +476,7 @@
     align-items: center;
     padding: 16px 18px;
     border-bottom: 1px solid var(--fm-border);
+    flex-shrink: 0;
 }
 
 .fm-page .modal-footer {
@@ -490,6 +501,7 @@
 
 .fm-page .modal-body {
     padding: 18px;
+    overflow-y: auto;
 }
 
 .fm-page .form-group {
@@ -515,6 +527,65 @@
 
 .fm-page .fm-shift-content {
     min-height: 120px;
+}
+
+.fm-page .fm-shift-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+}
+
+.fm-page .fm-shift-grid div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 14px;
+    border: 1px solid var(--fm-border);
+    border-radius: 8px;
+}
+
+.fm-page .fm-shift-grid strong {
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--fm-muted);
+}
+
+.fm-page .fm-shift-grid span {
+    font-size: 0.93rem;
+    color: var(--fm-text);
+}
+
+.fm-page .fm-shift-table-wrap {
+    margin-top: 18px;
+    overflow-x: auto;
+}
+
+.fm-page .fm-shift-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 560px;
+}
+
+.fm-page .fm-shift-table th,
+.fm-page .fm-shift-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--fm-border);
+    text-align: left;
+    font-size: 0.9rem;
+}
+
+.fm-page .fm-shift-table thead th {
+    background: #f8fafc;
+    color: var(--fm-muted);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.fm-page .modal:not([hidden]) {
+    display: flex;
 }
 
 @media (max-width: 720px) {

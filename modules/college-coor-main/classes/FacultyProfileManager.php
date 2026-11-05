@@ -140,6 +140,7 @@ class FacultyProfileManager {
                         SELECT COUNT(*)
                         FROM cc_certification_engagements ce
                         WHERE ce.employee_id = e.employee_id
+                        AND ce.status != 'Archived'
                     ) AS trainings_count
                 FROM cc_faculty cf
                 INNER JOIN em_employees e ON e.employee_id = cf.employee_id
