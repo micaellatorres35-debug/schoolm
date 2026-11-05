@@ -4,26 +4,47 @@ class Page {
     private $pagesDir;
     private $allowed = [];
 
-    /*Sidebar Content*/ 
+    /*Sidebar Content*/
     private $labels = [
         'dashboard-overview' => 'Dashboard Overview',
-        'academics' => 'Academics Management',
-        'events-management'  => 'Events Management',
         'faculty-management' => 'Faculty Management',
         'user-management' => 'Coordinator Management',
-        'department-unit-management' => 'Department & Unit Management',
         'communications-announcements' => 'Communications and Announcements',
-        'class-scheduling'   => 'Class Scheduling',
+        'academics-management' => 'Academics Management',   // dati: 'academics' (hindi tugma sa page slug)
+        'class-scheduling' => 'Class Scheduling',
+        'events-management' => 'Events Management',
         'report-submission-management' => 'Report Submission & Management',
         'concerns-issues-tracking' => 'Concern & Issue Tracking',
         'approval-decision-support' => 'Approval and Decision Support',
+        'department-unit-management' => 'Department & Unit Management', // wala na sa sidebar, pero puwede pa ring buksan via URL
     ];
 
-    /*Content Sections*/ 
+    /*Section headings (ayon sa pagkakasunod sa sidebar)*/
+    private $sectionTitles = [
+        'administration' => 'Administration',
+        'academic-affairs' => 'Academic Affairs',
+        'requests-and-reports' => 'Requests And Reports',
+    ];
+
+    /*Content Sections*/
     private $sections = [
-        'top'             => ['dashboard-overview'],
-        'academics'  => ['faculty-management', 'user-management', 'department-unit-management', 'communications-announcements', 'academics-management', 'class-scheduling', 'events-management'],
-        'requests-and-reports' => ['report-submission-management', 'concerns-issues-tracking', 'approval-decision-support']
+        'top' => ['dashboard-overview'],
+        'administration' => [
+            'faculty-management',
+            'user-management',
+            'department-unit-management', 
+            'communications-announcements',
+        ],
+        'academic-affairs' => [
+            'academics-management',
+            'class-scheduling',
+            'events-management',
+        ],
+        'requests-and-reports' => [
+            'report-submission-management',
+            'concerns-issues-tracking',
+            'approval-decision-support',
+        ],
     ];
 
     public function __construct($pagesDir = null) {
@@ -64,21 +85,16 @@ class Page {
     }
 
     public function renderNav() {
-        // Top section (no heading/separator)
+        // Top section (walang heading/separator)
         foreach ($this->sections['top'] as $p) {
             $this->renderLink($p);
         }
 
         // Grouped sections
-        $sectionOrder = ['academics', 'requests-and-reports'];
-        foreach ($sectionOrder as $section) {
+        foreach ($this->sectionTitles as $key => $title) {
             echo '<div class="separator"></div>';
-            if ($section === 'academics') {
-                echo '<h3>Administration</h3>';
-            } else {
-                echo '<h3>' . ucwords(str_replace('-', ' ', $section)) . '</h3>';
-            }
-            foreach ($this->sections[$section] as $p) {
+            echo '<h3>' . htmlspecialchars($title) . '</h3>';
+            foreach ($this->sections[$key] as $p) {
                 $this->renderLink($p);
             }
         }

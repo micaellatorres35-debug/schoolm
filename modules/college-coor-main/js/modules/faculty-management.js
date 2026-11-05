@@ -284,7 +284,7 @@ function fmRenderDetail(data) {
         } else {
             requirementBody.innerHTML = requirements.map((row) => {
                 const name = fmEsc(row.requirement_name || 'N/A');
-                const status = fmEsc(row.status || 'N/A');
+                const status = fmRequirementBadge(row.status || 'N/A');
                 const remarks = fmEsc(row.remarks || 'N/A');
                 const submitted = fmEsc(row.submitted_date || 'N/A');
                 const followUp = fmEsc(row.follow_up_date || 'N/A');
@@ -337,6 +337,18 @@ function fmRenderDetail(data) {
     const isPartTimeActive = employee.employment_type === 'Part-time' && String(employee.employment_status || '').toLowerCase() === 'active';
     if (detailShift) detailShift.hidden = !isPartTimeActive;
     if (detailAdd) detailAdd.hidden = !isPartTimeActive;
+}
+
+function fmRequirementBadge(status) {
+    const text = String(status || 'N/A').trim();
+    const normalized = text.toLowerCase();
+
+    let className = 'fm-badge fm-badge-muted';
+    if (normalized === 'submitted') className = 'fm-badge fm-badge-success';
+    else if (normalized === 'missing') className = 'fm-badge fm-badge-danger';
+    else if (normalized === 'for follow-up' || normalized === 'for follow up') className = 'fm-badge fm-badge-warning';
+
+    return '<span class="' + className + '">' + fmEsc(text || 'N/A') + '</span>';
 }
 
 function fmRenderTrainingActions(row) {

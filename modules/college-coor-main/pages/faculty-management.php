@@ -832,6 +832,26 @@ function renderTrainingsPanel($trainingSummary, $eligibleEmployees = []) {
                         </tbody>
                     </table>
                 </section>
+
+                <section class="fm-panel-card fm-req-card">
+                    <div class="fm-panel-header">
+                        <h3>Faculty Requirements</h3>
+                    </div>
+                    <table class="fm-inner-table fm-req-table">
+                        <thead>
+                            <tr>
+                                <th>Requirement</th>
+                                <th>Status</th>
+                                <th>Remarks</th>
+                                <th>Submitted Date</th>
+                                <th>Follow-up Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fmRequirementsTableBody">
+                            <tr><td colspan="5">No faculty requirements found.</td></tr>
+                        </tbody>
+                    </table>
+                </section>
             </div>
         </div>
     </section>

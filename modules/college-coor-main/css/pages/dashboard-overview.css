@@ -1021,7 +1021,7 @@
     margin-top: 0.85rem;
     padding: 0.8rem 1rem;
     border-radius: 10px;
-    background: var(--color7, #5146b7);
+    background: #180062;
     color: #ffffff;
     text-decoration: none;
     font-weight: 800;
@@ -1030,6 +1030,7 @@
 }
 
 .monitoring-dashboard .primary-cta:hover {
+    background: #12014d; 
     opacity: 0.96;
 }
 
@@ -1137,8 +1138,18 @@
 }
 
 .monitoring-dashboard .task-pill.has-tasks {
-    background: #fff2d9;
-    color: #b25f00;
+     background: #180062;   
+    color: #ffffff;
+}
+
+/* Departments & Personnel: navy (unang grupo) */
+.monitoring-dashboard .summary-card {
+    border-left: 4px solid #180062;
+}
+
+/* Reports & Operations: berde (pangalawang grupo), tulad ng sa Faculty Management */
+.monitoring-dashboard .summary-group:nth-child(2) .summary-card {
+    border-left-color: #198754;
 }
 
 .monitoring-dashboard .inline-alert {
@@ -1261,7 +1272,7 @@
 }
 
 .monitoring-dashboard .range-button.active {
-    background: var(--color7, #5146b7);
+    background: #180062;;
     color: #ffffff;
     box-shadow: 0 2px 8px rgba(81, 70, 183, 0.18);
 }
@@ -1464,7 +1475,7 @@
 }
 
 .monitoring-dashboard .tiny-link {
-    color: var(--color7, #5146b7);
+     color: #180062;
     text-decoration: none;
     font-size: 0.72rem;
     font-weight: 700;
