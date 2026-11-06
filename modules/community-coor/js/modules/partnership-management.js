@@ -1,3 +1,342 @@
+(function () {
+    const partnerOrganizations = [
+        {
+            id: 1,
+            name: 'Municipal LGU',
+            type: 'Government',
+            status: 'Active',
+            leadContact: 'Maria Santos',
+            latestActivity: 'Community vaccination and local outreach',
+            category: 'Government',
+            location: 'San Jose, Bulacan',
+            email: 'maria.santos@municipality.gov',
+            phone: '+63 (044) 123-4567',
+            representative: 'Mayor Office - Community Affairs',
+            moa: {
+                agreement: 'Memorandum of Agreement',
+                effectiveDate: '2025-01-11',
+                expiryDate: '2028-01-10',
+                coverage: 'Community outreach and local development programs'
+            },
+            activities: [
+                'Youth leadership forum and community roundtable',
+                'Support for emergency response training',
+                'Coordination for public service assistance'
+            ],
+            accomplishments: [
+                '5 barangay outreach programs completed',
+                '2 local sustainability initiatives launched',
+                'Enhanced access to community support services'
+            ],
+            programCount: 8,
+            quarterImpact: 12
+        },
+        {
+            id: 2,
+            name: 'Barangay Muzon',
+            type: 'Community',
+            status: 'Monitoring',
+            leadContact: 'Ramon Cruz',
+            latestActivity: 'Household needs assessment',
+            category: 'Community',
+            location: 'Barangay Muzon, San Jose Del Monte',
+            email: 'brgy.muzon@barangay.ph',
+            phone: '+63 917-123-4568',
+            representative: 'Barangay Captain Office',
+            moa: {
+                agreement: 'Partnership MOU',
+                effectiveDate: '2024-10-15',
+                expiryDate: '2027-10-14',
+                coverage: 'Community needs assessment and service delivery support'
+            },
+            activities: [
+                'Barangay profiling and welfare validation',
+                'Community-based learning sessions',
+                'Volunteer mobilization and support drive'
+            ],
+            accomplishments: [
+                '1,200 residents reached through community mapping',
+                '3 local assistance activities supported',
+                'Improved reporting of household needs'
+            ],
+            programCount: 5,
+            quarterImpact: 7
+        },
+        {
+            id: 3,
+            name: 'Community NGO',
+            type: 'Private',
+            status: 'Active',
+            leadContact: 'Alicia Mendoza',
+            latestActivity: 'Livelihood project implementation',
+            category: 'Private',
+            location: 'Bulacan Community Center',
+            email: 'alicia@communityngo.org',
+            phone: '+63 998-765-4321',
+            representative: 'Program Director',
+            moa: {
+                agreement: 'Service Agreement',
+                effectiveDate: '2025-02-20',
+                expiryDate: '2027-02-19',
+                coverage: 'Skills and livelihood support programs'
+            },
+            activities: [
+                'Skills training sessions for women and youth',
+                'Community enterprise mentoring',
+                'Resource sharing with local talent groups'
+            ],
+            accomplishments: [
+                '92 beneficiaries enrolled in livelihood activities',
+                '2 training batches completed',
+                '5 local partners engaged for referrals'
+            ],
+            programCount: 6,
+            quarterImpact: 9
+        },
+        {
+            id: 4,
+            name: 'Partner University',
+            type: 'Academic',
+            status: 'Renewal',
+            leadContact: 'Dr. Elaine Gomez',
+            latestActivity: 'Joint extension program review',
+            category: 'Academic',
+            location: 'Quezon City Campus',
+            email: 'elaine.gomez@partneruniversity.edu',
+            phone: '+63 02-8123-4567',
+            representative: 'Office of Extension and Community Programs',
+            moa: {
+                agreement: 'Academic Partnership Agreement',
+                effectiveDate: '2023-08-30',
+                expiryDate: '2026-08-29',
+                coverage: 'Academic research, extension, and student engagement programs'
+            },
+            activities: [
+                'Extension program planning consultation',
+                'Faculty and student exchange review',
+                'Joint research and community deployment coordination'
+            ],
+            accomplishments: [
+                '3 faculty-led extension initiatives developed',
+                '76 student volunteers mobilized',
+                'Research collaboration linked to local communities'
+            ],
+            programCount: 10,
+            quarterImpact: 14
+        }
+    ];
+
+    function esc(value) {
+        return String(value ?? '').replace(/[&<>"']/g, function (character) {
+            return {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[character];
+        });
+    }
+
+    function formatDate(dateString) {
+        if (!dateString) return '—';
+        const date = new Date(dateString + 'T00:00:00');
+        if (Number.isNaN(date.getTime())) return dateString;
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    function renderRow(partner) {
+        return `
+            <tr data-partner-id="${partner.id}">
+                <td>${esc(partner.name)}</td>
+                <td>${esc(partner.type)}</td>
+                <td><span class="psm-status psm-status-${partner.status.toLowerCase().replace(/\s+/g, '-')}">${esc(partner.status)}</span></td>
+                <td>${esc(partner.leadContact)}</td>
+                <td>${esc(partner.latestActivity)}</td>
+                <td>
+                    <div class="psm-actions">
+                        <button type="button" class="psm-btn psm-btn-link" data-psm-action="view" data-partner-id="${partner.id}">View Details</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+
+    function getFilteredPartners() {
+        const root = document.getElementById('psmRoot');
+        if (!root) return partnerOrganizations;
+
+        const searchValue = (document.getElementById('psmSearch')?.value || '').trim().toLowerCase();
+        const categoryValue = document.getElementById('psmCategoryFilter')?.value || 'All';
+        const statusValue = document.getElementById('psmStatusFilter')?.value || 'All';
+
+        return partnerOrganizations.filter(function (partner) {
+            const matchesSearch = !searchValue || partner.name.toLowerCase().includes(searchValue) || partner.leadContact.toLowerCase().includes(searchValue);
+            const matchesCategory = categoryValue === 'All' || partner.category === categoryValue;
+            const matchesStatus = statusValue === 'All' || partner.status === statusValue;
+            return matchesSearch && matchesCategory && matchesStatus;
+        });
+    }
+
+    function updateStats() {
+        const total = partnerOrganizations.length;
+        const active = partnerOrganizations.filter(function (partner) { return partner.status === 'Active'; }).length;
+        const moas = partnerOrganizations.filter(function (partner) { return partner.moa && partner.moa.effectiveDate; }).length;
+        const programs = partnerOrganizations.reduce(function (sum, partner) { return sum + (partner.programCount || 0); }, 0);
+        const quarter = partnerOrganizations.reduce(function (sum, partner) { return sum + (partner.quarterImpact || 0); }, 0);
+
+        const statEls = {
+            activePartners: document.querySelector('[data-psm-stat="activePartners"]'),
+            activeMoas: document.querySelector('[data-psm-stat="activeMoas"]'),
+            programsSupported: document.querySelector('[data-psm-stat="programsSupported"]'),
+            quarterImpact: document.querySelector('[data-psm-stat="quarterImpact"]')
+        };
+
+        if (statEls.activePartners) statEls.activePartners.textContent = String(active);
+        if (statEls.activeMoas) statEls.activeMoas.textContent = String(moas);
+        if (statEls.programsSupported) statEls.programsSupported.textContent = String(programs);
+        if (statEls.quarterImpact) statEls.quarterImpact.textContent = String(quarter);
+
+        if (document.getElementById('psmTableBody')) {
+            document.getElementById('psmTableBody').dataset.total = String(total);
+        }
+    }
+
+    function renderPartnerTable() {
+        const tableBody = document.getElementById('psmTableBody');
+        if (!tableBody) return;
+
+        const filtered = getFilteredPartners();
+        if (!filtered.length) {
+            tableBody.innerHTML = '<tr><td colspan="6" class="psm-empty">No partners found for the selected filters.</td></tr>';
+            return;
+        }
+
+        tableBody.innerHTML = filtered.map(renderRow).join('');
+        updateStats();
+    }
+
+    function updateDetailView(partner) {
+        const detailView = document.getElementById('psmDetailView');
+        const detailName = document.getElementById('psmDetailName');
+        const partnerInfo = document.getElementById('psmPartnerInfo');
+        const contactInfo = document.getElementById('psmContactInfo');
+        const moaInfo = document.getElementById('psmMoaInfo');
+        const activityList = document.getElementById('psmActivityList');
+        const accomplishmentList = document.getElementById('psmAccomplishmentList');
+
+        if (!partner || !detailView || !partnerInfo || !contactInfo || !moaInfo || !activityList || !accomplishmentList) return;
+
+        detailName.textContent = partner.name;
+        partnerInfo.innerHTML = `
+            <div><dt>Organization</dt><dd>${esc(partner.name)}</dd></div>
+            <div><dt>Type</dt><dd>${esc(partner.type)}</dd></div>
+            <div><dt>Status</dt><dd>${esc(partner.status)}</dd></div>
+            <div><dt>Location</dt><dd>${esc(partner.location)}</dd></div>
+        `;
+
+        contactInfo.innerHTML = `
+            <div><dt>Lead Contact</dt><dd>${esc(partner.leadContact)}</dd></div>
+            <div><dt>Representative</dt><dd>${esc(partner.representative)}</dd></div>
+            <div><dt>Email</dt><dd>${esc(partner.email)}</dd></div>
+            <div><dt>Phone</dt><dd>${esc(partner.phone)}</dd></div>
+        `;
+
+        moaInfo.innerHTML = `
+            <div><dt>Agreement</dt><dd>${esc(partner.moa.agreement)}</dd></div>
+            <div><dt>Effective</dt><dd>${esc(formatDate(partner.moa.effectiveDate))}</dd></div>
+            <div><dt>Expiry</dt><dd>${esc(formatDate(partner.moa.expiryDate))}</dd></div>
+            <div><dt>Coverage</dt><dd>${esc(partner.moa.coverage)}</dd></div>
+        `;
+
+        activityList.innerHTML = (partner.activities || []).map(function (item) {
+            return `<li>${esc(item)}</li>`;
+        }).join('');
+
+        accomplishmentList.innerHTML = (partner.accomplishments || []).map(function (item) {
+            return `<li>${esc(item)}</li>`;
+        }).join('');
+
+        document.getElementById('psmListView').hidden = true;
+        detailView.hidden = false;
+    }
+
+    function showListView() {
+        const listView = document.getElementById('psmListView');
+        const detailView = document.getElementById('psmDetailView');
+        if (listView) listView.hidden = false;
+        if (detailView) detailView.hidden = true;
+    }
+
+    function bindEvents(root) {
+        if (!root || root.dataset.psmEventsBound === 'true') return;
+        root.dataset.psmEventsBound = 'true';
+
+        root.addEventListener('click', function (event) {
+            const actionTarget = event.target.closest('[data-psm-action="view"]');
+            if (actionTarget) {
+                const partnerId = Number(actionTarget.dataset.partnerId);
+                const partner = partnerOrganizations.find(function (item) { return item.id === partnerId; });
+                if (partner) updateDetailView(partner);
+                return;
+            }
+
+            const rowTarget = event.target.closest('tr[data-partner-id]');
+            if (rowTarget) {
+                const partnerId = Number(rowTarget.dataset.partnerId);
+                const partner = partnerOrganizations.find(function (item) { return item.id === partnerId; });
+                if (partner) updateDetailView(partner);
+            }
+        });
+
+        const searchInput = document.getElementById('psmSearch');
+        const categoryFilter = document.getElementById('psmCategoryFilter');
+        const statusFilter = document.getElementById('psmStatusFilter');
+
+        [searchInput, categoryFilter, statusFilter].forEach(function (element) {
+            if (!element) return;
+            element.addEventListener('input', renderPartnerTable);
+            element.addEventListener('change', renderPartnerTable);
+        });
+
+        const backButton = document.getElementById('psmBackButton');
+        if (backButton) {
+            backButton.addEventListener('click', showListView);
+        }
+    }
+
+    function initPsmPage() {
+        const root = document.getElementById('psmRoot');
+        if (!root) return;
+
+        if (root.dataset.initialized === 'true') {
+            renderPartnerTable();
+            return;
+        }
+
+        root.dataset.initialized = 'true';
+        bindEvents(root);
+        renderPartnerTable();
+        showListView();
+    }
+
+    window.initPsmPage = initPsmPage;
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () {
+            initPsmPage();
+        });
+    } else {
+        initPsmPage();
+    }
+
+    window.addEventListener('page:loaded', function () {
+        if (document.getElementById('psmRoot')) {
+            initPsmPage();
+        }
+    });
+})();
+
 function exposeGlobal(name, value) {
     try {
         window[name] = value;

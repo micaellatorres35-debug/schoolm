@@ -10,7 +10,7 @@ class Page {
         'extension-program-management' => 'Extension Program Management',
         'events-management'  => 'Activity and Event Management',
         'community-needs-assessment' => 'Community Needs Assessment',
-        'class-scheduling'   => 'Partnership and Stakeholder Management',
+        'partnership-management'   => 'Partnership and Stakeholder Management',
         'report-submission' => 'Report Submission',
         'concern-submission' => 'Concern Submission',
         'approval-submission' => 'Approval Submission'
@@ -19,7 +19,7 @@ class Page {
     /*Content Sections*/ 
     private $sections = [
         'top'             => ['dashboard-overview'],
-        'academics'  => ['community-needs-assessment', 'extension-program-management', 'class-scheduling', 'events-management'],
+        'academics'  => ['community-needs-assessment', 'extension-program-management', 'partnership-management', 'events-management'],
         'requests-and-reports' => ['report-submission', 'concern-submission', 'approval-submission']
     ];
 

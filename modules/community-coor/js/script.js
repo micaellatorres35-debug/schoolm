@@ -8,8 +8,9 @@ import './modules/issue.js';
 import './modules/approval.js';
 import './modules/community-needs-assessment.js';
 import './modules/extension.js';
-import './modules/class-scheduling.js';
+import './modules/partnership-management.js';
 import './modules/events-management.js';
+
 
 
 
