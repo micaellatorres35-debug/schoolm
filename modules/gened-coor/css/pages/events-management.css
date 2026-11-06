@@ -36,6 +36,35 @@
         display: inline-flex;
     }
 
+    .gened-event-guide-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 14px;
+    }
+
+    .gened-event-suggestion {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 16px;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        background: #fff;
+    }
+
+    .gened-event-suggestion h6 {
+        margin: 0 0 8px;
+        color: #172554;
+    }
+
+    .gened-event-suggestion p {
+        flex: 1;
+        margin-bottom: 12px;
+        color: #5f6b7a;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
     /* Header Styles */
     .header {
         display: flex;
@@ -715,5 +744,831 @@
             border: none;
             padding: 0;
             margin: 0;
+        }
+    }
+
+    .ge-dashboard .module-header {
+        margin-bottom: 8px;
+    }
+
+    #addEventBtn[hidden] {
+        display: none !important;
+    }
+
+    .ge-dashboard-period {
+        margin: 0 0 18px;
+        font-size: 13px;
+    }
+
+    .ge-metric-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        margin-bottom: 22px;
+    }
+
+    .ge-metric-card {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        min-height: 112px;
+        padding: 18px;
+        border: 1px solid #dbeafe;
+        border-radius: 12px;
+        background: #eff6ff;
+        color: #1e3a8a;
+        box-shadow: 0 4px 14px rgba(30, 64, 175, 0.06);
+    }
+
+    .ge-metric-icon {
+        display: grid;
+        flex: 0 0 46px;
+        width: 46px;
+        height: 46px;
+        place-items: center;
+        border-radius: 12px;
+        background: #dbeafe;
+        color: #2563eb;
+        font-size: 19px;
+    }
+
+    .ge-metric-card p {
+        margin: 0 0 4px;
+        color: #475569;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .ge-metric-card strong {
+        display: block;
+        color: #1d4ed8;
+        font-size: 25px;
+        line-height: 1.2;
+        overflow-wrap: anywhere;
+    }
+
+    .ge-metric-card small {
+        display: block;
+        margin-top: 4px;
+        color: #64748b;
+        font-size: 11px;
+    }
+
+    .ge-metric-next-exam strong {
+        font-size: 17px;
+    }
+
+    .ge-dashboard-lists {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+        margin-bottom: 22px;
+    }
+
+    .ge-dashboard-panel {
+        min-width: 0;
+        padding: 18px;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+    }
+
+    .ge-panel-heading,
+    .ge-item-title-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .ge-panel-heading {
+        padding-bottom: 14px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .ge-panel-heading h2 {
+        margin: 0;
+        color: #1e3a8a;
+        font-size: 17px;
+        font-weight: 700;
+    }
+
+    .ge-panel-heading p {
+        margin: 4px 0 0;
+        color: #64748b;
+        font-size: 12px;
+    }
+
+    .ge-list {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .ge-dashboard-item {
+        display: flex;
+        gap: 12px;
+        padding: 15px 0;
+        border-bottom: 1px solid #eef2f7;
+    }
+
+    .ge-dashboard-item:last-child {
+        border-bottom: 0;
+    }
+
+    .ge-item-date {
+        display: flex;
+        flex: 0 0 48px;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        align-self: flex-start;
+        min-height: 48px;
+        border-radius: 9px;
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .ge-item-date strong {
+        font-size: 17px;
+        line-height: 1.1;
+    }
+
+    .ge-item-date span {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .ge-item-main {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .ge-item-title-row {
+        align-items: center;
+    }
+
+    .ge-item-title-row h3 {
+        margin: 0;
+        color: #1e293b;
+        font-size: 14px;
+        font-weight: 700;
+        overflow-wrap: anywhere;
+    }
+
+    .ge-item-main > p {
+        margin: 5px 0 3px;
+        color: #64748b;
+        font-size: 12px;
+    }
+
+    .ge-item-main > small {
+        color: #64748b;
+        font-size: 11px;
+    }
+
+    .ge-status {
+        flex: 0 0 auto;
+        padding: 4px 9px;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .ge-status-pending {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+
+    .ge-status-approved {
+        background: #dcfce7;
+        color: #15803d;
+    }
+
+    .ge-status-completed {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .ge-status-rejected {
+        background: #f1f5f9;
+        color: #475569;
+    }
+
+    .ge-status-neutral {
+        background: #f1f5f9;
+        color: #475569;
+    }
+
+    .ge-item-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin-top: 9px;
+    }
+
+    .ge-action-button {
+        padding: 4px 9px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        background: #fff;
+        color: #334155;
+        font-size: 11px;
+        cursor: pointer;
+    }
+
+    .ge-action-approve,
+    .ge-action-complete {
+        border-color: #86efac;
+        color: #15803d;
+    }
+
+    .ge-action-reject {
+        border-color: #fca5a5;
+        color: #b91c1c;
+    }
+
+    .ge-action-button:disabled {
+        cursor: wait;
+        opacity: 0.6;
+    }
+
+    .ge-empty-state {
+        padding: 22px 10px;
+        color: #64748b;
+        font-size: 13px;
+        text-align: center;
+    }
+
+    .ge-error-text {
+        color: #b91c1c;
+    }
+
+    .ge-event-ideas {
+        padding: 16px 18px;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        background: #fff;
+    }
+
+    .ge-event-ideas > summary {
+        color: #1e3a8a;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .ge-event-ideas[open] > summary {
+        margin-bottom: 10px;
+    }
+
+    .ge-event-ideas .gened-event-guide-grid {
+        margin-top: 14px;
+    }
+
+    .ge-event-ideas .gened-event-suggestion h3 {
+        margin: 0 0 8px;
+        color: #1e3a8a;
+        font-size: 14px;
+    }
+
+    .ge-event-modal[hidden] {
+        display: none !important;
+    }
+
+    .ge-event-modal {
+        position: fixed;
+        z-index: 100000;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 20px;
+    }
+
+    .ge-event-modal-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.6);
+    }
+
+    .ge-event-modal-content {
+        position: relative;
+        z-index: 1;
+        width: min(680px, 100%);
+        max-height: min(90vh, 850px);
+        overflow-y: auto;
+        padding: 22px;
+        border-radius: 14px;
+        background: #fff;
+        box-shadow: 0 20px 60px rgba(15, 23, 42, 0.25);
+    }
+
+    .ge-event-modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 18px;
+    }
+
+    .ge-event-modal-header h2 {
+        margin: 0;
+        color: #1e3a8a;
+        font-size: 19px;
+    }
+
+    .ge-modal-close {
+        border: 0;
+        background: transparent;
+        color: #64748b;
+        font-size: 27px;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    .ge-event-form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .ge-event-form-grid label {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        color: #334155;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .ge-event-form-grid input,
+    .ge-event-form-grid select,
+    .ge-event-form-grid textarea {
+        width: 100%;
+        min-height: 39px;
+        padding: 8px 10px;
+        border: 1px solid #cbd5e1;
+        border-radius: 7px;
+        background: #fff;
+        color: #1e293b;
+        font: inherit;
+        font-weight: 400;
+    }
+
+    .ge-event-form-grid textarea {
+        resize: vertical;
+    }
+
+    .ge-form-full {
+        grid-column: 1 / -1;
+    }
+
+    .ge-form-note {
+        margin: 14px 0;
+        color: #64748b;
+        font-size: 12px;
+    }
+
+    .ge-event-modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 9px;
+    }
+
+    .ge-toast {
+        position: fixed;
+        z-index: 100001;
+        right: 20px;
+        bottom: 20px;
+        max-width: min(420px, calc(100vw - 40px));
+        padding: 12px 16px;
+        border-radius: 8px;
+        background: #166534;
+        color: #fff;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2);
+        font-size: 13px;
+    }
+
+    .ge-toast-error {
+        background: #b91c1c;
+    }
+
+    @media (max-width: 900px) {
+        .ge-metric-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .ge-dashboard-lists {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 560px) {
+        .ge-metric-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .ge-dashboard .module-header {
+            align-items: flex-start;
+        }
+
+        .ge-panel-heading {
+            align-items: flex-start;
+        }
+
+        .ge-item-title-row {
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .ge-event-form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .ge-form-full {
+            grid-column: auto;
+        }
+    }
+
+    .ge-events-overview {
+        width: 100%;
+        max-width: none;
+        padding: 20px;
+        border: 1px solid #e9ecef;
+        border-radius: 16px;
+        background: #f1f3f5;
+    }
+
+    .ge-events-overview .module-header {
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        margin-bottom: 18px;
+        padding: 24px;
+        border: 1px solid #e5eaf2;
+        border-radius: 14px;
+        background: #fff;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+    }
+
+    .ge-events-overview .module-header h1 {
+        margin: 0 0 2px;
+        color: #000;
+        font-size: 32px;
+        font-weight: 700;
+    }
+
+    .ge-events-overview .module-header p {
+        margin: 0;
+        color: #6c757d;
+        font-size: 14px;
+    }
+
+    .ge-events-overview .module-header .btn {
+        display: flex;
+        justify-content: flex-start;
+        width: 100%;
+        min-height: 44px;
+        padding: 10px 16px;
+        border-radius: 8px;
+        background: #182b83;
+        color: #fff;
+        font-size: 14px;
+    }
+
+    .ge-events-overview .module-header .btn:hover {
+        background: #14246f;
+    }
+
+    .ge-events-overview .module-content {
+        min-height: 0;
+        padding: 20px;
+        border: 1px solid #e5eaf2;
+        border-radius: 14px;
+        background: #fff;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+    }
+
+    .ge-event-summary {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+
+    .ge-event-summary article {
+        display: flex;
+        min-height: 120px;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        border: 0;
+        border-left: 4px solid #0d6efd;
+        border-radius: 8px;
+        background: #fff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        text-align: center;
+    }
+
+    .ge-event-summary p {
+        margin: 0 0 8px;
+        color: #6c757d;
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .ge-event-summary strong {
+        color: #000;
+        font-size: 28px;
+        line-height: 1;
+    }
+
+    .ge-event-summary small {
+        margin-top: 6px;
+        color: #6c757d;
+        font-size: 12px;
+        line-height: 1.3;
+    }
+
+    .ge-event-period {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        margin-bottom: 20px;
+        padding: 16px;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        background: #fff;
+    }
+
+    .ge-event-period label {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        gap: 6px;
+        color: #000;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .ge-event-period input {
+        width: 100%;
+        min-height: 42px;
+        padding: 8px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 6px;
+        background: #fff;
+        color: #000;
+        font: inherit;
+        font-size: 14px;
+        font-weight: 400;
+    }
+
+    .ge-event-categories {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 24px;
+        overflow-x: auto;
+        border-bottom: 2px solid #dee2e6;
+        scrollbar-width: thin;
+    }
+
+    .ge-event-categories button {
+        flex: 0 0 auto;
+        padding: 13px 22px;
+        border: 0;
+        border-bottom: 3px solid transparent;
+        background: transparent;
+        color: #000;
+        font-size: 15px;
+        font-weight: 500;
+        white-space: nowrap;
+        cursor: pointer;
+    }
+
+    .ge-event-categories button:hover,
+    .ge-event-categories button.active {
+        color: #1677ff;
+    }
+
+    .ge-event-categories button.active {
+        border-bottom-color: #1677ff;
+        font-weight: 700;
+    }
+
+    .ge-event-table-card {
+        overflow: hidden;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        background: #fff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    .ge-event-table-card table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .ge-event-table-card thead {
+        background: #f8f9fa;
+    }
+
+    .ge-event-table-card th {
+        padding: 12px;
+        border-bottom: 1px solid #dee2e6;
+        color: #000;
+        font-size: 13px;
+        font-weight: 600;
+        text-align: left;
+    }
+
+    .ge-event-table-card td {
+        padding: 12px;
+        border-bottom: 1px solid #e5eaf2;
+        color: #000;
+        font-size: 14px;
+        vertical-align: middle;
+        overflow-wrap: anywhere;
+    }
+
+    .ge-event-table-card tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .ge-event-table-card tbody tr:hover {
+        background: #f8f9fa;
+    }
+
+    .ge-event-table-card td:first-child strong {
+        display: block;
+        color: #000;
+        font-weight: 600;
+    }
+
+    .ge-event-table-card td small,
+    .ge-event-table-card td:nth-child(3) small {
+        display: block;
+        margin-top: 3px;
+        color: #6c757d;
+        font-size: 12px;
+    }
+
+    .ge-event-table-card .ge-event-empty {
+        padding: 26px 12px;
+        color: #000;
+        font-size: 14px;
+        text-align: center;
+    }
+
+    .ge-event-row-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .ge-event-row-actions .ge-action-button {
+        padding: 6px 10px;
+        border: 1px solid #fecaca;
+        border-radius: 5px;
+        background: #fff;
+        color: #dc2626;
+        font-size: 12px;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    .ge-event-row-actions .ge-action-button:hover {
+        background: #fff1f2;
+    }
+
+    .ge-event-row-actions .ge-action-submit {
+        border-color: #182b83;
+        background: #182b83;
+        color: #fff;
+    }
+
+    .ge-event-row-actions .ge-action-submit:hover {
+        background: #14246f;
+    }
+
+    .ge-event-row-actions .ge-action-reject {
+        border-color: #fecaca;
+        color: #b91c1c;
+    }
+
+    .ge-event-row-actions .ge-action-approve,
+    .ge-event-row-actions .ge-action-complete {
+        border-color: #bfdbfe;
+        color: #1d4ed8;
+    }
+
+    .ge-status-pending {
+        background: #fef3c7;
+        color: #a16207;
+    }
+
+    .ge-status-approved {
+        background: #dcfce7;
+        color: #15803d;
+    }
+
+    .ge-status-completed {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .ge-status-returned {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+
+    .ge-status-neutral {
+        background: #e2e8f0;
+        color: #475569;
+    }
+
+    .ge-event-details-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .ge-event-details-grid p {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin: 0;
+        color: #475569;
+        font-size: 13px;
+        overflow-wrap: anywhere;
+    }
+
+    .ge-event-details-grid strong {
+        color: #1e3a8a;
+        font-size: 11px;
+    }
+
+    .ge-event-details-full {
+        grid-column: 1 / -1;
+    }
+
+    @media (max-width: 760px) {
+        .ge-event-summary {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .ge-event-table-card .table-responsive {
+            overflow-x: auto;
+        }
+
+        .ge-event-table-card table {
+            min-width: 780px;
+        }
+    }
+
+    @media (max-width: 520px) {
+        .ge-events-overview {
+            padding: 8px;
+        }
+
+        .ge-events-overview .module-content {
+            padding: 10px;
+        }
+
+        .ge-event-summary {
+            gap: 7px;
+        }
+
+        .ge-event-summary article {
+            min-height: 108px;
+            padding: 10px 6px;
+        }
+
+        .ge-event-summary small {
+            font-size: 10px;
+        }
+
+        .ge-event-period {
+            gap: 8px;
+            padding: 9px;
+        }
+
+        .ge-events-overview .module-header h1 {
+            font-size: 24px;
+        }
+
+        .ge-event-details-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .ge-event-details-full {
+            grid-column: auto;
         }
     }

@@ -50,7 +50,7 @@ foreach ($semesters as $semesterOption) {
     }
 }
 $semester = $semester ?: (!empty($semesters) ? (int)$semesters[0]['id'] : 0);
-$subjects = $db->query("SELECT id, code, name FROM rgr_subjects WHERE UPPER(code) LIKE 'GE%' ORDER BY code")->fetchAll(PDO::FETCH_ASSOC);
+$subjects = $db->query("SELECT id, code, name FROM rgr_subjects WHERE archived_at IS NULL AND UPPER(code) REGEXP '^(GE.*|FIL [1-3]|NSTP [1-2]|PE [1-2])$' ORDER BY code")->fetchAll(PDO::FETCH_ASSOC);
 $faculty_loads = $db->query("SELECT
     fl.id,
     fl.faculty_id,
@@ -63,6 +63,7 @@ $faculty_loads = $db->query("SELECT
     FROM gc_faculty_load fl
     INNER JOIN gc_faculty f ON f.id = fl.faculty_id
     INNER JOIN gc_sections sec ON sec.id = fl.section_id
+    INNER JOIN rgr_subjects subj ON subj.id = fl.subject_id AND subj.archived_at IS NULL AND UPPER(subj.code) REGEXP '^(GE.*|FIL [1-3]|NSTP [1-2]|PE [1-2])$'
     INNER JOIN rgr_school_years sy ON sy.id = fl.school_year_id AND sy.is_active = 1
     INNER JOIN rgr_semesters sem ON sem.id = fl.semester_id
         AND sem.school_year_id = fl.school_year_id
@@ -86,6 +87,7 @@ $edit_faculty_loads_stmt = $db->prepare("SELECT
     FROM gc_faculty_load fl
     INNER JOIN gc_faculty f ON f.id = fl.faculty_id
     INNER JOIN gc_sections sec ON sec.id = fl.section_id
+    INNER JOIN rgr_subjects subj ON subj.id = fl.subject_id AND UPPER(subj.code) REGEXP '^(GE.*|FIL [1-3]|NSTP [1-2]|PE [1-2])$'
     INNER JOIN rgr_school_years sy ON sy.id = fl.school_year_id AND sy.is_active = 1
     INNER JOIN rgr_semesters sem ON sem.id = fl.semester_id
         AND sem.school_year_id = fl.school_year_id
@@ -97,6 +99,7 @@ $edit_faculty_loads = $edit_faculty_loads_stmt->fetchAll(PDO::FETCH_ASSOC);
 $getActiveFacultyLoad = static function (PDO $db, int $facultyLoadId, int $schoolYearId, int $semesterId): ?array {
     $stmt = $db->prepare("SELECT fl.faculty_id, fl.subject_id, fl.section_id, fl.semester_id, fl.school_year_id
         FROM gc_faculty_load fl
+        INNER JOIN rgr_subjects subj ON subj.id = fl.subject_id AND UPPER(subj.code) REGEXP '^(GE.*|FIL [1-3]|NSTP [1-2]|PE [1-2])$'
         INNER JOIN rgr_school_years sy ON sy.id = fl.school_year_id AND sy.is_active = 1
         INNER JOIN rgr_semesters sem ON sem.id = fl.semester_id
             AND sem.school_year_id = fl.school_year_id
@@ -116,6 +119,7 @@ $getActiveFacultyLoad = static function (PDO $db, int $facultyLoadId, int $schoo
 $isActiveFacultyAssignment = static function (PDO $db, int $facultyId, int $schoolYearId, int $semesterId): bool {
     $stmt = $db->prepare("SELECT 1
         FROM gc_faculty_load fl
+        INNER JOIN rgr_subjects subj ON subj.id = fl.subject_id AND UPPER(subj.code) REGEXP '^(GE.*|FIL [1-3]|NSTP [1-2]|PE [1-2])$'
         INNER JOIN rgr_school_years sy ON sy.id = fl.school_year_id AND sy.is_active = 1
         INNER JOIN rgr_semesters sem ON sem.id = fl.semester_id
             AND sem.school_year_id = fl.school_year_id
@@ -366,12 +370,12 @@ $semester_map = array_column($semesters, 'name', 'id');
 $school_year_map = array_column($school_years, 'name', 'id');
 ?>
         <!-- Header -->
-        <div class="module-header">
+        <div class="module-header class-scheduling-header">
             <h1>Schedule Management System</h1>
             <p>Office of the Safety and Security | Class Schedule Management</p>
         </div>
 
-        <div class="module-content">
+        <div class="module-content class-scheduling-page">
             <div class="stats-grid">
             <div class="stat-card">
                 <i class="fas fa-calendar-check fa-2x" style="color: #4361ee;"></i>
@@ -709,7 +713,7 @@ $school_year_map = array_column($school_years, 'name', 'id');
     </div>
 
     <!-- Edit Modal -->
-    <div id="editModal" class="modal">
+    <div id="editModal" class="modal class-scheduling-modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h2><i class="fas fa-edit"></i> Edit Schedule</h2>

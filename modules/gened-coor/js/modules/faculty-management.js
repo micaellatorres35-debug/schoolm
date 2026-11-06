@@ -136,6 +136,11 @@ function initFacultyManagementPage() {
         panels.forEach(panel => {
             panel.classList.toggle('active', panel.id === `fm-panel-${tabName}`);
         });
+        document.querySelectorAll('[data-fm-overview]').forEach(overview => {
+            const isActive = overview.dataset.fmOverview === tabName;
+            overview.classList.toggle('active', isActive);
+            overview.hidden = !isActive;
+        });
     }
 
     tabButtons.forEach(button => {
@@ -147,10 +152,10 @@ function initFacultyManagementPage() {
     function initializeSearch(inputId, tableId, rowFilter) {
         const searchInput = document.getElementById(inputId);
         const table = document.getElementById(tableId);
-        if (!searchInput || !table) return;
+        if (!searchInput || !table) return null;
 
         const tbody = table.querySelector('tbody');
-        if (!tbody) return;
+        if (!tbody) return null;
 
         const originalRows = Array.from(tbody.querySelectorAll('tr')).filter(row => !row.classList.contains('no-data'));
 
@@ -179,10 +184,37 @@ function initFacultyManagementPage() {
 
         searchInput.addEventListener('input', performSearch);
         searchInput.addEventListener('change', performSearch);
+        return performSearch;
     }
 
-    initializeSearch('searchCredentials', 'credentialsTable');
-    initializeSearch('searchAttainment', 'attainmentTable');
+    const departmentFilter = document.getElementById('facultyDepartmentFilter');
+    const employmentFilter = document.getElementById('facultyEmploymentFilter');
+    const refreshCredentials = initializeSearch('searchCredentials', 'credentialsTable', row => {
+        const matchesDepartment = !departmentFilter || !departmentFilter.value
+            || row.dataset.department === departmentFilter.value;
+        const matchesEmployment = !employmentFilter || !employmentFilter.value
+            || row.dataset.employmentType === employmentFilter.value;
+        return matchesDepartment && matchesEmployment;
+    });
+    [departmentFilter, employmentFilter].forEach(filter => {
+        if (filter && refreshCredentials) {
+            filter.addEventListener('change', refreshCredentials);
+        }
+    });
+    const attainmentDegreeFilter = document.getElementById('attainmentDegreeFilter');
+    const attainmentYearFilter = document.getElementById('attainmentYearFilter');
+    const refreshAttainment = initializeSearch('searchAttainment', 'attainmentTable', row => {
+        const matchesDegree = !attainmentDegreeFilter || !attainmentDegreeFilter.value
+            || row.dataset.highestDegree === attainmentDegreeFilter.value;
+        const matchesYear = !attainmentYearFilter || !attainmentYearFilter.value
+            || row.dataset.yearGraduated === attainmentYearFilter.value;
+        return matchesDegree && matchesYear;
+    });
+    [attainmentDegreeFilter, attainmentYearFilter].forEach(filter => {
+        if (filter && refreshAttainment) {
+            filter.addEventListener('change', refreshAttainment);
+        }
+    });
     let trainingFilter = 'all';
     const trainingTable = document.getElementById('trainingsTable');
     const trainingFilterButtons = document.querySelectorAll('[data-training-filter]');
@@ -583,23 +615,6 @@ function initFacultyManagementPage() {
     const attainmentTable = document.getElementById('attainmentTable');
     if (attainmentTable) {
         attainmentTable.addEventListener('click', function (e) {
-            const editButton = e.target.closest('.edit-attainment-btn');
-            if (editButton) {
-                const row = editButton.closest('tr');
-                if (!row) return;
-                let records = [];
-                try {
-                    records = JSON.parse(row.dataset.records || '[]');
-                } catch (error) {
-                    records = [];
-                }
-                openEditEducationModal({
-                    employeeId: row.dataset.employeeId,
-                    facultyName: row.dataset.facultyName || row.cells[1]?.textContent || 'N/A'
-                }, records[0] || null);
-                return;
-            }
-
             const btn = e.target.closest('.view-attainment-btn');
             if (!btn) return;
             const row = btn.closest('tr');
@@ -993,6 +1008,52 @@ function initFacultyManagementPage() {
         addEngagementModal.addEventListener('click', function (event) {
             if (event.target === addEngagementModal) {
                 closeAddEngagementModal();
+            }
+        });
+    }
+
+    const addFacultyBtn = document.getElementById('addFacultyBtn');
+    const addFacultyModal = document.getElementById('fmAddFacultyModal');
+    const addFacultyForm = document.getElementById('addFacultyForm');
+    const closeAddFacultyModal = () => addFacultyModal?.classList.remove('show');
+
+    if (addFacultyBtn && addFacultyModal) {
+        addFacultyBtn.addEventListener('click', () => addFacultyModal.classList.add('show'));
+        addFacultyModal.querySelectorAll('[data-close-add-faculty]').forEach(button => {
+            button.addEventListener('click', closeAddFacultyModal);
+        });
+        addFacultyModal.addEventListener('click', event => {
+            if (event.target === addFacultyModal) closeAddFacultyModal();
+        });
+    }
+
+    if (addFacultyForm) {
+        addFacultyForm.addEventListener('submit', async event => {
+            event.preventDefault();
+            const submitButton = addFacultyForm.querySelector('[type="submit"]');
+            const employeeId = document.getElementById('addFacultyEmployee')?.value;
+            if (!employeeId) return;
+
+            submitButton.disabled = true;
+            try {
+                const response = await fetch(window.location.href, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'add_faculty', employee_id: employeeId })
+                });
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || 'Unable to add faculty.');
+                }
+                window.location.reload();
+            } catch (error) {
+                const feedback = addFacultyForm.querySelector('.fm-add-faculty-feedback');
+                if (feedback) {
+                    feedback.textContent = error.message || 'Unable to add faculty.';
+                    feedback.hidden = false;
+                }
+                submitButton.disabled = false;
             }
         });
     }

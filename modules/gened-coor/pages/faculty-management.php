@@ -95,6 +95,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        if ($action === 'add_faculty') {
+            $roleName = (string)($_SESSION['role_name'] ?? '');
+            if (!in_array($roleName, ['GenEd Coordinator', 'Admin College Coordinator', 'System Administrator'], true)) {
+                $response = ['success' => false, 'message' => 'You are not allowed to add GenEd faculty.'];
+            } else {
+                $employeeId = (int)($input['employee_id'] ?? 0);
+                if ($employeeId <= 0) {
+                    $response = ['success' => false, 'message' => 'Select a valid employee.'];
+                } else {
+                    $insertFaculty = $conn->prepare("
+                        INSERT INTO gc_faculty
+                            (employee_id, faculty_code, first_name, middle_name, last_name, email, department)
+                        SELECT e.employee_id, e.employee_code, e.first_name, e.middle_name, e.last_name,
+                               e.email, d.department_name
+                        FROM em_employees e
+                        LEFT JOIN em_departments d ON d.department_id = e.department_id
+                        WHERE e.employee_id = :employee_id
+                          AND e.is_archived = 0
+                          AND e.employment_status = 'Active'
+                          AND NOT EXISTS (
+                              SELECT 1 FROM gc_faculty cf WHERE cf.employee_id = e.employee_id
+                          )
+                    ");
+                    $insertFaculty->execute([':employee_id' => $employeeId]);
+                    $response = $insertFaculty->rowCount() === 1
+                        ? ['success' => true, 'message' => 'Faculty added successfully.']
+                        : ['success' => false, 'message' => 'Employee is inactive, archived, or already listed as faculty.'];
+                }
+            }
+        }
+
         if ($action === 'add_engagement') {
             error_log('add_engagement handler: received POST request');
             error_log('add_engagement input: ' . json_encode($input));
@@ -393,13 +424,12 @@ $facultyList = $facultyManager->getAllFacultyCredentials() ?? [];
 $educationSummary = $facultyManager->getFacultyEducationSummary() ?? [];
 $trainingSummary = $facultyManager->getFacultyTrainingSummary() ?? [];
 $eligibleEmployees = $facultyManager->getEligibleEngagementEmployees() ?? [];
-$requirementStatusSummary = $facultyManager->getFacultyRequirementStatusSummary() ?? [];
 
 $employmentTypeStats = [
     'Full-time' => 0,
     'Part-time' => 0,
-
 ];
+$activeFacultyCount = 0;
 
 foreach ($facultyList as $faculty) {
     $employmentType = trim((string)($faculty['employment_type'] ?? ''));
@@ -408,29 +438,64 @@ foreach ($facultyList as $faculty) {
         $employmentTypeStats['Full-time']++;
     } elseif ($employmentType === 'Part-time') {
         $employmentTypeStats['Part-time']++;
-    } elseif ($employmentType === 'OJT/Training') {
-        $employmentTypeStats['OJT / Training']++;
+    }
+
+    if (($faculty['employment_status'] ?? '') === 'Active') {
+        $activeFacultyCount++;
     }
 }
 
-$documentStatusStats = [];
-if (!empty($requirementStatusSummary)) {
-    $statusLabels = [
-        'Complete' => 'Complete',
-        'Pending' => 'Pending',
-        'Incomplete / Missing' => 'Incomplete / Missing',
-    ];
+$facultyDepartments = array_values(array_unique(array_filter(array_map(
+    static fn($faculty) => trim((string)($faculty['department'] ?? '')),
+    $facultyList
+))));
+sort($facultyDepartments, SORT_NATURAL | SORT_FLAG_CASE);
 
-    foreach ($statusLabels as $statusKey => $label) {
-        $count = (int)($requirementStatusSummary[$statusKey] ?? 0);
-        if ($count > 0) {
-            $documentStatusStats[] = [
-                'label' => $label,
-                'count' => $count,
-            ];
-        }
+$addableFacultyStmt = $conn->query("
+    SELECT e.employee_id, e.employee_code, e.first_name, e.middle_name, e.last_name, e.suffix,
+           d.department_name AS department
+    FROM em_employees e
+    LEFT JOIN em_departments d ON d.department_id = e.department_id
+    WHERE e.is_archived = 0
+      AND e.employment_status = 'Active'
+      AND NOT EXISTS (
+          SELECT 1 FROM gc_faculty cf WHERE cf.employee_id = e.employee_id
+      )
+    ORDER BY e.last_name ASC, e.first_name ASC
+");
+$addableFacultyEmployees = $addableFacultyStmt->fetchAll(PDO::FETCH_ASSOC);
+$canManageFaculty = in_array(
+    (string)($_SESSION['role_name'] ?? ''),
+    ['GenEd Coordinator', 'Admin College Coordinator', 'System Administrator'],
+    true
+);
+
+$educationDegreeCounts = [
+    'Masteral' => 0,
+    'Doctoral' => 0,
+    "Bachelor's" => 0,
+];
+$educationDegrees = [];
+$graduationYears = [];
+foreach ($educationSummary as $education) {
+    $degree = trim((string)($education['highest_degree'] ?? ''));
+    $degreeLabel = $degree === 'College' ? "Bachelor's" : $degree;
+    if (isset($educationDegreeCounts[$degreeLabel])) {
+        $educationDegreeCounts[$degreeLabel]++;
+    }
+    if ($degree !== '' && $degree !== 'No record yet') {
+        $educationDegrees[$degreeLabel] = $degreeLabel;
+    }
+
+    $year = trim((string)($education['year_graduated'] ?? ''));
+    if ($year !== '' && $year !== 'No record yet') {
+        $graduationYears[$year] = $year;
     }
 }
+$educationDegrees = array_values($educationDegrees);
+$graduationYears = array_values($graduationYears);
+sort($educationDegrees, SORT_NATURAL | SORT_FLAG_CASE);
+rsort($graduationYears, SORT_NATURAL | SORT_FLAG_CASE);
 
 function normalizeFacultySearchText($value) {
     return strtolower(trim(strip_tags((string)$value)));
@@ -473,19 +538,20 @@ function renderCredentialsRow($faculty) {
 
 function renderAttainmentRow($education) {
     $recordsJson = json_encode($education['records'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
-    $hasEducationRecord = !empty($education['records']);
+    $degree = trim((string)($education['highest_degree'] ?? 'No record yet'));
+    $degreeLabel = $degree === 'College' ? "Bachelor's" : $degree;
+    $yearGraduated = (string)($education['year_graduated'] ?? 'No record yet');
 
     ob_start();
     ?>
-    <tr data-record-type="education" data-employee-code="<?= htmlspecialchars($education['employee_code']) ?>" data-employee-id="<?= (int)($education['employee_id'] ?? 0) ?>" data-faculty-name="<?= htmlspecialchars($education['faculty_name']) ?>" data-department="<?= htmlspecialchars($education['department'] ?? 'Not provided') ?>" data-records='<?= htmlspecialchars($recordsJson, ENT_QUOTES, 'UTF-8') ?>'>
+    <tr data-record-type="education" data-employee-code="<?= htmlspecialchars($education['employee_code']) ?>" data-employee-id="<?= (int)($education['employee_id'] ?? 0) ?>" data-faculty-name="<?= htmlspecialchars($education['faculty_name']) ?>" data-department="<?= htmlspecialchars($education['department'] ?? 'Not provided') ?>" data-highest-degree="<?= htmlspecialchars($degreeLabel, ENT_QUOTES, 'UTF-8') ?>" data-year-graduated="<?= htmlspecialchars($yearGraduated, ENT_QUOTES, 'UTF-8') ?>" data-records='<?= htmlspecialchars($recordsJson, ENT_QUOTES, 'UTF-8') ?>'>
         <td><?= htmlspecialchars((string)($education['employee_id'] ?? 'N/A')) ?></td>
         <td><?= htmlspecialchars($education['faculty_name']) ?></td>
-        <td><?= htmlspecialchars($education['highest_degree']) ?></td>
+        <td><?= htmlspecialchars($degreeLabel) ?></td>
         <td><?= htmlspecialchars($education['school_name'] ?? 'No record yet') ?></td>
-        <td><?= htmlspecialchars($education['year_graduated'] ?? 'No record yet') ?></td>
+        <td><?= htmlspecialchars($yearGraduated) ?></td>
         <td class="actions">
             <button type="button" class="btn btn-sm btn-info view-attainment-btn">View</button>
-            <button type="button" class="btn btn-sm btn-outline-primary edit-attainment-btn"><?= $hasEducationRecord ? 'Edit' : 'Add Record' ?></button>
         </td>
     </tr>
     <?php
@@ -788,33 +854,75 @@ function renderTrainingsPanel($trainingSummary, $eligibleEmployees = []) {
 }
 
 ?>
-    <div class="module-header">
+    <div class="gened-faculty-page">
+    <div class="module-header gened-faculty-header">
         <div>
-            <h1> Faculty Management</h1>
+            <h1>Faculty Management</h1>
             <p>View and manage faculty credentials and educational attainment.</p>
         </div>
+        <?php if ($canManageFaculty): ?>
+            <button type="button" class="btn btn-primary" id="addFacultyBtn">
+                <i class="fas fa-plus" aria-hidden="true"></i> Add Faculty
+            </button>
+        <?php endif; ?>
     </div>
 
-    <div class="module-content">
-        <div class="stats-grid employment-stats-grid">
-            <?php foreach ($employmentTypeStats as $label => $count): ?>
-                <div class="stat-card faculty-type-card">
-                    <h6><?= htmlspecialchars($label) ?></h6>
-                    <h3><?= (int)$count ?></h3>
-                </div>
-            <?php endforeach; ?>
-        </div>
-
-        <?php if (!empty($documentStatusStats)): ?>
-            <div class="stats-grid document-status-grid">
-                <?php foreach ($documentStatusStats as $status): ?>
-                    <div class="stat-card document-status-card">
-                        <h6><?= htmlspecialchars($status['label']) ?></h6>
-                        <h3><?= (int)$status['count'] ?></h3>
-                    </div>
-                <?php endforeach; ?>
+    <div class="module-content gened-faculty-content">
+        <section class="fm-overview-set active" data-fm-overview="credentials" aria-label="Faculty credential summary and filters">
+            <div class="stats-grid employment-stats-grid gened-faculty-stats">
+                <article class="stat-card faculty-type-card"><h6>Total Faculty</h6><h3><?= count($facultyList) ?></h3><small>All faculty members</small></article>
+                <article class="stat-card faculty-type-card"><h6>Full-time</h6><h3><?= (int)$employmentTypeStats['Full-time'] ?></h3><small>Full-time employees</small></article>
+                <article class="stat-card faculty-type-card"><h6>Part-time</h6><h3><?= (int)$employmentTypeStats['Part-time'] ?></h3><small>Part-time employees</small></article>
+                <article class="stat-card faculty-type-card"><h6>Active</h6><h3><?= $activeFacultyCount ?></h3><small>Currently active</small></article>
             </div>
-        <?php endif; ?>
+
+            <div class="gened-faculty-filters">
+                <label for="facultyDepartmentFilter">Department
+                    <select id="facultyDepartmentFilter">
+                        <option value="">All departments</option>
+                        <?php foreach ($facultyDepartments as $department): ?>
+                            <option value="<?= htmlspecialchars($department, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($department) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+                <label for="facultyEmploymentFilter">Employment Type
+                    <select id="facultyEmploymentFilter">
+                        <option value="">All</option>
+                        <?php foreach (array_values(array_unique(array_filter(array_column($facultyList, 'employment_type')))) as $employmentType): ?>
+                            <option value="<?= htmlspecialchars($employmentType, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($employmentType) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+            </div>
+        </section>
+
+        <section class="fm-overview-set" data-fm-overview="attainment" aria-label="Educational attainment summary and filters" hidden>
+            <div class="stats-grid employment-stats-grid gened-faculty-stats gened-attainment-stats">
+                <article class="stat-card faculty-type-card"><h6>Total Faculty</h6><h3><?= count($educationSummary) ?></h3><small>All faculty members</small></article>
+                <article class="stat-card faculty-type-card"><h6>Masteral</h6><h3><?= (int)$educationDegreeCounts['Masteral'] ?></h3><small>Master's degree holders</small></article>
+                <article class="stat-card faculty-type-card"><h6>Doctoral</h6><h3><?= (int)$educationDegreeCounts['Doctoral'] ?></h3><small>Doctorate holders</small></article>
+                <article class="stat-card faculty-type-card"><h6>Bachelor's</h6><h3><?= (int)$educationDegreeCounts["Bachelor's"] ?></h3><small>Bachelor's degree only</small></article>
+            </div>
+
+            <div class="gened-faculty-filters">
+                <label for="attainmentDegreeFilter">Highest Degree
+                    <select id="attainmentDegreeFilter">
+                        <option value="">All</option>
+                        <?php foreach ($educationDegrees as $degree): ?>
+                            <option value="<?= htmlspecialchars($degree, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($degree) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+                <label for="attainmentYearFilter">Year Graduated
+                    <select id="attainmentYearFilter">
+                        <option value="">All</option>
+                        <?php foreach ($graduationYears as $year): ?>
+                            <option value="<?= htmlspecialchars($year, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($year) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+            </div>
+        </section>
 
         <div class="academics-tabs">
             <button class="academics-tab active" data-fm-tab="credentials">
@@ -823,153 +931,59 @@ function renderTrainingsPanel($trainingSummary, $eligibleEmployees = []) {
             <button class="academics-tab" data-fm-tab="attainment">
                 <i class="fas fa-graduation-cap"></i> Educational Attainment
             </button>
-            <button class="academics-tab" data-fm-tab="assignments">
-                <i class="fas fa-chalkboard-teacher"></i> Faculty Assignments
-            </button>
         </div>
 
         <?php echo renderCredentialsPanel($facultyList); ?>
 
         <?php echo renderAttainmentPanel($educationSummary); ?>
-
-        <div class="academics-panel fm-panel" id="fm-panel-assignments">
-            <div class="section-header">
-                <h3>Faculty Assignments</h3>
-                <p class="text-muted" style="margin: 0;"><small>Assign faculty to sections, then assign curriculum subjects.</small></p>
-            </div>
-            <div class="table-card">
-                <div class="table-responsive">
-                    <table id="facultyAssignmentsTable">
-                        <thead>
-                            <tr>
-                                <th>Faculty Name</th>
-                                <th>Department</th>
-                                <th>Sections</th>
-                                <th>Subjects</th>
-                                <th>Teaching Units</th>
-                                <th>Load Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr><td colspan="7" class="text-center text-muted">Loading faculty assignments...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+    </div>
     </div>
 
-    <div id="fmAssignSectionsModal" class="modal">
-        <div class="modal-dialog" style="max-width: 720px;">
-            <div class="modal-header">
-                <h5 class="modal-title">Assign Faculty to Sections</h5>
-                <button type="button" class="modal-close" aria-label="Close">&times;</button>
-            </div>
-            <form id="fmAssignSectionsForm" data-custom-submit>
+    <?php if ($canManageFaculty): ?>
+        <div id="fmAddFacultyModal" class="modal" aria-hidden="true">
+            <div class="modal-dialog" style="max-width:560px;">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add GenEd Faculty</h5>
+                    <button type="button" class="modal-close" data-close-add-faculty aria-label="Close">&times;</button>
+                </div>
                 <div class="modal-body">
-                    <input type="hidden" id="fmAssignSectionsFacultyId">
-                    <div class="form-group">
-                        <label class="form-label">Faculty</label>
-                        <input type="text" class="form-control" id="fmAssignSectionsFacultyName" readonly>
-                    </div>
-                    <div class="row g-3">
-                        <div class="col-md-6 form-group">
-                            <label for="fmAssignSectionsSchoolYear" class="form-label">School Year</label>
-                            <select id="fmAssignSectionsSchoolYear" class="form-select" required>
-                                <option value="">Loading school years...</option>
-                            </select>
+                    <?php if ($addableFacultyEmployees): ?>
+                        <form id="addFacultyForm">
+                            <div class="form-group">
+                                <label class="form-label" for="addFacultyEmployee">Active Employee</label>
+                                <select id="addFacultyEmployee" name="employee_id" class="form-control" required>
+                                    <option value="">Select an employee</option>
+                                    <?php foreach ($addableFacultyEmployees as $employee): ?>
+                                        <?php
+                                        $middleInitial = trim((string)($employee['middle_name'] ?? ''));
+                                        $middleInitial = $middleInitial !== '' ? ' ' . strtoupper(substr($middleInitial, 0, 1)) . '.' : '';
+                                        $suffix = trim((string)($employee['suffix'] ?? ''));
+                                        $employeeName = trim($employee['first_name'] . $middleInitial . ' ' . $employee['last_name'] . ($suffix !== '' ? ' ' . $suffix : ''));
+                                        $employeeLabel = trim((string)($employee['employee_code'] ?? '')) . ' - ' . $employeeName;
+                                        if (!empty($employee['department'])) {
+                                            $employeeLabel .= ' (' . $employee['department'] . ')';
+                                        }
+                                        ?>
+                                        <option value="<?= (int)$employee['employee_id'] ?>"><?= htmlspecialchars($employeeLabel) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <p class="fm-add-faculty-feedback" role="alert" hidden></p>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-close-add-faculty>Cancel</button>
+                                <button type="submit" class="btn btn-primary">Add Faculty</button>
+                            </div>
+                        </form>
+                    <?php else: ?>
+                        <p class="text-muted">There are no active employees available to add as faculty.</p>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-close-add-faculty>Close</button>
                         </div>
-                        <div class="col-md-6 form-group">
-                            <label for="fmAssignSectionsSemester" class="form-label">Semester</label>
-                            <select id="fmAssignSectionsSemester" class="form-select" required disabled>
-                                <option value="">Select semester</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="fmAssignSectionsList" class="form-label">Sections</label>
-                        <select id="fmAssignSectionsList" class="form-select" multiple size="7" required disabled></select>
-                        <small class="text-muted">Hold Ctrl to select multiple sections.</small>
-                    </div>
-                    <div id="fmAssignSectionsMessage" class="text-muted" role="status" aria-live="polite"></div>
+                    <?php endif; ?>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary modal-close">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Section Assignments</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="fmAssignSubjectModal" class="modal">
-        <div class="modal-dialog" style="max-width: 640px;">
-            <div class="modal-header">
-                <h5 class="modal-title">Assign Subject</h5>
-                <button type="button" class="modal-close" aria-label="Close">&times;</button>
-            </div>
-            <form id="fmAssignSubjectForm" data-custom-submit>
-                <div class="modal-body">
-                    <input type="hidden" id="fmAssignSubjectFacultyId">
-                    <div class="form-group">
-                        <label class="form-label">Faculty</label>
-                        <input type="text" class="form-control" id="fmAssignSubjectFacultyName" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label for="fmAssignSubjectSection" class="form-label">Assigned Section</label>
-                        <select id="fmAssignSubjectSection" class="form-select" required disabled>
-                            <option value="">Loading assigned sections...</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="fmAssignSubjectSubject" class="form-label">Curriculum Subject</label>
-                        <select id="fmAssignSubjectSubject" class="form-select" required disabled>
-                            <option value="">Select a section first</option>
-                        </select>
-                    </div>
-                    <div id="fmAssignSubjectMessage" class="text-muted" role="status" aria-live="polite"></div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary modal-close">Cancel</button>
-                    <button type="submit" class="btn btn-primary" disabled>Save Subject Assignment</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="fmFacultyAssignmentsViewModal" class="modal">
-        <div class="modal-dialog" style="max-width: 1100px;">
-            <div class="modal-header">
-                <h5 class="modal-title">Faculty Assignments</h5>
-                <button type="button" class="modal-close" aria-label="Close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p class="mb-3"><strong>Faculty:</strong> <span id="fmFacultyAssignmentsViewName"></span></p>
-                <div class="table-responsive">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Section</th>
-                                <th>Subject</th>
-                                <th>Units</th>
-                                <th>Academic Period</th>
-                                <th>Days</th>
-                                <th>Time</th>
-                                <th>Room</th>
-                                <th>Schedule Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="fmFacultyAssignmentsViewBody">
-                            <tr><td colspan="8" class="text-center text-muted">Select a faculty member to view assignments.</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary modal-close">Close</button>
             </div>
         </div>
-    </div>
+    <?php endif; ?>
 
     <div id="fmAddEngagementModal" class="modal">
     <div class="modal-dialog" style="max-width:560px;">

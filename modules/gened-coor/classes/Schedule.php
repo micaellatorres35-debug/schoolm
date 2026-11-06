@@ -300,6 +300,7 @@ class Schedule {
         $useIds = is_numeric($semester) && is_numeric($school_year);
         $where = " WHERE 1=1";
         $params = [];
+        $where .= " AND (s.subject_id IS NULL OR UPPER(subj.code) REGEXP '^(GE.*|FIL [1-3]|NSTP [1-2]|PE [1-2])$')";
 
         if ($useIds) {
             $where .= " AND s.semester_id = ? AND s.school_year_id = ?";
@@ -459,17 +460,20 @@ class Schedule {
                     COUNT(DISTINCT s.section_id) as total_sections,
                     COUNT(DISTINCT s.subject_id) as total_subjects
                   FROM {$this->table} s
-                  {$this->roomJoinClause()}";
+                    LEFT JOIN rgr_subjects subj ON s.subject_id = subj.id
+                    {$this->roomJoinClause()}";
 
         if ($useIds) {
-            $query .= " WHERE s.semester_id = ? AND s.school_year_id = ?";
+            $query .= " WHERE s.semester_id = ? AND s.school_year_id = ?
+                          AND (s.subject_id IS NULL OR UPPER(subj.code) REGEXP '^(GE.*|FIL [1-3]|NSTP [1-2]|PE [1-2])$')";
             $stmt = $this->conn->prepare($query);
             $stmt->bindParam(1, $semester, PDO::PARAM_INT);
             $stmt->bindParam(2, $school_year, PDO::PARAM_INT);
         } else {
             $query .= " LEFT JOIN rgr_semesters sem ON s.semester_id = sem.id
                         LEFT JOIN rgr_school_years sy ON s.school_year_id = sy.id
-                        WHERE sem.name = ? AND sy.name = ?";
+            WHERE sem.name = ? AND sy.name = ?
+              AND (s.subject_id IS NULL OR UPPER(subj.code) REGEXP '^(GE.*|FIL [1-3]|NSTP [1-2]|PE [1-2])$')";
             $stmt = $this->conn->prepare($query);
             $stmt->bindParam(1, $semester, PDO::PARAM_STR);
             $stmt->bindParam(2, $school_year, PDO::PARAM_STR);
@@ -547,16 +551,18 @@ class Schedule {
                     MIN(s.start_time) as earliest_start,
                     MAX(s.end_time) as latest_end
                   FROM " . $this->table . " s
+                  LEFT JOIN rgr_subjects subj ON s.subject_id = subj.id
                   LEFT JOIN gc_room cr ON s.room_id = cr.id";
 
         if ($useIds) {
-            $query .= " WHERE s.semester_id = ? AND s.school_year_id = ?";
+            $query .= " WHERE s.semester_id = ? AND s.school_year_id = ?
+                        AND (s.subject_id IS NULL OR UPPER(subj.code) REGEXP '^(GE.*|FIL [1-3]|NSTP [1-2]|PE [1-2])$')";
             $query .= " GROUP BY s.day_of_week ORDER BY FIELD(s.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')";
             $stmt = $this->conn->prepare($query);
             $stmt->bindParam(1, $semester, PDO::PARAM_INT);
             $stmt->bindParam(2, $school_year, PDO::PARAM_INT);
         } else {
-            $query .= " LEFT JOIN rgr_semesters sem ON s.semester_id = sem.id LEFT JOIN rgr_school_years sy ON s.school_year_id = sy.id WHERE sem.name = ? AND sy.name = ? GROUP BY s.day_of_week ORDER BY FIELD(s.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')";
+            $query .= " LEFT JOIN rgr_semesters sem ON s.semester_id = sem.id LEFT JOIN rgr_school_years sy ON s.school_year_id = sy.id WHERE sem.name = ? AND sy.name = ? AND (s.subject_id IS NULL OR UPPER(subj.code) REGEXP '^(GE.*|FIL [1-3]|NSTP [1-2]|PE [1-2])$') GROUP BY s.day_of_week ORDER BY FIELD(s.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')";
             $stmt = $this->conn->prepare($query);
             $stmt->bindParam(1, $semester, PDO::PARAM_STR);
             $stmt->bindParam(2, $school_year, PDO::PARAM_STR);

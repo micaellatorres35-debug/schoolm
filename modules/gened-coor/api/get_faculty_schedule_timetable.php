@@ -38,12 +38,13 @@ try {
               LEFT JOIN gc_faculty f ON cs.faculty_id = f.id
               LEFT JOIN gc_sections sec ON cs.section_id = sec.id
               LEFT JOIN rgr_subjects subj ON cs.subject_id = subj.id
-              LEFT JOIN cc_room cr ON cs.room_id = cr.id
+              LEFT JOIN gc_room cr ON cs.room_id = cr.id
               LEFT JOIN rgr_semesters sem ON cs.semester_id = sem.id
               LEFT JOIN rgr_school_years sy ON cs.school_year_id = sy.id
               WHERE cs.faculty_id = :faculty_id
                 AND cs.semester_id = :semester_id
                 AND cs.school_year_id = :school_year_id
+                AND (cs.subject_id IS NULL OR UPPER(subj.code) REGEXP '^(GE.*|FIL [1-3]|NSTP [1-2]|PE [1-2])$')
               ORDER BY 
                 FIELD(cs.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'),
                 CAST(cs.start_time AS TIME)";
@@ -72,7 +73,7 @@ try {
         $schoolYearName = $first['school_year_name'];
     } else {
         // If no schedules, still fetch faculty and semester/school year info
-        $facultyQuery = "SELECT first_name, last_name, faculty_code FROM cc_faculty WHERE id = :faculty_id";
+        $facultyQuery = "SELECT first_name, last_name, faculty_code FROM gc_faculty WHERE id = :faculty_id";
         $facultyStmt = $conn->prepare($facultyQuery);
         $facultyStmt->bindParam(':faculty_id', $faculty_id, PDO::PARAM_INT);
         $facultyStmt->execute();

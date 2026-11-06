@@ -4,7 +4,7 @@ include_once __DIR__ . '/../../../database/db.php';
 
 class DatabaseHelper {
     public function getUpcomingEvents($limit = 5) {
-        $stmt = $this->conn->prepare("SELECT * FROM cc_events WHERE event_date >= CURDATE() ORDER BY event_date ASC LIMIT :limit");
+        $stmt = $this->conn->prepare("SELECT * FROM gc_events WHERE archived_at IS NULL AND event_date >= CURDATE() ORDER BY event_date ASC LIMIT :limit");
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -13,7 +13,7 @@ class DatabaseHelper {
     // Get calendar events with upcoming status
     public function getCalendarEvents() {
         try {
-            $stmt = $this->conn->prepare("SELECT event_title, event_date, start_time, status FROM cc_events WHERE event_date >= CURDATE() ORDER BY event_date ASC");
+            $stmt = $this->conn->prepare("SELECT event_title, event_date, start_time, status FROM gc_events WHERE archived_at IS NULL AND event_date >= CURDATE() ORDER BY event_date ASC");
             $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (Exception $e) {
@@ -138,7 +138,7 @@ class DatabaseHelper {
 
             // 1. Recent Events
             try {
-                $stmt = $this->conn->prepare("SELECT event_id, event_title, 'Academic Event' as activity_type, created_at FROM cc_events ORDER BY created_at DESC LIMIT 5");
+                $stmt = $this->conn->prepare("SELECT event_id, event_title, 'Academic Event' as activity_type, created_at FROM gc_events WHERE archived_at IS NULL ORDER BY created_at DESC LIMIT 5");
                 $stmt->execute();
                 $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 foreach ($events as $event) {

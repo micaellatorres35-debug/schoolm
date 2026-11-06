@@ -1,5 +1,6 @@
 ALTER TABLE rgr_subjects
-    ADD COLUMN IF NOT EXISTS description TEXT NULL AFTER name;
+    ADD COLUMN IF NOT EXISTS description TEXT NULL AFTER name,
+    ADD COLUMN IF NOT EXISTS archived_at DATETIME NULL AFTER lab_hours;
 
 CREATE TABLE IF NOT EXISTS enr_prerequisites (
     id INT NOT NULL AUTO_INCREMENT,

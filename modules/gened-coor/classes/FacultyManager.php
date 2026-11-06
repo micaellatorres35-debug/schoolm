@@ -121,6 +121,7 @@ class FacultyManager {
         INNER JOIN rgr_school_years sy ON fl.school_year_id = sy.id AND sy.is_active = 1
         INNER JOIN rgr_semesters sem ON fl.semester_id = sem.id AND sem.is_active = 1
         WHERE fl.faculty_id = :faculty_id
+        AND UPPER(s.code) REGEXP '^(GE.*|FIL [1-3]|NSTP [1-2]|PE [1-2])$'
         ORDER BY sy.name DESC, sem.name DESC, sec.section_code, s.code";
         
         $stmt = $this->conn->prepare($sql);

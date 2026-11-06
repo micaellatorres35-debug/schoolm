@@ -862,5 +862,277 @@ tbody tr:hover {
 
 }
 
+.gened-faculty-page {
+    width: 100%;
+    max-width: none;
+    padding: 20px;
+    border-radius: 16px;
+    background: #f1f3f5;
+}
 
+.gened-faculty-page .gened-faculty-header {
+    display: flex;
+    min-height: 0;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 18px;
+    padding: 24px 24px 20px;
+    border: 1px solid #e5eaf2;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+}
 
+.gened-faculty-page .gened-faculty-header h1 {
+    margin: 0 0 2px;
+    color: #000;
+    font-size: 32px;
+}
+
+.gened-faculty-page .gened-faculty-header p {
+    margin: 0;
+    color: #000;
+    font-size: 14px;
+}
+
+.gened-faculty-page .gened-faculty-header .btn {
+    display: flex;
+    width: 100%;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-radius: 7px;
+    background: #182b83;
+    font-size: 14px;
+}
+
+.gened-faculty-page .gened-faculty-header .btn:hover {
+       background: #14246f;
+}
+
+.gened-faculty-page .gened-faculty-content {
+    min-height: 0;
+
+    border: 1px solid #e5eaf2;
+    border-radius: 14px;
+}
+
+.gened-faculty-page .gened-faculty-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.gened-faculty-page .gened-faculty-stats .stat-card {
+    min-height: 120px;
+    align-items: center;
+    padding: 20px;
+    border: 1px solid #e9ecef;
+    border-left: 4px solid #1677ff;
+    border-radius: 8px;
+   background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    text-align: center;
+}
+
+.gened-faculty-page .gened-faculty-stats .stat-card h6 {
+    margin: 0 0 3px;
+    color: #000;
+    font-size: 13px;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.gened-faculty-page .gened-faculty-stats .stat-card h3 {
+    color: #000;
+    font-size: 28px;
+}
+
+.gened-faculty-page .gened-faculty-stats .stat-card small {
+    margin-top: 6px;
+    color: #000;
+    font-size: 12px;
+}
+
+.gened-faculty-page .gened-attainment-stats .stat-card {
+    border-left: 0;
+}
+
+.fm-overview-set:not(.active) {
+    display: none;
+}
+
+.gened-faculty-filters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+    padding: 16px;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.gened-faculty-filters label {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 6px;
+    color: #000;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.gened-faculty-filters select {
+    width: 100%;
+    min-height: 42px;
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #fff;
+    color: #374151;
+    font: inherit;
+    font-weight: 400;
+}
+
+.gened-faculty-page .academics-tabs {
+    gap: 10px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid #d5e0f2;
+}
+
+.gened-faculty-page .academics-tab {
+    padding: 13px 22px;
+    border-bottom-width: 2px;
+    font-size: 15px;
+    color: #000;
+}
+
+.gened-faculty-page .academics-tab:hover,
+.gened-faculty-page .academics-tab.active {
+    color: #1677ff;
+}
+
+.gened-faculty-page .academics-tab.active {
+    border-bottom-color: #1677ff;
+}
+
+.gened-faculty-page button:focus-visible {
+    outline: 3px solid rgba(22, 119, 255, 0.35);
+    outline-offset: 2px;
+}
+
+.gened-faculty-page .section-header {
+    display: none;
+}
+
+.gened-faculty-page .section-header h3,
+.gened-faculty-content .text-muted,
+.gened-faculty-page th,
+.gened-faculty-page td {
+    color: #000;
+}
+
+.gened-faculty-page .search-filter-container {
+    margin-bottom: 14px;
+}
+
+.gened-faculty-page .search-box {
+    min-width: 0;
+    width: 100%;
+}
+
+.gened-faculty-page .search-box input {
+    min-height: 42px;
+    padding: 10px 14px;
+    border-color: #d3def0;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 14px;
+}
+
+.gened-faculty-page .table-card {
+    overflow: hidden;
+    border: 1px solid #e1e8f2;
+    border-radius: 10px;
+    box-shadow: none;
+}
+
+.gened-faculty-page table {
+    margin: 0;
+}
+
+.gened-faculty-page thead {
+    background: #f8fafc;
+}
+
+.gened-faculty-page th {
+    padding: 12px;
+    border-bottom: 1px solid #dbe5f4;
+    font-size: 13px;
+}
+
+.gened-faculty-page td {
+    padding: 12px;
+    border-bottom: 1px solid #e7edf5;
+    font-size: 14px;
+    vertical-align: middle;
+}
+
+.gened-faculty-page tbody tr:hover {
+    background: #f8fbff;
+}
+
+.gened-faculty-page td.actions {
+    display: table-cell;
+}
+
+.gened-faculty-page td.actions .btn {
+    padding: 6px 12px;
+    border-radius: 5px;
+    background: #182b83;
+    font-size: 12px;
+}
+
+.gened-faculty-page td.actions .btn:hover,
+.gened-faculty-page td.actions .btn:active {
+    background: #14246f;
+}
+
+.fm-add-faculty-feedback {
+    margin: 0 0 12px;
+    color: #b91c1c;
+    font-size: 13px;
+}
+
+@media (max-width: 768px) {
+    .gened-faculty-page {
+        padding: 14px;
+    }
+
+    .gened-faculty-page .gened-faculty-content {
+        padding: 14px;
+    }
+
+    .gened-faculty-page .gened-faculty-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .gened-faculty-page .table-responsive {
+        overflow-x: auto;
+    }
+
+    .gened-faculty-page table {
+        min-width: 780px;
+    }
+}
+
+@media (max-width: 480px) {
+    .gened-faculty-filters {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+}

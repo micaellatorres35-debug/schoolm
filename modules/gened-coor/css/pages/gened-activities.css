@@ -1,0 +1,210 @@
+.gc-activities-page {
+    padding: 20px;
+    border: 1px solid #e9ecef;
+    border-radius: 14px;
+    background: #f1f3f5;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+}
+
+.gc-activities-header h1 {
+    margin-bottom: 5px;
+    color: #1a202c;
+    font-size: 32px;
+    font-weight: 700;
+}
+
+.gc-activities-header p {
+    margin: 0;
+    color: #6c757d;
+    font-size: 14px;
+}
+
+.gc-activities-header .btn-primary {
+    background: #182b83;
+    border-color: #182b83;
+    font-size: 14px;
+}
+
+.gc-activities-header .btn-primary:hover {
+    background: #14246f;
+    border-color: #14246f;
+}
+
+.gc-activities-page .module-content {
+    padding: 0;
+}
+
+.gc-activity-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 15px;
+    margin: 0 0 20px;
+}
+
+.gc-activity-summary > [class*="col-"] {
+    width: auto;
+    max-width: none;
+    padding: 0;
+}
+
+.gc-activity-summary .stat-card {
+    height: 100%;
+    min-height: 104px;
+    padding: 20px;
+    border: 0;
+    border-left: 4px solid #0d6efd;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.gc-activity-summary .stat-card h6 {
+    margin-bottom: 8px;
+    color: #6c757d;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.gc-activity-summary .stat-card h3 {
+    color: #1a202c;
+    font-size: 28px;
+}
+
+.gc-activity-summary .stat-card small {
+    color: #6c757d;
+    font-size: 12px;
+}
+
+.gc-activities-page .module-content > .card {
+    margin-bottom: 20px !important;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.gc-activities-page .module-content > .card .form-label {
+    color: #495057;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.gc-activities-page .module-content > .card .form-select {
+    min-height: 42px;
+    padding: 8px 12px;
+    border-color: #ced4da;
+    font-size: 14px;
+}
+
+.gc-activities-page .gc-activity-categories {
+    gap: 10px;
+    margin: 0 0 24px;
+    border-bottom-color: #dee2e6;
+}
+
+.gc-activities-page .gc-activity-categories .academics-tab {
+    padding: 13px 22px;
+    color: #6c757d;
+    font-size: 15px;
+}
+
+.gc-activities-page .gc-activity-categories .academics-tab:hover,
+.gc-activities-page .gc-activity-categories .academics-tab.active {
+    color: #1677ff;
+}
+
+.gc-activities-page .gc-activity-categories .academics-tab.active {
+    border-bottom-color: #1677ff;
+}
+
+.gc-activities-page .table-card {
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.gc-activities-page #gcActivitiesTable thead {
+    background: #f8f9fa;
+}
+
+.gc-activities-page #gcActivitiesTable th {
+    border-bottom-color: #dee2e6;
+    color: #333;
+    font-size: 13px;
+}
+
+.gc-activities-page #gcActivitiesTable td {
+    font-size: 14px;
+}
+
+.gc-activities-page #gcActivitiesTable tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.gc-activity-status {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.gc-activity-status-pending-approval {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.gc-activity-status-approved {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.gc-activity-status-completed,
+.gc-activity-status-draft {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.gc-activity-status-rejected {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+@media (max-width: 900px) {
+    .gc-activity-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 600px) {
+    .gc-activities-header h1 {
+        font-size: 26px;
+    }
+
+    .gc-activities-page {
+        padding: 14px;
+    }
+
+    .gc-activity-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .gc-activity-summary .stat-card {
+        min-height: 88px;
+        padding: 14px;
+    }
+
+    .gc-activity-summary .stat-card h3 {
+        font-size: 24px;
+    }
+
+    .gc-activities-page .gc-activity-categories .academics-tab {
+        padding: 11px 16px;
+        font-size: 14px;
+    }
+}

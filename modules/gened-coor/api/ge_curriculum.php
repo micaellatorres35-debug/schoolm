@@ -17,7 +17,13 @@ function geCurriculumRespond(int $status, array $data): void {
 }
 
 function geCurriculumSubjectExists(PDO $conn, int $subjectId): bool {
-    $stmt = $conn->prepare("SELECT id FROM rgr_subjects WHERE id = :id AND UPPER(code) LIKE 'GE%' LIMIT 1");
+    $stmt = $conn->prepare("
+        SELECT id
+        FROM rgr_subjects
+        WHERE id = :id AND archived_at IS NULL
+          AND UPPER(code) REGEXP '^(GE.*|FIL [1-3]|NSTP [1-2]|PE [1-2])$'
+        LIMIT 1
+    ");
     $stmt->execute([':id' => $subjectId]);
     return (bool)$stmt->fetchColumn();
 }
@@ -31,17 +37,17 @@ try {
     $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-        $subjectsStmt = $conn->query("SELECT id, code, name, description, units, lecture_hours, lab_hours FROM rgr_subjects WHERE UPPER(code) LIKE 'GE%' ORDER BY code");
-        $coursesStmt = $conn->query("SELECT cu.id AS curriculum_id, cu.course_id, cu.curriculum_name, cu.effective_year, cu.is_active, c.code AS course_code, c.name AS course_name FROM rgr_curriculums cu LEFT JOIN rgr_courses c ON c.id = cu.course_id ORDER BY c.code, cu.effective_year DESC, cu.id DESC");
-        $prerequisitesStmt = $conn->query("SELECT p.id, s.id AS subject_id, s.code AS subject_code, s.name AS subject_name, prerequisite.id AS prerequisite_subject_id, prerequisite.code AS prerequisite_code, prerequisite.name AS prerequisite_name FROM enr_prerequisites p INNER JOIN rgr_subjects s ON s.id = p.subject_id INNER JOIN rgr_subjects prerequisite ON prerequisite.id = p.prerequisite_subject_id WHERE UPPER(s.code) LIKE 'GE%' ORDER BY s.code, prerequisite.code");
-        $mappingsStmt = $conn->query("SELECT cs.id, cs.curriculum_id, cu.curriculum_name, cu.effective_year, c.code AS course_code, s.id AS subject_id, s.code AS subject_code, s.name AS subject_name, s.units, cs.year_level, cs.semester FROM rgr_curriculum_subjects cs INNER JOIN rgr_curriculums cu ON cu.id = cs.curriculum_id LEFT JOIN rgr_courses c ON c.id = cu.course_id INNER JOIN rgr_subjects s ON s.id = cs.subject_id WHERE UPPER(s.code) LIKE 'GE%' ORDER BY c.code, cu.effective_year DESC, cs.year_level, cs.semester, s.code");
+        $subjectsStmt = $conn->query("
+            SELECT id, code, name, description, units, lecture_hours, lab_hours, archived_at,
+                   CASE WHEN archived_at IS NULL THEN 'Active' ELSE 'Archived' END AS status
+            FROM rgr_subjects
+            WHERE UPPER(code) REGEXP '^(GE.*|FIL [1-3]|NSTP [1-2]|PE [1-2])$'
+            ORDER BY archived_at IS NOT NULL, code
+        ");
 
         geCurriculumRespond(200, [
             'success' => true,
             'subjects' => $subjectsStmt->fetchAll(PDO::FETCH_ASSOC),
-            'curriculums' => $coursesStmt->fetchAll(PDO::FETCH_ASSOC),
-            'prerequisites' => $prerequisitesStmt->fetchAll(PDO::FETCH_ASSOC),
-            'mappings' => $mappingsStmt->fetchAll(PDO::FETCH_ASSOC),
         ]);
     }
 
@@ -65,8 +71,8 @@ try {
         $lectureHours = filter_var($input['lecture_hours'] ?? null, FILTER_VALIDATE_INT);
         $labHours = filter_var($input['lab_hours'] ?? null, FILTER_VALIDATE_INT);
 
-        if (!preg_match('/^GE[A-Z0-9-]{1,248}$/', $code) || $name === '' || $units === false || $units < 0 || $lectureHours === false || $lectureHours < 0 || $labHours === false || $labHours < 0) {
-            geCurriculumRespond(422, ['success' => false, 'message' => 'Enter a GE code, subject name, and valid unit/hour values.']);
+        if (!preg_match('/^(GE(?:[A-Z0-9-]+| [A-Z0-9-]+(?: [A-Z0-9-]+)*)|FIL [1-3]|NSTP [1-2]|PE [1-2])$/', $code) || $name === '' || $units === false || $units < 0 || $lectureHours === false || $lectureHours < 0 || $labHours === false || $labHours < 0) {
+            geCurriculumRespond(422, ['success' => false, 'message' => 'Enter a GE, FIL 1-3, NSTP 1-2, or PE 1-2 code, subject name, and valid unit/hour values.']);
         }
 
         $duplicateStmt = $conn->prepare('SELECT id FROM rgr_subjects WHERE code = :code AND id != :id LIMIT 1');
@@ -89,23 +95,29 @@ try {
         geCurriculumRespond(201, ['success' => true, 'message' => 'GE subject added.']);
     }
 
-    if ($action === 'delete_subject') {
+    if ($action === 'archive_subject') {
         $subjectId = (int)($input['id'] ?? 0);
         if ($subjectId <= 0 || !geCurriculumSubjectExists($conn, $subjectId)) {
             geCurriculumRespond(404, ['success' => false, 'message' => 'GE subject not found.']);
         }
-        $dependencyStmt = $conn->prepare('SELECT (SELECT COUNT(*) FROM rgr_curriculum_subjects WHERE subject_id = :subject_id) + (SELECT COUNT(*) FROM cc_faculty_load WHERE subject_id = :subject_id) AS dependency_count');
-        $dependencyStmt->execute([':subject_id' => $subjectId]);
-        if ((int)$dependencyStmt->fetchColumn() > 0) {
-            geCurriculumRespond(409, ['success' => false, 'message' => 'Remove curriculum mappings and faculty assignments before deleting this subject.']);
+        $archiveSubject = $conn->prepare('UPDATE rgr_subjects SET archived_at = CURRENT_TIMESTAMP WHERE id = :id AND archived_at IS NULL');
+        $archiveSubject->execute([':id' => $subjectId]);
+        geCurriculumRespond(200, ['success' => true, 'message' => 'GE subject archived. Existing assignments and curriculum mappings were preserved.']);
+    }
+
+    if ($action === 'restore_subject') {
+        $subjectId = (int)($input['id'] ?? 0);
+        $restoreSubject = $conn->prepare("
+            UPDATE rgr_subjects
+            SET archived_at = NULL
+            WHERE id = :id AND archived_at IS NOT NULL
+              AND UPPER(code) REGEXP '^(GE.*|FIL [1-3]|NSTP [1-2]|PE [1-2])$'
+        ");
+        $restoreSubject->execute([':id' => $subjectId]);
+        if ($restoreSubject->rowCount() === 0) {
+            geCurriculumRespond(404, ['success' => false, 'message' => 'Archived GE subject not found.']);
         }
-        $conn->beginTransaction();
-        $deletePrerequisites = $conn->prepare('DELETE FROM enr_prerequisites WHERE subject_id = :subject_id OR prerequisite_subject_id = :subject_id');
-        $deletePrerequisites->execute([':subject_id' => $subjectId]);
-        $deleteSubject = $conn->prepare('DELETE FROM rgr_subjects WHERE id = :id');
-        $deleteSubject->execute([':id' => $subjectId]);
-        $conn->commit();
-        geCurriculumRespond(200, ['success' => true, 'message' => 'GE subject deleted.']);
+        geCurriculumRespond(200, ['success' => true, 'message' => 'GE subject restored.']);
     }
 
     if ($action === 'save_prerequisite') {
@@ -125,7 +137,13 @@ try {
     }
 
     if ($action === 'delete_prerequisite') {
-        $stmt = $conn->prepare("DELETE p FROM enr_prerequisites p INNER JOIN rgr_subjects s ON s.id = p.subject_id WHERE p.id = :id AND UPPER(s.code) LIKE 'GE%'");
+        $stmt = $conn->prepare("
+            DELETE p
+            FROM enr_prerequisites p
+            INNER JOIN rgr_subjects s ON s.id = p.subject_id
+            WHERE p.id = :id
+              AND UPPER(s.code) REGEXP '^(GE.*|FIL [1-3]|NSTP [1-2]|PE [1-2])$'
+        ");
         $stmt->execute([':id' => (int)($input['id'] ?? 0)]);
         geCurriculumRespond(200, ['success' => true, 'message' => 'Prerequisite removed.']);
     }
@@ -154,7 +172,13 @@ try {
     }
 
     if ($action === 'delete_mapping') {
-        $stmt = $conn->prepare("DELETE cs FROM rgr_curriculum_subjects cs INNER JOIN rgr_subjects s ON s.id = cs.subject_id WHERE cs.id = :id AND UPPER(s.code) LIKE 'GE%'");
+        $stmt = $conn->prepare("
+            DELETE cs
+            FROM rgr_curriculum_subjects cs
+            INNER JOIN rgr_subjects s ON s.id = cs.subject_id
+            WHERE cs.id = :id
+              AND UPPER(s.code) REGEXP '^(GE.*|FIL [1-3]|NSTP [1-2]|PE [1-2])$'
+        ");
         $stmt->execute([':id' => (int)($input['id'] ?? 0)]);
         geCurriculumRespond(200, ['success' => true, 'message' => 'Curriculum mapping removed.']);
     }

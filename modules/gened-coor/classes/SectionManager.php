@@ -1,7 +1,7 @@
 <?php
 class SectionManager {
     private $conn;
-    private $table = "cc_sections";
+    private $table = "gc_sections";
 
     public $id;
     public $section_code;
@@ -31,11 +31,11 @@ class SectionManager {
                     COUNT(es.student_id) AS total_students
                   FROM " . $this->table . " cs
                   LEFT JOIN rgr_courses c ON c.id = cs.program_id
-                  LEFT JOIN cc_section_faculty sf ON sf.section_id = cs.id
+                  LEFT JOIN gc_section_faculty sf ON sf.section_id = cs.id
                     AND sf.role = 'Adviser'
                     AND sf.school_year_id = cs.school_year_id
                     AND sf.semester_id = cs.semester_id
-                  LEFT JOIN cc_faculty cf ON sf.faculty_id = cf.id
+                  LEFT JOIN gc_faculty cf ON sf.faculty_id = cf.id
                   LEFT JOIN rgr_school_years sy ON cs.school_year_id = sy.id
                   LEFT JOIN rgr_semesters sem ON cs.semester_id = sem.id
                   LEFT JOIN enr_students es ON es.section_id = cs.id

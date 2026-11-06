@@ -1,768 +1,312 @@
-/**
- * Events Management Module
- * Handles all client-side logic for event CRUD operations
- */
+function initGenEdEventsDashboard() {
+    const root = document.getElementById('genedEventsDashboard');
+    if (!root || root.dataset.initialized === 'true') return;
+    root.dataset.initialized = 'true';
 
-function exposeGlobal(name, value) {
-    try {
-        window[name] = value;
-    } catch (e) {
-        console.error(`Failed to expose "${name}" to window:`, e);
-    }
-}
+    const eventsApiUrl = new URL('api/events_dashboard.php', window.location.href);
+    const activitiesApiUrl = new URL('api/academic_activities.php', window.location.href);
+    const modal = root.querySelector('#addEventModal');
+    const detailModal = root.querySelector('#eventDetailsModal');
+    const form = root.querySelector('#eventForm');
+    const addButton = root.querySelector('#addEventBtn');
+    const tableBody = root.querySelector('#genedEventsTableBody');
+    const state = { dashboard: null, events: [], category: '' };
 
-// ===== GLOBAL STATE =====
-const BASE_URL = '/schoolm/modules/college-coor/api';
-const eventData = [];
+    const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    })[character]);
 
-function isEventsManagementPage() {
-    return !!(
-        document.getElementById('eventsTableBody') ||
-        document.getElementById('eventForm') ||
-        document.getElementById('addEventModal')
-    );
-}
-
-// Modal functions
-function openModal() {
-    const modal = document.getElementById('addEventModal');
-    if (!modal) return;
-    modal.classList.add('show');
-}
-
-function closeModal() {
-    const modal = document.getElementById('addEventModal');
-    if (!modal) return;
-    modal.classList.remove('show');
-    resetEventForm();
-}
-
-// Initialize event manager (called both on page load and after dynamic page load)
-function initializeEventManager() {
-    if (!isEventsManagementPage()) {
-        return;
-    }
-
-    // Get the form and reset its listener flag since it's a new element
-    const form = document.getElementById('eventForm');
-    if (form) {
-        form.dataset.listenerAttached = 'false';
-    }
-
-    // Setup Add Event button
-    const addBtn = document.getElementById('addEventBtn');
-    if (addBtn) {
-        addBtn.addEventListener('click', function() {
-            openAddEventModal();
-        });
-    }
-
-    // Close modal when clicking outside
-    window.addEventListener('click', function(e) {
-        const modal = document.getElementById('addEventModal');
-        if (modal && e.target === modal) {
-            closeModal();
-        }
-    });
-
-    attachFormListener();
-    attachFilters();
-    // Load templates for modal
-    loadEventTemplates();
-
-    // Always fetch fresh event data from API (important for dynamic page loads)
-    refreshEventsData();
-}
-
-// Load templates via AJAX and populate the template dropdown
-function loadEventTemplates() {
-    const select = document.getElementById('templateSelect');
-    if (!select) return;
-
-    fetch(`${BASE_URL}/get_event_templates.php`)
-        .then(res => res.json())
-        .then(res => {
-            if (res.success && Array.isArray(res.templates)) {
-                select.innerHTML = '<option value="">(none) - choose a template</option>';
-                res.templates.forEach(t => {
-                    const opt = document.createElement('option');
-                    opt.value = t.template_id;
-                    opt.textContent = (t.template_name || (`Template ${t.template_id}`)) + (t.event_type ? ` (${t.event_type})` : '');
-                    opt.dataset.template = JSON.stringify(t);
-                    select.appendChild(opt);
-                });
-            } else {
-                select.innerHTML = '<option value="">(none) - no templates</option>';
-            }
-        })
-        .catch(() => {
-            select.innerHTML = '<option value="">(none) - no templates</option>';
-        });
-}
-
-function applyTemplateToForm(t) {
-    if (!t) return;
-    if (t.default_title) document.getElementById('eventTitle').value = t.default_title;
-    if (t.event_type) document.getElementById('eventType').value = t.event_type;
-    if (t.default_description) document.getElementById('description').value = t.default_description;
-    if (t.default_location) document.getElementById('location').value = t.default_location;
-    if (t.default_target_audience) document.getElementById('targetAudience').value = t.default_target_audience;
-    if (t.default_status) document.getElementById('eventStatus').value = t.default_status;
-    if (typeof t.priority !== 'undefined' && document.getElementById('priority')) document.getElementById('priority').value = t.priority;
-}
-
-document.addEventListener('change', function(e) {
-    if (e.target && e.target.id === 'templateSelect') {
-        const v = e.target.value;
-        if (!v) return;
-        const opt = e.target.options[e.target.selectedIndex];
-        if (!opt || !opt.dataset || !opt.dataset.template) return;
-        try {
-            const tmpl = JSON.parse(opt.dataset.template);
-            applyTemplateToForm(tmpl);
-        } catch (err) {
-            console.error('Failed to parse template', err);
-        }
-    }
-});
-
-// ===============================
-// MODAL CONTROL
-// ===============================
-
-// OPEN ADD MODAL (Clean State)
-function openAddEventModal() {
-    const form = document.getElementById('eventForm');
-
-    if (!form) return;
-
-    // Reset form
-    form.reset();
-    
-    // Clear hidden ID
-    document.getElementById('eventId').value = '';
-    
-    // Set title
-    document.getElementById('eventModalTitle').textContent = 'Add New Event';
-
-    // Reset submit button
-    const btn = form.querySelector('button[type="submit"]');
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-save me-2"></i> Save Event';
-
-    // Show modal
-    openModal();
-}
-
-// RESET FORM (on modal close)
-function resetEventForm() {
-    const form = document.getElementById('eventForm');
-    if (!form) return;
-
-    form.reset();
-    document.getElementById('eventId').value = '';
-    document.getElementById('eventModalTitle').textContent = 'Add New Event';
-
-    const btn = form.querySelector('button[type="submit"]');
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-save me-2"></i> Save Event';
-
-    // reset template and priority when closing
-    const templateSelect = document.getElementById('templateSelect');
-    if (templateSelect) templateSelect.value = '';
-    const prioritySelect = document.getElementById('priority');
-    if (prioritySelect) prioritySelect.value = '';
-}
-
-// ===============================
-// FORM SUBMIT (ADD / UPDATE)
-// ===============================
-function attachFormListener() {
-    const form = document.getElementById('eventForm');
-    if (!form) {
-        return;
-    }
-
-    // Prevent duplicate listener attachment
-    if (form.dataset.listenerAttached === 'true') {
-        return;
-    }
-
-    form.dataset.listenerAttached = 'true';
-
-    form.addEventListener('submit', function (e) {
-        e.preventDefault();
-
-        const btn = form.querySelector('button[type="submit"]');
-        if (btn.disabled) return;
-
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
-
-        // Get event ID - check it exists and is a valid number
-        const eventIdElement = document.getElementById('eventId');
-        
-        if (!eventIdElement) {
-            console.error('ERROR: eventId element not found!');
-            throw new Error('Form element missing');
-        }
-        
-        const eventIdValue = (eventIdElement.value || '').trim();
-        const eventId = eventIdValue && eventIdValue !== '' ? parseInt(eventIdValue, 10) : 0;
-        const isEdit = !isNaN(eventId) && eventId > 0;
-
-        const payload = {
-            event_title: document.getElementById('eventTitle').value,
-            event_type: document.getElementById('eventType').value,
-            event_date: document.getElementById('eventDate').value,
-            start_time: document.getElementById('startTime').value,
-            end_time: document.getElementById('endTime').value,
-            location: document.getElementById('location').value,
-            description: document.getElementById('description').value,
-            target_audience: document.getElementById('targetAudience').value,
-            status: document.getElementById('eventStatus').value,
-            template_id: (document.getElementById('templateSelect') ? document.getElementById('templateSelect').value : null),
-            priority: (document.getElementById('priority') ? document.getElementById('priority').value : null)
-        };
-
-        // Add event_id only for edits
-        if (isEdit) {
-            payload.event_id = eventId;
-        }
-
-        const url = isEdit
-            ? `${BASE_URL}/update_event.php`
-            : `${BASE_URL}/add_event.php`;
-
-        fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        })
-        .then(res => res.json())
-        .then(res => {
-            if (res.success) {
-                showToast('Event saved successfully!', 'success');
-                closeModal();
-                notifyDashboardAlertsUpdate();
-                refreshEventsData();
-            } else {
-                throw new Error(res.message || 'Unknown error occurred');
-            }
-        })
-        .catch(err => {
-            showToast('Error saving event: ' + err.message, 'danger');
-
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-save me-2"></i> Save Event';
-        });
-    });
-}
-
-// ===============================
-// DISPLAY TABLE
-// ===============================
-function displayEventsData(data = eventData) {
-    const tbody = document.getElementById('eventsTableBody');
-    if (!tbody) return;
-
-    tbody.innerHTML = '';
-
-    if (!data || !data.length) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="7" class="text-center py-4 text-muted">
-                    <i class="fas fa-calendar-times me-2"></i> No events found
-                </td>
-            </tr>
-        `;
-        return;
-    }
-
-    // helper: convert 24-hour time string to 12-hour format
-    function convertTo12Hour(timeStr) {
-        if (!timeStr) return '';
-        // handle 'HH:MM:SS' or 'HH:MM'
-        const t = timeStr.split(' ')[0];
-        const parts = t.split(':');
-        if (parts.length < 2) return timeStr;
-        let h = parseInt(parts[0], 10);
-        const m = parts[1];
-        const ampm = h >= 12 ? 'PM' : 'AM';
-        h = h % 12;
-        if (h === 0) h = 12;
-        return h + ':' + m + ' ' + ampm;
-    }
-
-    data.forEach(e => {
-        const row = document.createElement('tr');
-
-        row.innerHTML = `
-            <td><strong>${escapeHtml(e.event_title || '')}</strong></td>
-            <td>${escapeHtml(e.event_type || '-')}</td>
-            <td>${formatDate(e.event_date)}<br><small class="text-muted">${convertTo12Hour(e.start_time) || ''} - ${convertTo12Hour(e.end_time) || ''}</small></td>
-            <td>${escapeHtml(e.location || '-')}</td>
-            <td>${escapeHtml(e.target_audience || '-')}</td>
-            <td>${renderStatusBadge(e.status)}</td>
-            <td>
-                <button class="btn btn-info btn-sm" onclick="editEvent(${e.event_id})">
-                    <i class="fas fa-edit"></i> Edit
-                </button>
-                <button class="btn btn-warning btn-sm" onclick="printEvent(${e.event_id})">
-                    <i class="fas fa-print"></i> Print
-                </button>
-            </td>
-        `;
-
-        tbody.appendChild(row);
-    });
-}
-
-// Helper function to escape HTML
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-// EDIT EVENT
-function editEvent(id) {
-    const event = eventData.find(e => e.event_id == id);
-    
-    if (!event) {
-        console.error('Event not found in eventData for ID:', id);
-        return;
-    }
-
-    const eventIdInput = document.getElementById('eventId');
-    
-    if (!eventIdInput) {
-        console.error('ERROR: eventId input not found!');
-        return;
-    }
-
-    eventIdInput.value = event.event_id;
-    
-    document.getElementById('eventTitle').value = event.event_title || '';
-    document.getElementById('eventType').value = event.event_type || '';
-    document.getElementById('eventDate').value = event.event_date || '';
-    document.getElementById('startTime').value = event.start_time || '';
-    document.getElementById('endTime').value = event.end_time || '';
-    document.getElementById('location').value = event.location || '';
-    document.getElementById('description').value = event.description || '';
-    document.getElementById('targetAudience').value = event.target_audience || '';
-    document.getElementById('eventStatus').value = event.status || '';
-    const templateSelect = document.getElementById('templateSelect');
-    if (templateSelect) templateSelect.value = event.template_id || '';
-    const prioritySelect = document.getElementById('priority');
-    if (prioritySelect) prioritySelect.value = event.priority || '';
-
-    document.getElementById('eventModalTitle').textContent = 'Edit Event';
-
-    openModal();
-}
-
-// DELETE EVENT
-function deleteEvent(id) {
-    if (!confirm('Are you sure you want to delete this event?')) return;
-
-    fetch(`${BASE_URL}/delete_event.php`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ event_id: id })
-    })
-    .then(res => res.json())
-    .then(res => {
-        if (res.success) {
-            showToast('Event deleted successfully!', 'success');
-            notifyDashboardAlertsUpdate();
-            refreshEventsData();
-        } else {
-            throw new Error(res.message || 'Delete failed');
-        }
-    })
-    .catch(err => {
-        console.error(err);
-        showToast('Error deleting event', 'danger');
-    });
-}
-
-// ===============================
-// FILTERS
-// ===============================
-function attachFilters() {
-    const searchInput = document.getElementById('searchInput');
-    const filterType = document.getElementById('filterType');
-    const filterStatus = document.getElementById('filterStatus');
-    
-    if (searchInput) searchInput.addEventListener('keyup', filterEvents);
-    if (filterType) filterType.addEventListener('change', filterEvents);
-    if (filterStatus) filterStatus.addEventListener('change', filterEvents);
-}
-
-function filterEvents() {
-    const searchInput = document.getElementById('searchInput');
-    const filterType = document.getElementById('filterType');
-    const filterStatus = document.getElementById('filterStatus');
-    
-    const search = searchInput ? searchInput.value.toLowerCase() : '';
-    const type = filterType ? filterType.value : '';
-    const status = filterStatus ? filterStatus.value : '';
-
-    const filtered = eventData.filter(e =>
-        (!search || (e.event_title && e.event_title.toLowerCase().includes(search))) &&
-        (!type || e.event_type === type) &&
-        (!status || e.status === status)
-    );
-
-    displayEventsData(filtered);
-}
-
-// ===============================
-// REFRESH DATA
-// ===============================
-function refreshEventsData() {
-    fetch(`${BASE_URL}/get_events.php`)
-        .then(res => res.json())
-        .then(res => {
-            if (res.success) {
-                eventData.length = 0;
-                eventData.push(...(res.events || []));
-                displayEventsData();
-                updateEventStatistics();
-            }
-        })
-        .catch(err => {
-            showToast('Failed to refresh events', 'danger');
-        });
-}
-
-// ===============================
-// STATISTICS
-// ===============================
-function updateEventStatistics() {
-    const totalEl = document.getElementById('totalEvents');
-    const upcomingEl = document.getElementById('upcomingEvents');
-    const ongoingEl = document.getElementById('ongoingEvents');
-    const completedEl = document.getElementById('completedEvents');
-    
-    if (!eventData) return;
-    
-    const total = eventData.length;
-    const scheduled = eventData.filter(e => e.status === 'upcoming').length;
-    const ongoing = eventData.filter(e => e.status === 'ongoing').length;
-    const completed = eventData.filter(e => e.status === 'completed').length;
-
-    if (totalEl) totalEl.textContent = total;
-    if (upcomingEl) upcomingEl.textContent = scheduled;
-    if (ongoingEl) ongoingEl.textContent = ongoing;
-    if (completedEl) completedEl.textContent = completed;
-}
-
-// ===============================
-// HELPERS
-// ===============================
-function notifyDashboardAlertsUpdate() {
-    try {
-        if (window.localStorage) {
-            localStorage.setItem('ccDashboardAlertsRefresh', String(Date.now()));
-        }
-        window.dispatchEvent(new CustomEvent('cc:dashboard-alerts-refresh', {
-            detail: { source: 'events-management' }
-        }));
-    } catch (error) {
-        console.warn('Unable to notify dashboard alerts:', error);
-    }
-}
-
-function renderStatusBadge(status) {
-    const map = {
-        'upcoming': 'secondary',
-        'ongoing': 'primary',
-        'completed': 'success',
-        'cancelled': 'danger'
+    const showToast = (message, isError = false) => {
+        const container = root.querySelector('#toastContainer');
+        const toast = document.createElement('div');
+        toast.className = `ge-toast${isError ? ' ge-toast-error' : ''}`;
+        toast.textContent = message;
+        container.appendChild(toast);
+        window.setTimeout(() => toast.remove(), 4500);
     };
 
-    const color = map[status] || 'secondary';
-    return `<span class="badge bg-${color}">${escapeHtml(status || 'Unknown')}</span>`;
-}
-
-function formatDate(dateStr) {
-    if (!dateStr) return '-';
-    try {
-        return new Date(dateStr).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
+    const request = async (url, options = {}) => {
+        const response = await fetch(url, {
+            credentials: 'same-origin',
+            ...options,
+            headers: {
+                ...(options.headers || {}),
+                ...(options.body ? { 'Content-Type': 'application/json' } : {})
+            }
         });
-    } catch (e) {
-        return dateStr;
-    }
-}
+        const payload = await response.json();
+        if (!response.ok || !payload.success) {
+            throw new Error(payload.message || `Request failed (${response.status}).`);
+        }
+        return payload;
+    };
 
-function formatTimeForDisplay(timeStr) {
-    if (!timeStr) return 'TBA';
+    const formatDate = value => {
+        if (!value) return 'Date not set';
+        const date = new Date(`${value}T00:00:00`);
+        return Number.isNaN(date.getTime())
+            ? value
+            : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    };
 
-    const normalized = timeStr.toString().trim();
-    const timeParts = normalized.split(' ')[0].split(':');
-    if (timeParts.length < 2) return normalized;
+    const formatTime = value => {
+        if (!value) return '';
+        const [hour, minute] = value.slice(0, 5).split(':').map(Number);
+        const date = new Date();
+        date.setHours(hour, minute, 0, 0);
+        return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    };
 
-    let hours = parseInt(timeParts[0], 10);
-    const minutes = timeParts[1];
-    const suffix = hours >= 12 ? 'PM' : 'AM';
+    const statusClass = status => {
+        if (status === 'Pending Approval' || status === 'Pending') return 'ge-status-pending';
+        if (status === 'Approved') return 'ge-status-approved';
+        if (status === 'Completed') return 'ge-status-completed';
+        if (status === 'Rejected' || status === 'Returned') return 'ge-status-returned';
+        return 'ge-status-neutral';
+    };
 
-    hours = hours % 12;
-    if (hours === 0) hours = 12;
+    const displayStatus = event => {
+        if (event.status === 'Pending Approval') return 'Pending';
+        if (event.status === 'Rejected') return 'Returned';
+        if (event.status === 'Draft') return 'Draft';
+        if (event.status === 'Completed' || event.event_status === 'completed') return 'Completed';
+        if (event.status === 'Approved') return 'Approved';
+        return event.status || event.event_status || 'Unknown';
+    };
 
-    return `${hours}:${minutes} ${suffix}`;
-}
+    const eventCategory = event => {
+        if (event.event_category) return event.event_category;
+        const text = `${event.title || ''} ${event.event_type || ''} ${event.description || ''}`.toLowerCase();
+        if (/buwan ng wika|filipin|language|literary|literature|balagtasan|poetry|essay|writing|slogan/.test(text)) return 'Language & Literature';
+        if (/rizal|history|historical|culture|cultural|art appreciation/.test(text)) return 'History & Culture';
+        if (/science|technology|sts|math|nutrition/.test(text)) return 'Science & Math';
+        if (/ethic|value|integrity|citizenship/.test(text)) return 'Values & Ethics';
+        if (/sports|sport|pe event|intramural|dance competition/.test(text)) return 'Sports';
+        if (/nstp|community|outreach|clean-up|tree planting|service/.test(text)) return 'Community';
+        return 'Academic Support';
+    };
 
-function getStatusClassName(status) {
-    const normalized = (status || 'upcoming').toLowerCase();
-    if (normalized === 'ongoing') return 'status-ongoing';
-    if (normalized === 'completed') return 'status-completed';
-    if (normalized === 'cancelled') return 'status-cancelled';
-    return 'status-upcoming';
-}
+    const actionButtons = item => {
+        const canApprove = state.dashboard?.can_approve;
+        const isPending = item.status === 'Pending Approval';
+        const isApproved = item.status === 'Approved';
+        const canManage = state.dashboard?.can_create;
+        const isOwner = Number(item.submitted_by) === Number(state.dashboard?.current_employee_id);
+        const actions = [];
+        if ((item.status === 'Draft' || item.status === 'Rejected') && (isOwner || canManage)) {
+            actions.push(`<button type="button" class="ge-action-button ge-action-submit" data-source="event" data-action="submit" data-id="${Number(item.id)}">Submit</button>`);
+        }
+        if (isPending && canApprove) {
+            actions.push(`<button type="button" class="ge-action-button ge-action-approve" data-source="event" data-action="approve" data-id="${Number(item.id)}">Approve</button>`);
+            actions.push(`<button type="button" class="ge-action-button ge-action-reject" data-source="event" data-action="reject" data-id="${Number(item.id)}">Reject</button>`);
+        } else if (isApproved && (isOwner || canApprove)) {
+            actions.push(`<button type="button" class="ge-action-button ge-action-complete" data-source="event" data-action="complete" data-id="${Number(item.id)}">Complete</button>`);
+        }
+        if (isOwner || canManage) {
+            actions.push(`<button type="button" class="ge-action-button ge-action-archive" data-source="event" data-action="archive" data-id="${Number(item.id)}">Archive</button>`);
+        }
+        return `<div class="ge-event-row-actions">${actions.join('')}</div>`;
+    };
 
-function cleanupPrintView() {
-    const wrapper = document.getElementById('eventPrintWrapper');
-    if (wrapper && wrapper.parentNode) {
-        wrapper.parentNode.removeChild(wrapper);
-    }
-}
+    const renderEvents = () => {
+        const events = state.events.filter(event => {
+            return !state.category || eventCategory(event) === state.category;
+        });
 
-function printEvent(id) {
-    const event = eventData.find(e => Number(e.event_id) === Number(id));
+        if (!events.length) {
+            tableBody.innerHTML = `<tr><td colspan="7" class="ge-event-empty">${state.events.length ? 'No events in this category.' : 'No events have been added yet.'}</td></tr>`;
+            return;
+        }
 
-    if (!event) {
-        showToast('Event not found', 'danger');
-        return;
-    }
+        tableBody.innerHTML = events.map(event => {
+            const eventDate = new Date(`${event.event_date}T00:00:00`);
+            const formattedDate = Number.isNaN(eventDate.getTime()) ? escapeHtml(event.event_date || '—') : eventDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+            const submittedBy = event.submitted_by_name || '—';
+            const status = displayStatus(event);
+            return `
+                <tr>
+                    <td><strong>${escapeHtml(event.title)}</strong><small>${escapeHtml(event.event_type || 'GenEd event')}</small></td>
+                    <td>${escapeHtml(eventCategory(event))}</td>
+                    <td><span>${formattedDate}${event.start_time ? `, ${escapeHtml(formatTime(event.start_time))}` : ''}</span><small>${escapeHtml(event.location || '—')}</small></td>
+                    <td>${escapeHtml(submittedBy)}</td>
+                    <td><span class="ge-status ${statusClass(status)}">${escapeHtml(status)}</span></td>
+                    <td>${escapeHtml(event.decision_note || '—')}</td>
+                    <td>${actionButtons(event)}</td>
+                </tr>`;
+        }).join('');
+    };
 
-    cleanupPrintView();
+    const renderDashboard = data => {
+        state.dashboard = data;
+        state.events = data.event_records || [];
+        root.querySelector('#eventSchoolYear').value = data.period?.school_year || 'No active school year';
+        root.querySelector('#eventSemester').value = data.period?.semester || 'No active semester';
+        addButton.hidden = !data.can_create;
+        const summary = data.event_summary || {};
+        root.querySelector('#eventTotal').textContent = summary.total ?? 0;
+        root.querySelector('#eventPending').textContent = summary.pending ?? 0;
+        root.querySelector('#eventUpcoming').textContent = summary.upcoming ?? 0;
+        root.querySelector('#eventCompleted').textContent = summary.completed ?? 0;
+        renderEvents();
+    };
 
-    const eventTitle = escapeHtml(event.event_title || 'Untitled Event');
-    const eventDate = escapeHtml(new Date(event.event_date).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    }));
-    const venue = escapeHtml(event.location || 'To be announced');
-    const timeRange = escapeHtml(
-        `${formatTimeForDisplay(event.start_time || '')} - ${formatTimeForDisplay(event.end_time || '')}`
-            .replace('TBA - TBA', 'TBA')
-            .replace(/^-|-$|\s+-\s+/g, '')
-    );
-    const audience = escapeHtml(event.target_audience || 'General Public');
-    const description = (event.description || 'No description provided.').replace(/\n/g, '<br><br>');
-    const printedDate = new Date().toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
+    const loadDashboard = async () => {
+        try {
+            const data = await request(eventsApiUrl);
+            renderDashboard(data);
+        } catch (error) {
+            root.querySelector('#eventSchoolYear').value = 'Unable to load';
+            root.querySelector('#eventSemester').value = 'Unable to load';
+            tableBody.innerHTML = `<tr><td colspan="7" class="ge-event-empty ge-error-text">${escapeHtml(error.message)}</td></tr>`;
+            showToast(error.message, true);
+        }
+    };
+
+    const openModal = () => {
+        form.reset();
+        modal.hidden = false;
+        root.querySelector('#eventTitle').focus();
+    };
+
+    const closeModal = () => {
+        modal.hidden = true;
+    };
+
+    addButton.addEventListener('click', openModal);
+    root.querySelectorAll('[data-close-event-modal]').forEach(button => {
+        button.addEventListener('click', closeModal);
+    });
+    root.querySelectorAll('[data-close-event-details]').forEach(button => {
+        button.addEventListener('click', () => {
+            detailModal.hidden = true;
+        });
     });
 
-    const wrapper = document.createElement('div');
-    wrapper.id = 'eventPrintWrapper';
-    wrapper.className = 'event-print-wrapper';
-    wrapper.innerHTML = `
-        <div class="event-print-sheet">
-            <div class="event-print-header">
-                <div class="event-print-brand">
-                    <div class="event-print-logo">
-                        <i class="fas fa-university"></i>
-                    </div>
-                    <div class="event-print-brand-text">
-                        <div class="event-print-institution">BESTLINK COLLEGE OF THE PHILIPPINES</div>
-                        <div class="event-print-subtitle">College Coordinator Office</div>
-                    </div>
-                </div>
-            </div>
+    root.querySelectorAll('[data-event-category]').forEach(button => {
+        button.addEventListener('click', () => {
+            state.category = button.dataset.eventCategory || '';
+            root.querySelectorAll('[data-event-category]').forEach(tab => {
+                tab.classList.toggle('active', tab === button);
+            });
+            renderEvents();
+        });
+    });
 
-            <div class="event-print-banner">
-                <i class="fas fa-calendar-alt"></i>
-                <span>EVENT NOTICE</span>
-            </div>
+    root.addEventListener('click', async event => {
+        const suggestion = event.target.closest('.use-gened-event-suggestion');
+        if (suggestion) {
+            openModal();
+            root.querySelector('#eventTitle').value = suggestion.dataset.title || '';
+            root.querySelector('#eventType').value = suggestion.dataset.eventType || '';
+            root.querySelector('#eventCategory').value = eventCategory({
+                title: suggestion.dataset.title,
+                description: suggestion.dataset.description
+            });
+            root.querySelector('#description').value = suggestion.dataset.description || '';
+            root.querySelector('#eventScope').value = 'Department-level';
+            return;
+        }
 
-            <div class="event-print-card">
-                <div class="event-print-info-grid">
-                    <div class="event-print-info-item">
-                        <div class="event-print-icon-wrap">
-                            <i class="fas fa-bullhorn"></i>
-                        </div>
-                        <div class="event-print-info-text">
-                            <div class="event-print-label">Event Title</div>
-                            <div class="event-print-value event-print-title-value">${eventTitle}</div>
-                        </div>
-                    </div>
+        const viewButton = event.target.closest('[data-view-event]');
+        if (viewButton) {
+            const item = state.events.find(record => Number(record.id) === Number(viewButton.dataset.viewEvent));
+            if (!item) return;
+            const setDetail = (id, value) => {
+                root.querySelector(`#${id}`).textContent = value || '—';
+            };
+            root.querySelector('#eventDetailsTitle').textContent = item.title || 'Event details';
+            setDetail('eventDetailsType', item.event_type);
+            setDetail('eventDetailsDate', `${formatDate(item.event_date)} · ${formatTime(item.start_time)}${item.end_time ? ` – ${formatTime(item.end_time)}` : ''}`);
+            setDetail('eventDetailsVenue', item.location);
+            setDetail('eventDetailsScope', item.event_scope);
+            setDetail('eventDetailsStatus', displayStatus(item));
+            setDetail('eventDetailsInCharge', item.submitted_by_name);
+            setDetail('eventDetailsAudience', item.target_audience);
+            setDetail('eventDetailsDescription', item.description);
+            detailModal.hidden = false;
+            return;
+        }
 
-                    <div class="event-print-info-item">
-                        <div class="event-print-icon-wrap">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                        <div class="event-print-info-text">
-                            <div class="event-print-label">Time</div>
-                            <div class="event-print-value">${timeRange}</div>
-                        </div>
-                    </div>
+        const button = event.target.closest('.ge-action-button');
+        if (!button) return;
+        const action = button.dataset.action;
+        let decisionNote = '';
+        if (action === 'reject') {
+            const rejectionReason = window.prompt('Reason for rejecting this item:');
+            if (rejectionReason === null) return;
+            decisionNote = rejectionReason.trim();
+            if (!decisionNote) {
+                showToast('A rejection reason is required.', true);
+                return;
+            }
+        } else if (action === 'complete' && !window.confirm('Mark this item as completed?')) {
+            return;
+        } else if (action === 'archive' && !window.confirm('Archive this event? It will be removed from the active events list.')) {
+            return;
+        } else if (action === 'submit' && !window.confirm('Submit this event for approval?')) {
+            return;
+        }
 
-                    <div class="event-print-info-item">
-                        <div class="event-print-icon-wrap">
-                            <i class="fas fa-calendar"></i>
-                        </div>
-                        <div class="event-print-info-text">
-                            <div class="event-print-label">Date</div>
-                            <div class="event-print-value">${eventDate}</div>
-                        </div>
-                    </div>
+        button.disabled = true;
+        const api = button.dataset.source === 'activity' ? activitiesApiUrl : eventsApiUrl;
+        try {
+            const result = await request(api, {
+                method: 'POST',
+                body: JSON.stringify({ action, id: Number(button.dataset.id), decision_note: decisionNote })
+            });
+            showToast(result.message);
+            await loadDashboard();
+        } catch (error) {
+            button.disabled = false;
+            showToast(error.message, true);
+        }
+    });
 
-                    <div class="event-print-info-item">
-                        <div class="event-print-icon-wrap">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div class="event-print-info-text">
-                            <div class="event-print-label">Target Audience</div>
-                            <div class="event-print-value">${audience}</div>
-                        </div>
-                    </div>
+    form.addEventListener('submit', async event => {
+        event.preventDefault();
+        const submitButton = form.querySelector('[type="submit"]');
+        submitButton.disabled = true;
+        const payload = {
+            action: 'create',
+            event_title: root.querySelector('#eventTitle').value.trim(),
+            event_type: root.querySelector('#eventType').value,
+            event_category: root.querySelector('#eventCategory').value,
+            event_scope: root.querySelector('#eventScope').value,
+            event_date: root.querySelector('#eventDate').value,
+            start_time: root.querySelector('#startTime').value,
+            end_time: root.querySelector('#endTime').value,
+            location: root.querySelector('#location').value.trim(),
+            target_audience: root.querySelector('#targetAudience').value.trim(),
+            description: root.querySelector('#description').value.trim()
+        };
+        try {
+            const result = await request(eventsApiUrl, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+            closeModal();
+            showToast(result.message);
+            await loadDashboard();
+        } catch (error) {
+            showToast(error.message, true);
+        } finally {
+            submitButton.disabled = false;
+        }
+    });
 
-                    <div class="event-print-info-item full-width-item">
-                        <div class="event-print-icon-wrap">
-                            <i class="fas fa-map-marker-alt"></i>
-                        </div>
-                        <div class="event-print-info-text">
-                            <div class="event-print-label">Venue</div>
-                            <div class="event-print-value">${venue}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && !modal.hidden) closeModal();
+        if (event.key === 'Escape' && !detailModal.hidden) detailModal.hidden = true;
+    });
 
-            <div class="event-print-description-block">
-                <div class="event-print-description-banner">
-                    <i class="fas fa-file-alt"></i>
-                    <span>EVENT DESCRIPTION</span>
-                </div>
-                <div class="event-print-description">${description}</div>
-            </div>
-
-            <div class="event-print-footer">
-                <div class="event-print-footer-signature">
-                    <div class="event-print-footer-label">Prepared by:</div>
-                    <div class="event-print-signature-line"></div>
-                    <div class="event-print-footer-name">College Coordinator</div>
-                </div>
-
-                <div class="event-print-footer-date">
-                    <div class="event-print-date-row">
-                        <i class="fas fa-calendar-alt"></i>
-                        <span>Date Printed:</span>
-                    </div>
-                    <div class="event-print-date-value">${printedDate}</div>
-                </div>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(wrapper);
-
-    setTimeout(() => {
-        window.print();
-    }, 150);
+    loadDashboard();
 }
 
-window.addEventListener('afterprint', cleanupPrintView);
-
-// ===============================
-// TOAST NOTIFICATION
-// ===============================
-function showToast(message, type = 'info', duration = 4000) {
-    const container = document.getElementById('toastContainer');
-    if (!container) {
-        return;
-    }
-    
-    const toastId = 'toast-' + Date.now();
-    
-    const html = `<div id="${toastId}" class="toast ${type}">${message}</div>`;
-    
-    container.insertAdjacentHTML('beforeend', html);
-    
-    // Auto remove after specified duration
-    setTimeout(() => {
-        const toast = document.getElementById(toastId);
-        if (toast) {
-            toast.style.animation = 'slideOutTop 0.3s ease-out';
-            setTimeout(() => {
-                if (toast && toast.parentElement) {
-                    toast.remove();
-                }
-            }, 300);
-        }
-    }, duration);
-}
-
-// ===============================
-// PAGE LOAD & INITIALIZATION
-// ===============================
-
-// Load eventData from preload blob when page loads dynamically
-window.addEventListener('page:loaded', function(e) {
-    if (e.detail?.page !== 'events-management') return;
-
-    try {
-        const blob = document.getElementById('preload-eventData');
-        if (blob && blob.textContent) {
-            try {
-                eventData.length = 0;
-                eventData.push(...(JSON.parse(blob.textContent) || []));
-                console.log('Loaded preload eventData:', eventData);
-            } catch (err) {
-                console.error('Failed to parse preload-eventData JSON', err);
-            }
-        }
-    } catch (e) {
-        // ignore
-    }
-
-    initializeEventManager();
+document.addEventListener('DOMContentLoaded', initGenEdEventsDashboard);
+window.addEventListener('page:loaded', event => {
+    if (event.detail?.page === 'events-management') initGenEdEventsDashboard();
 });
-
-// Load eventData from preload blob on initial page load
-document.addEventListener('DOMContentLoaded', function() {
-    if (!isEventsManagementPage()) {
-        return;
-    }
-
-    try {
-        const blob = document.getElementById('preload-eventData');
-        if (blob && blob.textContent) {
-            try {
-                eventData.length = 0;
-                eventData.push(...(JSON.parse(blob.textContent) || []));
-            } catch (err) {
-                console.error('Failed to parse preload-eventData JSON', err);
-            }
-        }
-    } catch (e) {
-        // ignore
-    }
-
-    initializeEventManager();
-});
-
-// ===============================
-// EXPOSE FUNCTIONS TO WINDOW
-// ===============================
-// Required for inline onclick handlers in HTML
-exposeGlobal('openModal', openModal);
-exposeGlobal('closeModal', closeModal);
-exposeGlobal('resetEventForm', resetEventForm);
-exposeGlobal('openAddEventModal', openAddEventModal);
-exposeGlobal('editEvent', editEvent);
-exposeGlobal('deleteEvent', deleteEvent);
-exposeGlobal('printEvent', printEvent);
-exposeGlobal('filterEvents', filterEvents);
-exposeGlobal('showToast', showToast);
-exposeGlobal('initializeEventManager', initializeEventManager);

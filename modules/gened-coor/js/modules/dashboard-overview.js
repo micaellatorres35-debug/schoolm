@@ -92,8 +92,7 @@
                 event = {title: parts[0], time: parts[1] || '', type: 'Academic', status: 'upcoming'};
             }
             const status = event.status || 'upcoming';
-            const colors = {completed:'#10b981', cancelled:'#ef4444', ongoing:'#f59e0b'};
-            const color = colors[status] || '#3b82f6';
+            const color = '#2563eb';
             let html = `<div class="modal-event-item"><div style="display:flex;justify-content:space-between;align-items:start;gap:10px;"><div style="flex:1;"><div class="modal-event-title">${escapeHtml(event.title)}</div><div style="font-size:12px;color:#9ca3af;margin-top:2px;"><span style="background:${color};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">${escapeHtml(event.type || 'Academic')}</span></div></div><span style="background:${color};color:white;padding:4px 8px;border-radius:3px;font-size:11px;white-space:nowrap;">${escapeHtml(status)}</span></div>`;
             if (event.time) html += `<div class="modal-event-desc"><strong>Time:</strong> ${escapeHtml(convertTo12Hour(event.time))}${event.endTime ? ' - ' + escapeHtml(convertTo12Hour(event.endTime)) : ''}</div>`;
             if (event.location) html += `<div class="modal-event-desc"><strong>Location:</strong> ${escapeHtml(event.location)}</div>`;
@@ -469,6 +468,9 @@
     }
 
     function initDashboardCharts() {
+        if (!document.getElementById('studentsPerProgramChart')
+            && !document.getElementById('facultyLoadChart')
+            && !document.getElementById('studentStatusChart')) return;
         const data = dashboard().chartData;
         initStudentsPerProgramChart();
         initFacultyLoadChart(data.facultyUnits || []);
@@ -476,22 +478,177 @@
         refreshFacultyLoadChart();
     }
 
+    function renderItemAnalysisChart(itemAnalysis) {
+        const chartElement = document.getElementById('genedDashboardItemAnalysisChart');
+        if (!chartElement) return;
+
+        const statuses = [
+            {key: 'pending', label: 'Pending Approval', color: '#f59e0b'},
+            {key: 'approved', label: 'Approved', color: '#16a34a'},
+            {key: 'completed', label: 'Completed', color: '#2563eb'},
+            {key: 'rejected', label: 'Rejected', color: '#dc2626'}
+        ];
+        const values = statuses.map(status => {
+            const value = Number(itemAnalysis[status.key]);
+            return Number.isFinite(value) ? Math.max(0, value) : 0;
+        });
+        const total = values.reduce((sum, value) => sum + value, 0);
+
+        document.getElementById('genedDashboardItemAnalysisTotal').textContent = total;
+        let currentAngle = 0;
+        const slices = statuses.map((status, index) => {
+            const nextAngle = currentAngle + (total ? values[index] / total * 360 : 0);
+            const slice = `${status.color} ${currentAngle}deg ${nextAngle}deg`;
+            currentAngle = nextAngle;
+
+            document.getElementById(`genedDashboardItemAnalysis${status.key[0].toUpperCase()}${status.key.slice(1)}`).textContent = values[index];
+            document.getElementById(`genedDashboardItemAnalysis${status.key[0].toUpperCase()}${status.key.slice(1)}Percent`).textContent =
+                `${total ? Math.round(values[index] / total * 100) : 0}%`;
+            return slice;
+        });
+
+        chartElement.classList.toggle('gened-item-analysis-chart-empty', total === 0);
+        chartElement.style.background = total
+            ? `conic-gradient(${slices.join(', ')})`
+            : '#e2e8f0';
+        chartElement.setAttribute(
+            'aria-label',
+            total
+                ? `Item Analysis activity statuses: ${statuses.map((status, index) => `${status.label}: ${values[index]}`).join(', ')}`
+                : 'No Item Analysis activities recorded this semester'
+        );
+    }
+
+    async function loadGenEdDashboard() {
+        const root = document.getElementById('genedCoordinatorDashboard');
+        if (!root) return;
+
+        const eventsList = root.querySelector('#genedDashboardUpcomingEvents');
+        const apiUrl = new URL('api/events_dashboard.php', window.location.href);
+        try {
+            const response = await fetch(apiUrl, { credentials: 'same-origin' });
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || `Unable to load dashboard (${response.status}).`);
+            }
+
+            root.querySelector('#genedDashboardSubjects').textContent = data.metrics.subjects;
+            root.querySelector('#genedDashboardFaculty').textContent = data.metrics.faculty;
+            root.querySelector('#genedDashboardApprovals').textContent = data.metrics.pending_approvals;
+            root.querySelector('#genedDashboardBookReports').textContent = data.metrics.pending_book_reports;
+            root.querySelector('#genedDashboardConcerns').textContent = data.metrics.open_concerns === null
+                ? '—'
+                : data.metrics.open_concerns;
+            const itemAnalysis = data.metrics.item_analysis || {};
+            renderItemAnalysisChart(itemAnalysis);
+            root.querySelector('#genedDashboardConcernsNote').textContent = data.metrics.open_concerns === null
+                ? 'No department linked to account'
+                : 'Need a reply';
+
+            const period = data.period
+                ? `${data.period.school_year} · ${data.period.semester}`
+                : 'No active academic period';
+            root.querySelector('#genedDashboardPeriod').textContent = period;
+
+            const calendarEvents = (data.event_records || data.events || []).filter(event =>
+                ['Pending Approval', 'Approved', 'Completed'].includes(event.status)
+                || event.event_status === 'completed'
+            );
+            window.eventsByDate = calendarEvents.reduce((eventsByDate, event) => {
+                if (!event.event_date) return eventsByDate;
+                if (!eventsByDate[event.event_date]) eventsByDate[event.event_date] = [];
+                eventsByDate[event.event_date].push({
+                    title: event.title || 'Untitled event',
+                    time: event.start_time || '',
+                    endTime: event.end_time || '',
+                    type: event.event_type || 'GenEd',
+                    status: event.status || event.event_status || 'Approved',
+                    location: event.location || '',
+                    description: event.description || '',
+                    audience: event.target_audience || ''
+                });
+                return eventsByDate;
+            }, {});
+            renderCalendar();
+
+            const events = data.events || [];
+            if (!events.length) {
+                eventsList.innerHTML = '<p class="gened-dashboard-empty">No upcoming events.</p>';
+            } else {
+                eventsList.replaceChildren();
+                events.forEach(event => {
+                    const item = document.createElement('article');
+                    item.className = 'gened-dashboard-event';
+
+                    const details = document.createElement('div');
+                    details.className = 'gened-dashboard-event-details';
+                    const title = document.createElement('h3');
+                    title.textContent = event.title || 'Untitled event';
+                    const meta = document.createElement('p');
+                    meta.textContent = [
+                        formatDashboardDate(event.event_date),
+                        event.location,
+                        event.event_scope
+                    ].filter(Boolean).join(' · ');
+                    const time = document.createElement('small');
+                    time.textContent = [convertTo12Hour(event.start_time), convertTo12Hour(event.end_time)]
+                        .filter(Boolean)
+                        .join(' – ');
+                    details.append(title, meta);
+                    if (time.textContent) details.appendChild(time);
+
+                    const status = document.createElement('span');
+                    status.className = `gened-dashboard-status ${dashboardStatusClass(event.status)}`;
+                    status.textContent = event.status || 'Unknown';
+                    item.append(details, status);
+                    eventsList.appendChild(item);
+                });
+            }
+        } catch (error) {
+            eventsList.innerHTML = '';
+            const message = document.createElement('p');
+            message.className = 'gened-dashboard-empty gened-dashboard-error';
+            message.textContent = error.message;
+            eventsList.appendChild(message);
+            const period = root.querySelector('#genedDashboardPeriod');
+            if (period) period.textContent = 'Dashboard data could not be loaded.';
+            console.error('Unable to load GenEd dashboard data:', error);
+        }
+    }
+
+    function formatDashboardDate(dateValue) {
+        if (!dateValue) return 'Date not set';
+        const date = new Date(`${dateValue}T00:00:00`);
+        return Number.isNaN(date.getTime())
+            ? dateValue
+            : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    }
+
+    function dashboardStatusClass(status) {
+        if (status === 'Pending Approval') return 'gened-dashboard-status-pending';
+        if (status === 'Approved') return 'gened-dashboard-status-approved';
+        if (status === 'Completed') return 'gened-dashboard-status-completed';
+        return 'gened-dashboard-status-neutral';
+    }
+
     function initializeDashboard() {
-        if (!document.getElementById('calendarDays')) return;
+        if (!document.getElementById('genedCoordinatorDashboard')
+            && !document.getElementById('calendarDays')) return;
         window.dashboardClientLoadTs = window.dashboardClientLoadTs || Date.now();
         readNotificationIds = getStoredIds(readNotificationKey);
         renderCalendar();
         renderNotificationBell();
+        loadGenEdDashboard();
         updatePriorityAlertTimes();
         updateNotificationTimes();
         updateToastCountdowns();
         updateRecentActivityTimes();
         showUrgentToasts();
         initDashboardCharts();
-        if (!activityTimer) activityTimer = setInterval(updateRecentActivityTimes, 1000);
+        if (document.querySelector('.activity-time') && !activityTimer) activityTimer = setInterval(updateRecentActivityTimes, 1000);
         if (!dashboardTimer) dashboardTimer = setInterval(() => { updatePriorityAlertTimes(); updateNotificationTimes(); updateToastCountdowns(); }, 60000);
-        if (!window.facultyLoadRefreshTimer) window.facultyLoadRefreshTimer = window.setInterval(refreshFacultyLoadChart, 30000);
-        if (sessionStorage.getItem('refreshFacultyLoad') === 'true') {
+        if (document.getElementById('facultyLoadChart') && !window.facultyLoadRefreshTimer) window.facultyLoadRefreshTimer = window.setInterval(refreshFacultyLoadChart, 30000);
+        if (document.getElementById('facultyLoadChart') && sessionStorage.getItem('refreshFacultyLoad') === 'true') {
             sessionStorage.removeItem('refreshFacultyLoad');
             refreshFacultyLoadChart();
         }
@@ -512,6 +669,7 @@
         renderCalendar();
         renderNotificationBell();
         updateRecentActivityTimes();
+        loadGenEdDashboard();
     };
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initializeDashboard, {once:true});

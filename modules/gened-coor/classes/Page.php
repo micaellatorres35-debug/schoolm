@@ -7,12 +7,12 @@ class Page {
     /*Sidebar Content*/ 
     private $labels = [
         'dashboard-overview' => 'Dashboard Overview',
-        'academic activities' => 'Academic Activities',
+        'academic activities' => 'GenEd Activities',
         'general-education-curriculum' => 'General Education Curriculum',
     
-        'events-management'  => 'Events Management',
-        'faculty-management' => 'Faculty Management',
-        'class-scheduling'   => 'Class Scheduling',
+        'events-management'  => 'GenEd Event Management',
+        'faculty-management' => 'GenED Faculty Management',
+        'class-scheduling'   => 'GenED Class Scheduling',
         'report-submission' => 'Report Submission',
         'concern-submission' => 'Concern Submission',
         'approval-submission' => 'Approval Submission'

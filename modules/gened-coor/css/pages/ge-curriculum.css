@@ -1,0 +1,33 @@
+.ge-curriculum-page{max-width:1400px;margin:0 auto;padding:20px;color:#1a202c}
+.ge-curriculum-page .ge-stats-grid{margin-bottom:20px}
+.ge-curriculum-page .ge-stat-card{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:100px;border-left-color:#0d6efd}
+.ge-curriculum-page .ge-stat-card h3{font-size:28px}
+.ge-curriculum-page .ge-stat-icon{display:grid;width:44px;height:44px;flex:0 0 44px;place-items:center;border-radius:12px;background:#eaf2ff;color:#0d6efd;font-size:19px}
+.ge-curriculum-page .ge-filter-card{margin-bottom:24px}
+.ge-curriculum-page .ge-filter-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.ge-curriculum-page .ge-filter-grid .form-label{display:block;margin-bottom:6px;color:#495057;font-size:13px;font-weight:600}
+.ge-curriculum-page .ge-filter-grid .form-select{min-height:42px}
+.ge-curriculum-header{margin-bottom:18px}
+.ge-curriculum-header p{margin:4px 0 0;color:#6c757d;font-size:14px}
+.ge-curriculum-header #geAddSubjectBtn{white-space:nowrap}
+.ge-curriculum-header #geAssignFacultyBtn{white-space:nowrap}
+.ge-curriculum-header [hidden]{display:none!important}
+.ge-curriculum-page [hidden]{display:none!important}
+.ge-curriculum-page .academics-tabs{margin-bottom:24px}
+.ge-curriculum-page .academics-tab{padding:13px 22px;font-size:15px}
+.ge-curriculum-page .academics-tab:hover,.ge-curriculum-page .academics-tab.active{color:#1677ff}
+.ge-curriculum-page .academics-tab.active{border-bottom-color:#1677ff}
+.ge-curriculum-page .section-header{margin-bottom:14px}
+.ge-curriculum-page #geSubjectsTable{min-width:850px}
+.ge-curriculum-page #geSubjectsTable th:first-child{width:125px}
+.ge-curriculum-page #geSubjectsTable th:nth-child(4),.ge-curriculum-page #geSubjectsTable th:nth-child(5),.ge-curriculum-page #geSubjectsTable th:nth-child(6){width:100px}
+.ge-curriculum-page #geSubjectsTable td.actions{align-items:center;flex-wrap:wrap}
+.ge-curriculum-page #geSubjectsTable td.actions .badge{margin-right:2px}
+.ge-curriculum-page #facultyAssignmentsTable{min-width:800px}
+.ge-curriculum-page #facultyAssignmentsTable th:first-child{min-width:130px}
+.ge-curriculum-page #facultyAssignmentsTable th:nth-child(2){min-width:145px}
+.ge-curriculum-page #facultyAssignmentsTable th:last-child{min-width:255px}
+.ge-curriculum-page #facultyAssignmentsTable td.actions{align-items:center;flex-wrap:wrap}
+.ge-curriculum-page .ge-assignment-search{margin-bottom:12px}
+@media(max-width:768px){.ge-curriculum-page{padding:14px}.ge-curriculum-page .ge-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.ge-curriculum-page .ge-stat-card{min-height:88px;padding:14px}.ge-curriculum-page .ge-stat-card h3{font-size:24px}.ge-curriculum-page .ge-filter-grid{grid-template-columns:1fr}.ge-curriculum-header{align-items:flex-start;gap:12px}.ge-curriculum-header #geAddSubjectBtn{padding:9px 11px}}
+@media(max-width:420px){.ge-curriculum-header{flex-direction:column}.ge-curriculum-page .ge-stats-grid{grid-template-columns:1fr 1fr}.ge-curriculum-page .ge-stat-icon{width:36px;height:36px;flex-basis:36px;font-size:16px}}

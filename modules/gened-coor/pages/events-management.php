@@ -1,248 +1,180 @@
-<!-- Events Management Page - Display and manage events -->
 <?php
-require_once dirname(dirname(dirname(__DIR__))) . '/database/db.php';
 require_once dirname(__DIR__) . '/classes/EventManager.php';
 
-// Create database connection and manager
-$database = new Database();
-$conn = $database->getConnection();
-$eventManager = new EventManager($conn);
-
-// Fetch all CC events from database
-try {
-    $events = $eventManager->getAllEvents();
-    $eventTypes = $eventManager->getEventTypeEnums();
-    $statuses = $eventManager->getStatusEnums();
-} catch (Exception $e) {
-    $events = [];
-    $eventTypes = ['Academic', 'Meeting','Institutional Event', 'Sports', 'Cultural', 'Social', 'Workshop', 'Seminar'];
-  $statuses = ['upcoming', 'ongoing', 'completed', 'cancelled'];
-    $error = $e->getMessage();
-}
+$genedEventSuggestions = [
+    ['title' => 'Buwan ng Wika', 'event_type' => 'Cultural Event', 'description' => 'Debate, balagtasan, sabayang pagbigkas, tula, poster-making, o slogan-making para sa Filipino at GE.'],
+    ['title' => 'Rizal Day / Rizal Month', 'event_type' => 'Academic', 'description' => 'Lecture, essay-writing, drama, o quiz tungkol kay Dr. Jose Rizal.'],
+    ['title' => 'Nutrition Month / Science and Technology Week', 'event_type' => 'Academic', 'description' => 'Exhibit o forum na may kaugnayan sa Science, Technology and Society (STS).'],
+    ['title' => 'Art and Culture Week', 'event_type' => 'Cultural Event', 'description' => 'Art Appreciation exhibit, film showing, o gallery walk.'],
+    ['title' => 'Ethics / Values Forum', 'event_type' => 'Seminar', 'description' => 'Talk tungkol sa academic integrity, ethics, values, at citizenship.'],
+    ['title' => 'Math / Science Fair', 'event_type' => 'Academic', 'description' => 'Math o science fair na may partisipasyon ng General Education.'],
+    ['title' => 'Literary / Writing Contest', 'event_type' => 'Cultural Event', 'description' => 'Essay, poetry, o short-story writing contest.'],
+    ['title' => 'PE Event', 'event_type' => 'Sports Event', 'description' => 'Intramurals, sportsfest, o dance competition kung saklaw ng GenEd ang PE.'],
+    ['title' => 'NSTP Community Activity', 'event_type' => 'Institutional Event', 'description' => 'Community service, clean-up drive, tree planting, o outreach kung kasama sa GenEd ang NSTP.'],
+    ['title' => 'Graduation / Enrollment GE Support', 'event_type' => 'Academic', 'description' => 'Pagsasaayos at paggabay sa mga estudyante tungkol sa GE subjects para sa graduation o enrollment.'],
+];
+$genedEventTypes = ['Academic', 'Meeting', 'Seminar', 'Institutional Event', 'Cultural Event', 'Sports Event', 'Orientation', 'Other'];
 ?>
 
-<div class="events-management-wrapper">
-    <!-- Page Header -->
+<div class="events-management-wrapper ge-dashboard ge-events-overview" id="genedEventsDashboard">
     <div class="module-header">
         <div>
-            <h1>Events Management</h1>
-            <p class="text-muted small">Manage college events, activities, and celebrations</p>
+            <h1>GenEd Events</h1>
+            <p class="text-muted small">Plan and track GenEd events for each semester.</p>
         </div>
-        <button class="btn btn-primary" id="addEventBtn" type="button">
+        <button class="btn btn-primary" id="addEventBtn" type="button" hidden>
             <i class="fas fa-plus me-2"></i> Add Event
         </button>
     </div>
 
     <div class="module-content">
-    <div class="stats-row">
-        <div class="stat-card">
-            <div class="stat-icon total">
-                <i class="fas fa-calendar"></i>
+        <section class="ge-event-summary" aria-label="Event summary">
+            <article><p>Total Events</p><strong id="eventTotal">--</strong><small>All events this semester</small></article>
+            <article><p>Pending Approval</p><strong id="eventPending">--</strong><small>Waiting for admin / college coordinator</small></article>
+            <article><p>Upcoming</p><strong id="eventUpcoming">--</strong><small>Approved events with future dates</small></article>
+            <article><p>Completed</p><strong id="eventCompleted">--</strong><small>Events marked complete</small></article>
+        </section>
+
+        <section class="ge-event-period" aria-label="Active academic period">
+            <label>School Year<input type="text" id="eventSchoolYear" value="Loading..." readonly></label>
+            <label>Semester<input type="text" id="eventSemester" value="Loading..." readonly></label>
+        </section>
+
+        <nav class="ge-event-categories" aria-label="Filter events by category">
+            <button type="button" class="active" data-event-category="">All Events</button>
+            <button type="button" data-event-category="Language & Literature">Language &amp; Literature</button>
+            <button type="button" data-event-category="History & Culture">History &amp; Culture</button>
+            <button type="button" data-event-category="Science & Math">Science &amp; Math</button>
+            <button type="button" data-event-category="Values & Ethics">Values &amp; Ethics</button>
+            <button type="button" data-event-category="Sports">Sports</button>
+            <button type="button" data-event-category="Community">Community</button>
+            <button type="button" data-event-category="Academic Support">Academic Support</button>
+        </nav>
+
+        <section class="ge-event-table-card" aria-label="Events list">
+            <div class="table-responsive">
+                <table id="genedEventsTable">
+                    <thead>
+                        <tr>
+                            <th>Event</th>
+                            <th>Category</th>
+                            <th>Date &amp; Venue</th>
+                            <th>Submitted By</th>
+                            <th>Status</th>
+                            <th>Approval Notes</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="genedEventsTableBody">
+                        <tr><td colspan="7" class="ge-event-empty">Loading events...</td></tr>
+                    </tbody>
+                </table>
             </div>
-            <div class="stat-info">
-                <h6>Total Events</h6>
-                <h3 id="totalEvents">0</h3>
+        </section>
+
+        <details class="ge-event-ideas">
+            <summary>GenEd event ideas</summary>
+            <p class="text-muted small">Choose an idea to prefill the event form. Events are submitted for approval.</p>
+            <div class="gened-event-guide-grid">
+                <?php foreach ($genedEventSuggestions as $suggestion): ?>
+                    <article class="gened-event-suggestion">
+                        <h3><?php echo htmlspecialchars($suggestion['title']); ?></h3>
+                        <p><?php echo htmlspecialchars($suggestion['description']); ?></p>
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-outline-primary use-gened-event-suggestion"
+                            data-title="<?php echo htmlspecialchars($suggestion['title'], ENT_QUOTES); ?>"
+                            data-event-type="<?php echo htmlspecialchars($suggestion['event_type'], ENT_QUOTES); ?>"
+                            data-description="<?php echo htmlspecialchars($suggestion['description'], ENT_QUOTES); ?>">
+                            Use this idea
+                        </button>
+                    </article>
+                <?php endforeach; ?>
             </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon upcoming">
-                <i class="fas fa-arrow-right"></i>
-            </div>
-            <div class="stat-info">
-                <h6>Upcoming</h6>
-                <h3 id="upcomingEvents">0</h3>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon ongoing">
-                <i class="fas fa-circle"></i>
-            </div>
-            <div class="stat-info">
-                <h6>Ongoing</h6>
-                <h3 id="ongoingEvents">0</h3>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon completed">
-                <i class="fas fa-check-circle"></i>
-            </div>
-            <div class="stat-info">
-                <h6>Completed</h6>
-                <h3 id="completedEvents">0</h3>
-            </div>
-        </div>
+        </details>
     </div>
 
-    <!-- Search and Filters -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <div class="filters">
-                <div class="form-group">
-                    <label class="form-label">Search by Title</label>
-                    <input type="text" class="form-control" id="searchInput" placeholder="Search events...">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Event Type</label>
-                    <select class="form-select" id="filterType">
-                        <option value="">All Types</option>
-                        <option value="Academic">Academic</option>
-                        <option value="Sports">Sports</option>
-                        <option value="Cultural">Cultural</option>
-                        <option value="Social">Social</option>
-                        <option value="Workshop">Workshop</option>
-                        <option value="Seminar">Seminar</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Status</label>
-                   <select class="form-select" id="filterStatus">
-    <option value="">All Status</option>
-    <option value="upcoming">Upcoming</option>
-    <option value="ongoing">Ongoing</option>
-    <option value="completed">Completed</option>
-    <option value="cancelled">Cancelled</option>
-</select>
-                </div>
+    <div class="ge-event-modal" id="eventDetailsModal" hidden>
+        <div class="ge-event-modal-backdrop" data-close-event-details></div>
+        <section class="ge-event-modal-content" role="dialog" aria-modal="true" aria-labelledby="eventDetailsTitle">
+            <div class="ge-event-modal-header">
+                <h2 id="eventDetailsTitle">Event details</h2>
+                <button type="button" class="ge-modal-close" aria-label="Close" data-close-event-details>&times;</button>
             </div>
-        </div>
+            <div class="ge-event-details-grid">
+                <p><strong>Type</strong><span id="eventDetailsType"></span></p>
+                <p><strong>Date and time</strong><span id="eventDetailsDate"></span></p>
+                <p><strong>Venue</strong><span id="eventDetailsVenue"></span></p>
+                <p><strong>Scope</strong><span id="eventDetailsScope"></span></p>
+                <p><strong>Status</strong><span id="eventDetailsStatus"></span></p>
+                <p><strong>In charge</strong><span id="eventDetailsInCharge"></span></p>
+                <p class="ge-event-details-full"><strong>Target audience</strong><span id="eventDetailsAudience"></span></p>
+                <p class="ge-event-details-full"><strong>Description</strong><span id="eventDetailsDescription"></span></p>
+            </div>
+        </section>
     </div>
 
-    <!-- Events Table -->
-    <div class="card">
-        <div class="card-header">
-            <h5 class="mb-0">Events List</h5>
-        </div>
-        <div class="table-responsive">
-            <table id="eventsTable">
-                <thead>
-                    <tr>
-                        <th>Event Title</th>
-                        <th>Type</th>
-                        <th>Date & Time</th>
-                        <th>Location</th>
-                        <th>Target Audience</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="eventsTableBody">
-                    <tr>
-                        <td colspan="7" class="text-center py-4 text-muted">
-                            <i class="fas fa-spinner fa-spin me-2"></i> Loading events...
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-    </div>
-
-    <!-- Event Statistics Cards -->
-    
-
-
-<!-- Add/Edit Event Modal -->
-<div class="modal" id="addEventModal">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="eventModalTitle">Add New Event</h5>
-                <button type="button" class="btn-close" onclick="closeModal()">&times;</button>
+    <div class="ge-event-modal" id="addEventModal" hidden>
+        <div class="ge-event-modal-backdrop" data-close-event-modal></div>
+        <section class="ge-event-modal-content" role="dialog" aria-modal="true" aria-labelledby="eventModalTitle">
+            <div class="ge-event-modal-header">
+                <h2 id="eventModalTitle">Submit GenEd Event</h2>
+                <button type="button" class="ge-modal-close" aria-label="Close" data-close-event-modal>&times;</button>
             </div>
             <form id="eventForm" data-custom-submit="true">
-                <div class="modal-body">
-                    <input type="hidden" id="eventId">
-
-                    <div class="form-group">
-                        <label class="form-label">Use Template</label>
-                        <select class="form-select" id="templateSelect">
-                            <option value="">(none) - choose a template</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Event Title <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="eventTitle" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Event Type <span class="text-danger">*</span></label>
-                        <select class="form-select" id="eventType" required>
-                            <option value="">Select Type</option>
-                            <?php foreach ($eventTypes as $type): ?>
+                <div class="ge-event-form-grid">
+                    <label class="ge-form-full">Event Title *
+                        <input type="text" id="eventTitle" maxlength="255" required>
+                    </label>
+                    <label>Event Type *
+                        <select id="eventType" required>
+                            <option value="">Select type</option>
+                            <?php foreach ($genedEventTypes as $type): ?>
                                 <option value="<?php echo htmlspecialchars($type); ?>"><?php echo htmlspecialchars($type); ?></option>
                             <?php endforeach; ?>
                         </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Date <span class="text-danger">*</span></label>
-                        <input type="date" class="form-control" id="eventDate" required>
-                    </div>
-
-                    <div class="row">
-                        <div class="form-group">
-                            <label class="form-label">Start Time <span class="text-danger">*</span></label>
-                            <input type="time" class="form-control" id="startTime" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">End Time <span class="text-danger">*</span></label>
-                            <input type="time" class="form-control" id="endTime" required>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Location <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="location" placeholder="e.g., Gymnasium, Auditorium" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Description</label>
-                        <textarea class="form-control" id="description" rows="3" placeholder="Event details..."></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Target Audience</label>
-                        <input type="text" class="form-control" id="targetAudience" placeholder="e.g., Grade 10-12, Faculty, All Students">
-                    </div>
-
-                    <div class="row">
-                        <div class="form-group">
-                            <label class="form-label">Priority</label>
-                            <select class="form-select" id="priority">
-                                <option value="">Select Priority</option>
-                                <option value="Normal">Normal</option>
-                                <option value="High">High</option>
-                                <option value="Urgent">Urgent</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Status <span class="text-danger">*</span></label>
-                            <select class="form-select" id="eventStatus" required>
-                                <option value="">Select Status</option>
-                                <?php foreach ($statuses as $status): ?>
-                                    <option value="<?php echo htmlspecialchars($status); ?>"><?php echo htmlspecialchars($status); ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                    </div>
+                    </label>
+                    <label>Category *
+                        <select id="eventCategory" required>
+                            <option value="">Select category</option>
+                            <?php foreach (['Language & Literature', 'History & Culture', 'Science & Math', 'Values & Ethics', 'Sports', 'Community', 'Academic Support'] as $category): ?>
+                                <option value="<?php echo htmlspecialchars($category, ENT_QUOTES); ?>"><?php echo htmlspecialchars($category); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                    <label>Event Scope *
+                        <select id="eventScope" required>
+                            <option value="">Select scope</option>
+                            <option value="School-wide">School-wide</option>
+                            <option value="Department-level">Department-level</option>
+                        </select>
+                    </label>
+                    <label>Date *
+                        <input type="date" id="eventDate" required>
+                    </label>
+                    <label>Target Audience
+                        <input type="text" id="targetAudience" maxlength="100" placeholder="Students, faculty, or all">
+                    </label>
+                    <label>Start Time *
+                        <input type="time" id="startTime" required>
+                    </label>
+                    <label>End Time *
+                        <input type="time" id="endTime" required>
+                    </label>
+                    <label class="ge-form-full">Location *
+                        <input type="text" id="location" maxlength="255" required>
+                    </label>
+                    <label class="ge-form-full">Description
+                        <textarea id="description" rows="3"></textarea>
+                    </label>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-2"></i> Save Event
-                    </button>
+                <p class="ge-form-note">New events will appear as Pending until an administrator or college coordinator reviews them.</p>
+                <div class="ge-event-modal-actions">
+                    <button type="button" class="btn btn-secondary" data-close-event-modal>Cancel</button>
+                    <button type="submit" class="btn btn-primary">Submit for Approval</button>
                 </div>
             </form>
-        </div>
+        </section>
     </div>
+    <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 </div>
-     </div>
-
-<!-- Toast Notification -->
-<div id="toastContainer" class="toast-container"></div>
-
-<!-- Hidden JSON data for events-management.js module -->
-<script id="preload-eventData" type="application/json">
-<?php echo json_encode($events ?? []); ?>
-</script>

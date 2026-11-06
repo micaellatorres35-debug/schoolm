@@ -26,6 +26,7 @@ try {
                             LEFT JOIN rgr_subjects subj ON cs.subject_id = subj.id
                             LEFT JOIN gc_room cr ON cs.room_id = cr.id
               WHERE cs.faculty_id = :faculty_id
+                AND UPPER(subj.code) REGEXP '^(GE.*|FIL [1-3]|NSTP [1-2]|PE [1-2])$'
               ORDER BY 
                 FIELD(cs.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'),
                 cs.start_time";

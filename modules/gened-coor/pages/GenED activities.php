@@ -1,5 +1,5 @@
 <?php
-// Academics Module Dashboard
+// GenED Module Dashboard
 require_once(__DIR__ . '/../classes/ProgramManager.php');
 require_once(__DIR__ . '/../classes/SubjectManager.php');
 require_once(__DIR__ . '/../classes/SectionManager.php');
@@ -23,13 +23,13 @@ $facultyManager = new FacultyManager($conn);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Academics Module</title>
+    <title>GenED Module</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="../css/academics-management.css">
 </head>
 <body>
 <div class="container-fluid mt-4">
-    <h2 class="mb-4">Academics Module</h2>
+    <h2 class="mb-4">GenED Module</h2>
     <ul class="nav nav-tabs mb-3" id="academicsTabs" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link active" id="programs-tab" data-bs-toggle="tab" data-bs-target="#programs" type="button" role="tab">Programs & Curriculum</button>

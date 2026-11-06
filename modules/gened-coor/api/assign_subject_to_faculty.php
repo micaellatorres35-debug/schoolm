@@ -56,6 +56,7 @@ try {
     $insertQuery = "INSERT INTO gc_faculty_load (faculty_id, section_id, subject_id, school_year_id, semester_id, created_at) 
                     VALUES (:faculty_id, :section_id, :subject_id, :school_year_id, :semester_id, NOW())";
     $insertStmt = $db->prepare($insertQuery);
+    $subjectStmt = $db->prepare("SELECT id FROM rgr_subjects WHERE id = :subject_id AND archived_at IS NULL AND UPPER(code) REGEXP '^(GE.*|FIL [1-3]|NSTP [1-2]|PE [1-2])$' LIMIT 1");
 
     foreach ($assignments as $assignment) {
         $section_id = (int)$assignment['section_id'];
@@ -63,6 +64,11 @@ try {
 
         if ($section_id <= 0 || $subject_id <= 0) {
             throw new Exception('Invalid section or subject assignment');
+        }
+
+        $subjectStmt->execute([':subject_id' => $subject_id]);
+        if (!$subjectStmt->fetchColumn()) {
+            throw new Exception('Select an active GenEd subject.');
         }
 
         $sectionStmt->bindParam(':section_id', $section_id, PDO::PARAM_INT);

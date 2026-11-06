@@ -391,3 +391,199 @@
 
         .schedule-type-field.is-hidden { display: none; }
         .readonly-select { background: #e9ecef; cursor: not-allowed; }
+
+        .class-scheduling-header {
+            border: 1px solid #dbeafe;
+            border-radius: 12px;
+            background: #fff;
+            box-shadow: 0 4px 14px rgba(30, 64, 175, 0.06);
+        }
+
+        .class-scheduling-header h1 {
+            color: #1e3a8a;
+        }
+
+        .class-scheduling-header p {
+            color: #64748b;
+        }
+
+        .class-scheduling-page {
+            --primary: #1e3a8a;
+            --secondary: #1d4ed8;
+            --success: #2563eb;
+            --warning: #1d4ed8;
+            color: #1e293b;
+        }
+
+        .class-scheduling-page .stats-grid {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .class-scheduling-page .stat-card {
+            min-height: 150px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid #dbeafe;
+            border-left: 4px solid #2563eb;
+            border-radius: 12px;
+            background: #eff6ff;
+            box-shadow: 0 4px 14px rgba(30, 64, 175, 0.06);
+        }
+
+        .class-scheduling-page .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(30, 64, 175, 0.1);
+        }
+
+        .class-scheduling-page .stat-card > i {
+            color: #2563eb !important;
+        }
+
+        .class-scheduling-page .stat-value {
+            color: #1d4ed8;
+        }
+
+        .class-scheduling-page .stat-label,
+        .class-scheduling-page .summary-day {
+            color: #475569;
+        }
+
+        .class-scheduling-page .summary-item {
+            border: 1px solid #dbeafe;
+            background: #eff6ff;
+            box-shadow: none;
+        }
+
+        .class-scheduling-page .summary-count {
+            color: #1d4ed8;
+        }
+
+        .class-scheduling-page .tabs {
+            overflow: hidden;
+            border: 1px solid #dbeafe;
+            border-radius: 10px;
+            background: #eff6ff;
+            box-shadow: none;
+        }
+
+        .class-scheduling-page .tab {
+            color: #1e40af;
+        }
+
+        .class-scheduling-page .tab:hover {
+            background: #dbeafe;
+        }
+
+        .class-scheduling-page .tab.active {
+            background: #1e3a8a;
+            color: #fff;
+        }
+
+        .class-scheduling-page .filters,
+        .class-scheduling-page .tab-content,
+        .class-scheduling-page .table-container,
+        .class-scheduling-modal .modal-content {
+            border: 1px solid #dbeafe;
+            border-radius: 12px;
+            background: #fff;
+            box-shadow: 0 4px 14px rgba(30, 64, 175, 0.05);
+        }
+
+        .class-scheduling-page .filters {
+            background: #eff6ff;
+        }
+
+        .class-scheduling-page .form-card {
+            border: 1px solid #dbeafe;
+            border-left: 4px solid #2563eb;
+            border-radius: 10px;
+            background: #eff6ff;
+        }
+
+        .class-scheduling-page .form-card h3 {
+            color: #1e3a8a;
+        }
+
+        .class-scheduling-page label {
+            color: #334155;
+        }
+
+        .class-scheduling-page select,
+        .class-scheduling-page input,
+        .class-scheduling-page textarea {
+            border-color: #cbd5e1;
+            border-radius: 7px;
+            background-color: #fff;
+        }
+
+        .class-scheduling-page select:focus,
+        .class-scheduling-page input:focus,
+        .class-scheduling-page textarea:focus {
+            border-color: #60a5fa;
+            outline: 0;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+
+        .class-scheduling-page .btn-primary,
+        .class-scheduling-page .btn-success,
+        .class-scheduling-page .btn-warning {
+            border: 1px solid #1e40af;
+            background: #1e3a8a;
+            color: #fff;
+        }
+
+        .class-scheduling-page .btn-primary:hover,
+        .class-scheduling-page .btn-success:hover,
+        .class-scheduling-page .btn-warning:hover {
+            background: #1d4ed8;
+        }
+
+        .class-scheduling-page .btn-danger {
+            border: 1px solid #bfdbfe;
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .class-scheduling-page .btn-danger:hover {
+            background: #bfdbfe;
+            color: #1e3a8a;
+        }
+
+        .class-scheduling-page .data-table th {
+            background: #1e3a8a;
+        }
+
+        .class-scheduling-page .data-table td {
+            border-bottom-color: #e2e8f0;
+        }
+
+        .class-scheduling-page .data-table tr:nth-child(even) {
+            background: #f8fbff;
+        }
+
+        .class-scheduling-page .data-table tr:hover {
+            background: #eff6ff;
+        }
+
+        .class-scheduling-modal {
+            z-index: 100001;
+        }
+
+        .class-scheduling-modal .modal-content {
+            border-top: 4px solid #2563eb;
+        }
+
+        @media (max-width: 900px) {
+            .class-scheduling-page .stats-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 560px) {
+            .class-scheduling-page .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
