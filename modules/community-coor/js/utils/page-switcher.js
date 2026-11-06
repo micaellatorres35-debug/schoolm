@@ -1,4 +1,4 @@
-  // ─── Department Select Helper (exported for role.js and position.js) ──────────
+// ─── Department Select Helper (exported for role.js and position.js) ──────────
 
   export function getFreshDepartmentSelect() {
       const departmentSelect = document.getElementById('department');
@@ -253,7 +253,9 @@
       initForms();
       attachAssignSectionsFormHandler();
 
-      window.dispatchEvent(new CustomEvent('page:loaded', { detail: { page: page } }));
+      requestAnimationFrame(function () {
+        window.dispatchEvent(new CustomEvent('page:loaded', { detail: { page: page } }));
+      });
     }
 
     function attachAssignSectionsFormHandler() {
