@@ -7,10 +7,12 @@ class Page {
     /*Sidebar Content*/ 
     private $labels = [
         'dashboard-overview' => 'Dashboard Overview',
-        'research-project'  => 'Research Projects',
         'research-proposal' => 'Research Proposals',
+        'research-project'  => 'Research Projects',
+        'evaluation-assessment' => 'Evaluation & Assessment',
         'research-documentation' => 'Research Documentation',
-        'ethics-compliance' => 'Ethics and Compliance',
+        'ethics-compliance' => 'Ethics & Compliance',
+        // 'faculty-management' => 'Advisers Management',
         'class-scheduling'   => 'Class Scheduling',
         'report-submission' => 'Report Submission',
         'concern-submission' => 'Concern Submission',
@@ -20,7 +22,7 @@ class Page {
     /*Content Sections*/ 
     private $sections = [
         'top'             => ['dashboard-overview'],
-        'research'  => ['research-project', 'research-proposal', 'research-documentation', 'ethics-compliance', 'class-scheduling', 'events-management'],
+        'research'  => ['research-project', 'research-proposal', 'research-documentation', 'evaluation-assessment', 'ethics-compliance', 'faculty-management', 'class-scheduling', 'events-management'],
         'requests-and-reports' => ['report-submission', 'concern-submission', 'approval-submission']
     ];
 

@@ -32,12 +32,17 @@
             <label>Category
                 <select id="documentCategoryFilter" class="documentation-control">
                     <option value="">All categories</option>
-                    <option>Research Proposal Documents</option><option>Research Manuscripts</option>
-                    <option>Research Chapters and Appendices</option><option>Final Research Papers</option>
-                    <option>Supporting Research Documents</option><option>Research Ethics Documents</option>
-                    <option>Informed Consent Documents</option><option>Plagiarism Check Documents</option>
-                    <option>Compliance Evidence</option><option>Research Progress Documents</option>
-                    <option>Research Accomplishment Reports</option><option>Other Research Documents</option>
+                    <option>Research Proposal Documents</option>
+                    <option>Research Manuscripts</option>
+                    <option>Research Chapters and Appendices</option>
+                    <option>Final Research Papers</option>
+                    <option>Supporting Research Documents</option>
+                    <option>Research Ethics Documents</option>
+                    <option>Informed Consent Documents</option>
+                    <option>Compliance Evidence</option>
+                    <option>Research Progress Documents</option>
+                    <option>Research Accomplishment Reports</option>
+                    <option>Other Research Documents</option>
                 </select>
             </label>
             <label>Linked record

@@ -10,6 +10,7 @@ import './modules/dashboard-overview.js';
 import './modules/faculty-management.js';
 import './modules/academics-management.js';
 import './modules/research-project.js';
+import './modules/evaluation-assessment.js';
 import './modules/research-proposal.js';
 import './modules/research-documentation.js';
 import './modules/ethics-compliance.js';
