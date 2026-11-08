@@ -1,0 +1,52 @@
+.gened-book-report-header{display:flex;max-width:1400px;align-items:center;justify-content:space-between;gap:20px;margin:0 auto 18px;padding:26px 30px;border-radius:10px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.gened-book-report-header h1{margin:0 0 5px;color:#1a202c;font-size:32px;font-weight:700}
+.gened-book-report-header p{margin:0;color:#6c757d;font-size:14px}
+.gened-book-report-header small{display:inline-block;margin-top:8px;color:#6c757d;font-size:12px}
+.gened-book-report-header .btn-primary,.gened-book-report-dialog .btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;border:1px solid #0d6efd;border-radius:5px;background:#0d6efd;color:#fff;font-size:14px;font-weight:500;white-space:nowrap;cursor:pointer}
+.gened-book-report-header .btn-primary:hover,.gened-book-report-dialog .btn-primary:hover{background:#0b5ed7}
+.gened-book-report-page{max-width:1400px;margin:0 auto;padding:20px;color:#1a202c}
+.gened-book-report-catalog-notice{margin:0 0 14px;padding:11px 14px;border:1px solid #bfdbfe;border-radius:6px;background:#eff6ff;color:#1e40af;font-size:13px}
+.gened-book-report-catalog-notice.is-error{border-color:#f5c2c7;background:#f8d7da;color:#842029}
+.gened-book-report-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(250px,1.5fr);gap:14px;margin-bottom:20px;padding:16px 18px;border:1px solid #e9ecef;border-radius:8px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.gened-book-report-filters label,.gened-book-report-form-grid label{display:block;min-width:0;color:#495057;font-size:13px;font-weight:600}
+.gened-book-report-filters select,.gened-book-report-filters input,.gened-book-report-form-grid input,.gened-book-report-form-grid select{display:block;width:100%;min-height:42px;margin-top:6px;padding:9px 12px;border:1px solid #ced4da;border-radius:5px;background:#fff;color:#212529;font:inherit;font-size:14px}
+.gened-book-report-filters select:focus,.gened-book-report-filters input:focus,.gened-book-report-form-grid input:focus,.gened-book-report-form-grid select:focus{border-color:#86b7fe;outline:0;box-shadow:0 0 0 3px rgba(13,110,253,.15)}
+.gened-book-report-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:15px;margin-bottom:18px}
+.gened-book-report-summary article{display:flex;min-height:118px;flex-direction:column;justify-content:center;padding:18px 20px;border-left:4px solid #0d6efd;border-radius:8px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.gened-book-report-summary span{color:#6c757d;font-size:13px;font-weight:600}
+.gened-book-report-summary strong{margin-top:6px;color:#1a202c;font-size:28px;line-height:1.15}
+.gened-book-report-departments{display:flex;flex-wrap:wrap;gap:10px 24px;margin-bottom:20px;padding:16px 18px;border:1px solid #e9ecef;border-radius:8px;background:#fff;color:#212529;font-size:14px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.gened-book-report-departments strong{color:#0d6efd}
+.gened-book-report-table-wrap{overflow:auto;border:1px solid #e9ecef;border-radius:8px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.gened-book-report-table{width:100%;min-width:1120px;border-collapse:collapse}
+.gened-book-report-table th{padding:12px;border-bottom:2px solid #dee2e6;background:#f8f9fa;color:#333;font-size:13px;font-weight:600;text-align:left;white-space:nowrap}
+.gened-book-report-table td{padding:11px 12px;border-bottom:1px solid #dee2e6;color:#212529;font-size:13px;vertical-align:middle}
+.gened-book-report-table tbody tr:nth-child(even){background:#fbfcfd}
+.gened-book-report-table tbody tr:hover{background:#f1f6ff}
+.gened-book-report-table .book-report-subject strong,.gened-book-report-table .book-report-subject small{display:block}
+.gened-book-report-table .book-report-subject strong{color:#1a202c}
+.gened-book-report-table .book-report-subject small{margin-top:3px;color:#6c757d;font-size:12px}
+.gened-book-report-actions{display:flex;gap:5px;white-space:nowrap}
+.gened-book-report-actions button{padding:5px 8px;border:1px solid #0d6efd;border-radius:4px;background:#fff;color:#0d6efd;font-size:12px;cursor:pointer}
+.gened-book-report-actions button:hover{background:#eaf2ff}
+.gened-book-report-actions .book-report-archive{border-color:#6c757d;color:#6c757d}
+.book-report-status{display:inline-block;padding:4px 9px;border-radius:999px;background:#d4edda;color:#155724;font-size:12px;font-weight:600}
+.book-report-status.is-archived{background:#e9ecef;color:#495057}
+.gened-book-report-empty{padding:32px!important;color:#6c757d!important;text-align:center}
+.gened-book-report-note{margin:12px 0 0;color:#6c757d;font-size:12px}
+.gened-book-report-modal{position:fixed;z-index:100010;inset:0;display:none;align-items:center;justify-content:center;overflow-y:auto;padding:20px;background:rgba(15,23,42,.55)}
+.gened-book-report-modal.is-open{display:flex}
+.gened-book-report-dialog{width:min(100%,760px);max-height:90vh;overflow-y:auto;padding:22px;border-top:4px solid #0d6efd;border-radius:8px;background:#fff;box-shadow:0 12px 36px rgba(15,23,42,.2)}
+.gened-book-report-dialog>header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid #dee2e6}
+.gened-book-report-dialog>header h2{margin:0;color:#1a202c;font-size:20px}
+.gened-book-report-dialog>header button{border:0;background:transparent;color:#6c757d;font-size:28px;line-height:1;cursor:pointer}
+.gened-book-report-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.gened-book-report-error{min-height:20px;margin:10px 0 0;color:#b02a37;font-size:13px}
+.gened-book-report-dialog form>footer{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.book-report-cancel{padding:9px 14px;border:1px solid #6c757d;border-radius:5px;background:#fff;color:#6c757d;cursor:pointer}
+.gened-book-report-view{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.gened-book-report-view div{padding:11px;border-radius:6px;background:#f8f9fa}
+.gened-book-report-view span{display:block;margin-bottom:4px;color:#6c757d;font-size:12px}
+.gened-book-report-view strong{color:#212529;font-size:14px}
+@media(max-width:1000px){.gened-book-report-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.gened-book-report-summary{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:640px){.gened-book-report-header{align-items:flex-start;flex-direction:column;padding:20px}.gened-book-report-header h1{font-size:26px}.gened-book-report-page{padding:14px}.gened-book-report-filters,.gened-book-report-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.gened-book-report-summary article{min-height:92px;padding:13px}.gened-book-report-summary strong{font-size:24px}.gened-book-report-form-grid,.gened-book-report-view{grid-template-columns:1fr}}

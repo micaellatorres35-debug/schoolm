@@ -1,10 +1,12 @@
 <?php
-$pageTitle = 'GenEd Activities';
+$pageTitle = $gcActivityPageTitle ?? 'GenEd Activities';
+$activityDescription = $gcActivityPageDescription ?? 'Plan and track GenEd activities for each semester.';
+$defaultActivityCategory = $gcActivityDefaultCategory ?? '';
 ?>
 <div class="module-header gc-activities-header">
     <div>
-        <h1>GenEd Activities</h1>
-        <p>Plan and track GenEd activities for each semester.</p>
+        <h1><?= htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8') ?></h1>
+        <p><?= htmlspecialchars($activityDescription, ENT_QUOTES, 'UTF-8') ?></p>
     </div>
     <button type="button" class="btn btn-primary" id="gcAddActivityButton">
         <i class="fas fa-plus"></i> Add Activity
@@ -12,7 +14,7 @@ $pageTitle = 'GenEd Activities';
 </div>
 
 <div class="gc-activities-page">
-<div class="module-content" id="gcAcademicActivities">
+<div class="module-content" id="gcAcademicActivities" data-default-category="<?= htmlspecialchars($defaultActivityCategory, ENT_QUOTES, 'UTF-8') ?>">
     <div class="row g-3 mb-4 gc-activity-summary">
         <div class="col-12 col-sm-6 col-xl-3"><div class="stat-card">
             <h6>Total Activities</h6><h3 id="gcTotalActivities">0</h3>
@@ -48,9 +50,9 @@ $pageTitle = 'GenEd Activities';
     </div>
 
     <nav class="academics-tabs gc-activity-categories" aria-label="Activity categories">
-        <button type="button" class="academics-tab active" data-activity-category="">All Activities</button>
+        <button type="button" class="academics-tab<?= $defaultActivityCategory === '' ? ' active' : '' ?>" data-activity-category="">All Activities</button>
         <button type="button" class="academics-tab" data-activity-category="Common Exams">Common Exams</button>
-        <button type="button" class="academics-tab" data-activity-category="Book Reports">Book Reports</button>
+        <button type="button" class="academics-tab<?= $defaultActivityCategory === 'Book Reports' ? ' active' : '' ?>" data-activity-category="Book Reports">Book Reports</button>
         <button type="button" class="academics-tab" data-activity-category="Quiz Bees &amp; Contests">Quiz Bees &amp; Contests</button>
         <button type="button" class="academics-tab" data-activity-category="Research &amp; Paper Presentations">Research &amp; Paper Presentations</button>
         <button type="button" class="academics-tab" data-activity-category="Orientation &amp; Curriculum Review">Orientation &amp; Curriculum Review</button>

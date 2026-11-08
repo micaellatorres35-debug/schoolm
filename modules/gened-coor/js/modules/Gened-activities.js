@@ -11,7 +11,12 @@ function initAcademicActivities() {
     const categorySelect = document.getElementById('gcActivityCategory');
     const examPeriodSelect = document.getElementById('gcExamPeriod');
     const examPeriodGroup = document.getElementById('gcExamPeriodGroup');
-    const state = { activities: [], canApprove: false, employeeId: 0, selectedCategory: '' };
+    const state = {
+        activities: [],
+        canApprove: false,
+        employeeId: 0,
+        selectedCategory: root.dataset.defaultCategory || ''
+    };
     const apiUrl = new URL('api/academic_activities.php', window.location.href);
 
     function showMessage(message, isError = false) {
@@ -183,6 +188,7 @@ function initAcademicActivities() {
     });
 
     root.querySelectorAll('[data-activity-category]').forEach(button => {
+        button.classList.toggle('active', button.dataset.activityCategory === state.selectedCategory);
         button.addEventListener('click', () => {
             state.selectedCategory = button.dataset.activityCategory || '';
             root.querySelectorAll('[data-activity-category]').forEach(tab => tab.classList.toggle('active', tab === button));
@@ -255,5 +261,5 @@ function initAcademicActivities() {
 
 document.addEventListener('DOMContentLoaded', initAcademicActivities);
 window.addEventListener('page:loaded', event => {
-    if (event.detail?.page === 'academic activities') initAcademicActivities();
+    if (['academic activities', 'gened-book-report'].includes(event.detail?.page)) initAcademicActivities();
 });

@@ -9,10 +9,11 @@ class Page {
         'dashboard-overview' => 'Dashboard Overview',
         'academic activities' => 'GenEd Activities',
         'general-education-curriculum' => 'General Education Curriculum',
-    
         'events-management'  => 'GenEd Event Management',
         'faculty-management' => 'GenED Faculty Management',
         'class-scheduling'   => 'GenED Class Scheduling',
+        'item-analysis' => 'GenED Item Analysis',
+        'gened-book-report' => 'GenED Book Report',
         'report-submission' => 'Report Submission',
         'concern-submission' => 'Concern Submission',
         'approval-submission' => 'Approval Submission'
@@ -21,7 +22,7 @@ class Page {
     /*Content Sections*/ 
     private $sections = [
         'top'             => ['dashboard-overview'],
-        'academics'  => ['faculty-management', 'general-education-curriculum', 'academic activities', 'class-scheduling', 'events-management'],
+        'academics'  => ['faculty-management', 'general-education-curriculum', 'academic activities', 'class-scheduling', 'events-management', 'item-analysis', 'gened-book-report'],
         'requests-and-reports' => ['report-submission', 'concern-submission', 'approval-submission']
     ];
 

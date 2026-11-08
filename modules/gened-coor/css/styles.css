@@ -11,9 +11,11 @@
 @import url('pages/concerns-issue-tracking.css');
 @import url('pages/report-submission-management.css');
 @import url('./pages/dashboard-overview.css');
+@import url('./pages/item-analysis.css');
 @import url('./pages/events-management.css');
 @import url('./pages/academics-management.css');
 @import url('./pages/ge-curriculum.css');
+@import url('./pages/gened-book-report.css');
 @import url('./pages/gened-activities.css');
 @import url('./pages/faculty-management.css');
 @import url('./pages/class-scheduling.css');

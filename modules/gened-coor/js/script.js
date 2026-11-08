@@ -9,6 +9,8 @@ import './modules/approval.js';
 import './modules/faculty-management.js';
 import './modules/ge-curriculum.js';
 import './modules/Gened-activities.js';
+import './modules/gened-book-report.js';
 import './modules/class-scheduling.js';
 import './modules/events-management.js';
 import './modules/dashboard-overview.js';
+import './modules/item-analysis.js';
