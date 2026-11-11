@@ -4,10 +4,6 @@
         <p>Office of Research Coordination | Research Documentation Management</p>
     </div>
 
-    <div class="documentation-notice" id="documentationNotice" role="status" aria-live="polite">
-        Document records and files are stored in this browser on this device.
-    </div>
-
     <section class="documentation-stats" aria-label="Document summary">
         <article><span>Active Documents</span><strong id="documentCountActive">0</strong></article>
         <article><span>Proposal Documents</span><strong id="documentCountProposals">0</strong></article>

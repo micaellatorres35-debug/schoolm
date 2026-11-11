@@ -725,7 +725,7 @@ function renderTrainingsPanel($trainingSummary, $eligibleEmployees = []) {
 ?>
     <div class="module-header">
         <div>
-            <h1> Faculty Management</h1>
+            <h1>Adviser Management</h1>
             <p>View and manage faculty credentials, attainment, and trainings.</p>
         </div>
     </div>
@@ -1118,5 +1118,4 @@ function renderTrainingsPanel($trainingSummary, $eligibleEmployees = []) {
         </div>
     </div>
 </div>
-
 

@@ -94,11 +94,12 @@
 
     .sidebar h3 {
         color: var(--color3);
-        font-size: 13px;
+        font-size: 10px;
         text-transform: uppercase;
         letter-spacing: 1px;
-        margin-bottom: 1rem;
+        margin-bottom: 0.5rem;
         padding-left: 0.5rem;
+        opacity: 0.7;
     }
 
     .sidebar ul {
@@ -136,9 +137,9 @@
     }
 
     .separator {
-        height: 0.5px;
+        height: 1px;
         background: var(--color4);
-        margin: 1rem 0;
+        margin: 0.75rem 0;
     }
 
     .active-menu-link {

@@ -4,10 +4,6 @@
         <p>Office of Research Coordination | Research Proposal Management</p>
     </div>
 
-    <div class="proposal-notice" id="proposalNotice" role="status" aria-live="polite">
-        Proposal records are saved in this browser.
-    </div>
-
     <section class="proposal-stats" aria-label="Proposal summary">
         <article><span>Total Proposals</span><strong id="proposalCountTotal">0</strong></article>
         <article><span>For Review</span><strong id="proposalCountReview">0</strong></article>

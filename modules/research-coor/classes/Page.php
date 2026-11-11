@@ -6,24 +6,26 @@ class Page {
 
     /*Sidebar Content*/ 
     private $labels = [
-        'dashboard-overview' => 'Dashboard Overview',
+        'dashboard-overview' => 'Dashboard',
         'research-proposal' => 'Research Proposals',
         'research-project'  => 'Research Projects',
         'evaluation-assessment' => 'Evaluation & Assessment',
         'research-documentation' => 'Research Documentation',
         'ethics-compliance' => 'Ethics & Compliance',
-        // 'faculty-management' => 'Advisers Management',
-        'class-scheduling'   => 'Class Scheduling',
-        'report-submission' => 'Report Submission',
-        'concern-submission' => 'Concern Submission',
-        'approval-submission' => 'Approval Submission'
+        'adviser-management' => 'Adviser Management',
+        'defense-scheduling' => 'Defense Scheduling',
+        'events-management' => 'Research Events',
+        'report-submission' => 'Report Submissions',
+        'concern-submission' => 'Concern Submissions',
+        'approval-submission' => 'Approval Requests'
     ];
 
     /*Content Sections*/ 
     private $sections = [
-        'top'             => ['dashboard-overview'],
-        'research'  => ['research-project', 'research-proposal', 'research-documentation', 'evaluation-assessment', 'ethics-compliance', 'faculty-management', 'class-scheduling', 'events-management'],
-        'requests-and-reports' => ['report-submission', 'concern-submission', 'approval-submission']
+        'Dashboard Overview' => ['dashboard-overview'],
+        'Research Management' => ['research-project', 'research-proposal', 'research-documentation', 'evaluation-assessment', 'ethics-compliance'],
+        'Academic Management' => ['adviser-management', 'defense-scheduling', 'events-management'],
+        'Submissions & Approvals' => ['report-submission', 'concern-submission', 'approval-submission']
     ];
 
     public function __construct($pagesDir = null) {
@@ -64,23 +66,16 @@ class Page {
     }
 
     public function renderNav() {
-        // Top section (no heading/separator)
-        foreach ($this->sections['top'] as $p) {
-            $this->renderLink($p);
-        }
-
-        // Grouped sections
-        $sectionOrder = ['research', 'requests-and-reports'];
-        foreach ($sectionOrder as $section) {
-            echo '<div class="separator"></div>';
-            if ($section === 'research') {
-                echo '<h3>Research Management</h3>';
-            } else {
-                echo '<h3>' . ucwords(str_replace('-', ' ', $section)) . '</h3>';
+        $isFirstSection = true;
+        foreach ($this->sections as $heading => $pages) {
+            if (!$isFirstSection) {
+                echo '<div class="separator"></div>';
             }
-            foreach ($this->sections[$section] as $p) {
+            echo '<h3>' . htmlspecialchars($heading, ENT_QUOTES, 'UTF-8') . '</h3>';
+            foreach ($pages as $p) {
                 $this->renderLink($p);
             }
+            $isFirstSection = false;
         }
     }
 

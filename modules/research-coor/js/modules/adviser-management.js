@@ -452,7 +452,7 @@ function initFacultyManagementPage() {
         console.log('Modal element (#fmEngagementDetailsModal) found:', !!modal);
         if (!modal) {
             console.log('✗✗✗ CRITICAL ERROR: Modal #fmEngagementDetailsModal NOT FOUND in DOM!');
-            console.log('Check if modal HTML was added to faculty-management.php');
+            console.log('Check if modal HTML was added to adviser-management.php');
             return;
         }
 
@@ -1049,7 +1049,7 @@ function initFacultyManagementWhenReady() {
 
 document.addEventListener('DOMContentLoaded', initFacultyManagementWhenReady);
 window.addEventListener('page:loaded', function (event) {
-    if (event.detail && event.detail.page === 'faculty-management') {
+    if (event.detail && event.detail.page === 'adviser-management') {
         setTimeout(initFacultyManagementWhenReady, 100);
     }
 });

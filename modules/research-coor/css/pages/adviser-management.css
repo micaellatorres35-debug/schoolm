@@ -1,4 +1,4 @@
-/* Faculty Management Styles */
+/* Adviser Management Styles */
 * {
     margin: 0;
     padding: 0;
@@ -10,7 +10,7 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
 }
 
-.faculty-management-page,
+.adviser-management-page,
 .academics-page {
     max-width: 1400px;
     margin: 0 auto;
@@ -727,6 +727,5 @@ tbody tr:hover {
     margin: 40px auto !important;
     max-height: none !important;
 }
-
 
 

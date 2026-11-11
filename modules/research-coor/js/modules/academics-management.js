@@ -1853,12 +1853,6 @@ window.addEventListener("page:loaded", function (e) {
 });
 
 window.addEventListener("page:loaded", function (e) {
-  if (e.detail && e.detail.page === "class-scheduling") {
-    sessionStorage.setItem("refreshFacultyLoad", "true");
-  }
-});
-
-window.addEventListener("page:loaded", function (e) {
   if (e.detail && e.detail.page === "academics-management") {
     if (sessionStorage.getItem("refreshFacultyLoad") === "true") {
       sessionStorage.removeItem("refreshFacultyLoad");

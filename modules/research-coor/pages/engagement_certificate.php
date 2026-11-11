@@ -492,7 +492,7 @@ if ($isPending) {
             if (!confirm('Mark this certificate as generated? This will save a timestamp.')) return;
 
             const payload = { action: 'generate_engagement_certificate', engagement_id: <?php echo (int)$engagementId; ?> };
-            fetch('<?php echo htmlspecialchars((dirname($_SERVER['SCRIPT_NAME'])) . '/faculty-management.php'); ?>', {
+            fetch('<?php echo htmlspecialchars((dirname($_SERVER['SCRIPT_NAME'])) . '/adviser-management.php'); ?>', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)

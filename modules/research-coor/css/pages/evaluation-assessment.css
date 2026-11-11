@@ -1,5 +1,5 @@
 .evaluation-page{display:grid;gap:1rem;max-width:1500px;margin:0 auto;padding:1rem;color:#1e293b}
-.evaluation-header{display:flex;align-items:center;justify-content:space-between;gap:1.2rem;padding:1.45rem;border:1px solid #dbeafe;border-radius:14px;background:linear-gradient(115deg,#f8fbff,#edf5ff 58%,#f6f8ff);box-shadow:0 5px 18px rgba(30,64,175,.06)}
+.evaluation-header{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:1.2rem;background:#fff}
 .evaluation-header h1{margin:.12rem 0;color:#14213d;font-size:clamp(1.45rem,2.2vw,2rem);letter-spacing:-.035em}
 .evaluation-header p{max-width:800px;margin:.4rem 0 0;color:#64748b;font-size:.86rem;line-height:1.55}
 .evaluation-eyebrow{color:#2563eb;font-size:.7rem;font-weight:750;letter-spacing:.08em;text-transform:uppercase}

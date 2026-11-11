@@ -6,10 +6,6 @@
         </div>
     </div>
 
-    <div class="research-storage-notice" id="researchStorageNotice" role="status" aria-live="polite">
-        Research projects are saved in rc_projects.
-    </div>
-
     <div class="stats-grid">
         <div class="stat-card">
             <h6>Total Projects</h6>

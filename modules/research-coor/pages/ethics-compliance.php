@@ -6,25 +6,6 @@
         </div>
     </div>
 
-    <section class="ethics-guide" aria-labelledby="ethicsGuideTitle">
-        <div class="ethics-guide-heading">
-            <span class="ethics-guide-icon"><i class="fas fa-circle-info" aria-hidden="true"></i></span>
-            <div>
-                <h2 id="ethicsGuideTitle">Purpose and how this module works</h2>
-                <p>Keep a traceable ethics and compliance record for each research project. Upload evidence here and it will also appear in Research Documentation.</p>
-            </div>
-        </div>
-        <ol class="ethics-guide-steps">
-            <li><strong>Link a project</strong><span>Select an active Research Project so clearance and evidence stay connected to its project record.</span></li>
-            <li><strong>Record clearance and checks</strong><span>Track committee application, decision, consent, plagiarism, policy review, and required documents.</span></li>
-            <li><strong>Upload supporting evidence</strong><span>Attach ethics, informed consent, plagiarism, or compliance files; they are indexed in the shared Document Library.</span></li>
-            <li><strong>Update and archive</strong><span>Save status changes to keep a dated history. Archive records instead of deleting them.</span></li>
-        </ol>
-        <p class="ethics-storage-note"><i class="fas fa-laptop" aria-hidden="true"></i> Data and uploaded files are stored in this browser on this device, consistent with the connected Research modules.</p>
-    </section>
-
-    <div class="ethics-notice" id="ethicsNotice" role="status" aria-live="polite">Ethics records are saved in this browser.</div>
-
     <section class="ethics-stats" aria-label="Ethics and compliance summary">
         <article><span>Total records</span><strong id="ethicsCountTotal">0</strong></article>
         <article><span>Under review</span><strong id="ethicsCountReview">0</strong></article>

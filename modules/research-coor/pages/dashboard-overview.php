@@ -362,9 +362,9 @@ $jsonFlags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT;
                 <span><strong>Concern Submission</strong><small>Manage research concerns</small></span>
                 <i class="fas fa-arrow-right research-quick-access-arrow" aria-hidden="true"></i>
             </a>
-            <a class="research-quick-access-card" href="?page=class-scheduling" data-page="class-scheduling">
+            <a class="research-quick-access-card" href="?page=defense-scheduling" data-page="defense-scheduling">
                 <span class="research-quick-access-icon"><i class="fas fa-calendar-alt" aria-hidden="true"></i></span>
-                <span><strong>Class Scheduling</strong><small>Open scheduling tools</small></span>
+                <span><strong>Defense Scheduling</strong><small>Assign research defense schedules</small></span>
                 <i class="fas fa-arrow-right research-quick-access-arrow" aria-hidden="true"></i>
             </a>
         </div>

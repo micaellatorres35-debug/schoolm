@@ -1,15 +1,12 @@
 <link rel="stylesheet" href="css/pages/evaluation-assessment.css">
 <div class="evaluation-page">
-    <header class="evaluation-header">
+    <div class="module-header evaluation-header">
         <div>
-            <span class="evaluation-eyebrow">Office of Research Coordination</span>
-            <h1>Research Evaluation and Assessment</h1>
+            <h1>Evaluation &amp; Assessment</h1>
             <p>Record panel evaluations, recommendations, revision requirements, and defense outcomes linked to registered research projects.</p>
         </div>
         <a class="evaluation-button evaluation-button-primary" href="?page=research-project" data-page="research-project"><i class="fas fa-folder-open" aria-hidden="true"></i> Research Projects</a>
-    </header>
-
-    <div class="evaluation-notice" id="evaluationNotice" role="status" aria-live="polite">Evaluation records are stored in the research database.</div>
+    </div>
 
     <section class="evaluation-stats" aria-label="Evaluation summary">
         <article><span>Panel Evaluations</span><strong id="evaluationCountTotal">0</strong></article>
