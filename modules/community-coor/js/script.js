@@ -9,7 +9,10 @@ import './modules/approval.js';
 import './modules/community-needs-assessment.js';
 import './modules/extension.js';
 import './modules/partnership-management.js';
-import './modules/events-management.js';
+import './modules/activity-management.js';
+import './modules/volunteer.js';
+import './modules/budget.js';
+import './modules/activity-management.js';
 
 
 

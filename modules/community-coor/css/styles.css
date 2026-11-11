@@ -11,10 +11,12 @@
 @import url('pages/concerns-issue-tracking.css');
 @import url('pages/report-submission-management.css');
 @import url('./pages/dashboard-overview.css');
-@import url('./pages/events-management.css');
 @import url('./pages/extension-management.css');
 @import url('./pages/community-needs-assessment.css');
 @import url('./pages/partnership-management.css');
+@import url('./pages/volunteer-management.css');
+@import url('./pages/budget-resource.css');
+@import url('./pages/activity-events.css');
 
 
 

@@ -8,9 +8,11 @@ class Page {
     private $labels = [
         'dashboard-overview' => 'Dashboard Overview',
         'extension-program-management' => 'Extension Program Management',
-        'events-management'  => 'Activity and Event Management',
         'community-needs-assessment' => 'Community Needs Assessment',
         'partnership-management'   => 'Partnership and Stakeholder Management',
+        'volunteer-management' => 'Volunteer and Manpower Management',
+        'budget-management' => 'Budget and Resource Management',
+        'activity-events-management' => 'Activity and Events Management',
         'report-submission' => 'Report Submission',
         'concern-submission' => 'Concern Submission',
         'approval-submission' => 'Approval Submission'
@@ -19,7 +21,7 @@ class Page {
     /*Content Sections*/ 
     private $sections = [
         'top'             => ['dashboard-overview'],
-        'academics'  => ['community-needs-assessment', 'extension-program-management', 'partnership-management', 'events-management'],
+        'academics'  => ['community-needs-assessment', 'extension-program-management', 'partnership-management', 'volunteer-management', 'budget-management', 'activity-events-management'],
         'requests-and-reports' => ['report-submission', 'concern-submission', 'approval-submission']
     ];
 
@@ -71,7 +73,7 @@ class Page {
         foreach ($sectionOrder as $section) {
             echo '<div class="separator"></div>';
             if ($section === 'academics') {
-                echo '<h3>Academic Affairs</h3>';
+                echo '<h3>Extension Operations</h3>';
             } else {
                 echo '<h3>' . ucwords(str_replace('-', ' ', $section)) . '</h3>';
             }

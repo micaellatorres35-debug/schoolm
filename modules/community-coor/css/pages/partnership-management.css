@@ -1,111 +1,119 @@
+/* Partnership and Stakeholder Management Styles
+   (same design language as Extension Program Management) */
 #psmRoot {
-    --psm-primary: #1d3d7a;
-    --psm-primary-soft: #eaf1ff;
-    --psm-border: #dfe7f7;
-    --psm-text: #1f2937;
-    --psm-muted: #6b7280;
-    --psm-success-bg: #eafaf0;
-    --psm-success-text: #177d4f;
-    --psm-warning-bg: #fff4d8;
-    --psm-warning-text: #b7791f;
-    --psm-neutral-bg: #edf3ff;
-    --psm-neutral-text: #2f4b8a;
-    --psm-danger-bg: #fee2e2;
-    --psm-danger-text: #b42318;
-    --psm-shadow: 0 12px 28px rgba(16, 24, 40, 0.08);
-    max-width: 1500px;
-    margin: 0 auto;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --psm-navy: #180062;
+    --psm-navy-soft: rgba(24, 0, 98, 0.12);
+    --psm-card: #ffffff;
+    --psm-bg: #f8f9fa;
+    --psm-border: #dee2e6;
+    --psm-text: #1a202c;
+    --psm-muted: #6c757d;
+    --psm-success: #198754;
+    --psm-success-soft: #d4edda;
+    --psm-warning: #fd7e14;
+    --psm-warning-soft: #fff3cd;
+    --psm-danger: #dc3545;
+    --psm-danger-soft: #f8d7da;
+    --psm-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     color: var(--psm-text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
 }
 
 #psmRoot * {
     box-sizing: border-box;
 }
 
-#psmRoot .psm-header-card {
-    background: linear-gradient(135deg, #ffffff 0%, #edf3ff 100%);
-    border: 1px solid var(--psm-border);
-    border-radius: 18px;
-    box-shadow: var(--psm-shadow);
-    padding: 28px 28px 22px;
-    margin-bottom: 22px;
+#psmRoot.psm-page {
+    background: #efefef;
+    min-height: 100vh;
 }
 
+/* ---------- Header ---------- */
+#psmRoot .psm-header-card {
+    margin-bottom: 24px;
+    padding: 24px;
+    background: #ffffff;
+    border: 0;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+/* badge is not used in the EPM design */
 #psmRoot .psm-header-badge {
-    display: inline-block;
-    padding: 6px 12px;
-    background: var(--psm-primary-soft);
-    color: var(--psm-primary);
-    border: 1px solid rgba(29, 61, 122, 0.12);
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    margin-bottom: 14px;
+    display: none;
 }
 
 #psmRoot .psm-header-card h1 {
-    margin: 0 0 8px;
-    font-size: clamp(2rem, 2vw, 2.5rem);
-    color: var(--psm-primary);
+    margin: 0 0 2px;
+    color: var(--psm-text);
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
 }
 
 #psmRoot .psm-header-card p {
     margin: 0;
-    color: var(--psm-muted);
-    font-size: 1rem;
-    line-height: 1.6;
-    max-width: 960px;
+    max-width: none;
+    color: var(--psm-text);
+    font-size: 14px;
+    line-height: 1.5;
 }
 
+/* ---------- Stat cards ---------- */
 #psmRoot .psm-stats {
     display: grid;
-    grid-template-columns: repeat(4, minmax(180px, 1fr));
-    gap: 18px;
-    margin-bottom: 22px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
 }
 
 #psmRoot .psm-stat-card {
-    background: #fff;
-    border: 1px solid var(--psm-border);
-    border-radius: 16px;
+    min-height: 104px;
+    padding: 20px;
+    background: var(--psm-card);
+    border: 0;
+    border-left: 4px solid var(--psm-navy);
+    border-radius: 8px;
     box-shadow: var(--psm-shadow);
-    padding: 18px 18px 16px;
-    min-height: 118px;
     display: flex;
     flex-direction: column;
     justify-content: center;
 }
 
+#psmRoot .psm-stat-card:nth-child(2) { border-left-color: #6f42c1; }
+#psmRoot .psm-stat-card:nth-child(3) { border-left-color: #198754; }
+#psmRoot .psm-stat-card:nth-child(4) { border-left-color: #fd7e14; }
+
 #psmRoot .psm-stat-label {
     display: block;
+    margin: 0 0 8px;
     color: var(--psm-muted);
-    font-size: 0.8rem;
+    font-size: 13px;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-bottom: 10px;
+    letter-spacing: 0.04em;
 }
 
 #psmRoot .psm-stat-value {
-    color: var(--psm-primary);
-    font-size: clamp(1.8rem, 3vw, 2.5rem);
+    color: var(--psm-text);
+    font-size: 28px;
     font-weight: 700;
-    line-height: 1.1;
+    line-height: 1.15;
 }
 
+/* ---------- Toolbar (search + filters) ---------- */
 #psmRoot .psm-toolbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 18px;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 15px 16px;
     background: #fff;
     border: 1px solid var(--psm-border);
-    border-radius: 16px;
+    border-radius: 8px;
     box-shadow: var(--psm-shadow);
-    padding: 18px 20px;
-    margin-bottom: 18px;
 }
 
 #psmRoot .psm-search-wrap {
@@ -115,26 +123,33 @@
 #psmRoot .psm-search-wrap input,
 #psmRoot .psm-filter-group select {
     width: 100%;
-    height: 42px;
-    border: 1px solid var(--psm-border);
-    border-radius: 10px;
-    outline: none;
-    padding: 0 14px;
-    font-size: 0.95rem;
+    height: auto;
+    padding: 10px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 5px;
     background: #fff;
     color: var(--psm-text);
+    font-size: 14px;
+    outline: none;
+}
+
+#psmRoot .psm-search-wrap input:focus,
+#psmRoot .psm-filter-group select:focus {
+    border-color: var(--psm-navy);
+    box-shadow: 0 0 0 3px rgba(24, 0, 98, 0.12);
 }
 
 #psmRoot .psm-filter-group {
     display: flex;
-    gap: 12px;
+    gap: 15px;
     flex: 0 1 420px;
 }
 
+/* ---------- Table ---------- */
 #psmRoot .psm-list-view {
-    background: #fff;
-    border: 1px solid var(--psm-border);
-    border-radius: 18px;
+    background: var(--psm-card);
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
     box-shadow: var(--psm-shadow);
     overflow: hidden;
 }
@@ -145,148 +160,172 @@
 
 #psmRoot .psm-table {
     width: 100%;
-    border-collapse: collapse;
     min-width: 900px;
+    border-collapse: collapse;
+    background: #fff;
 }
 
 #psmRoot .psm-table thead th {
-    background: #f5f8ff;
-    border-bottom: 1px solid var(--psm-border);
-    color: var(--psm-primary);
-    font-size: 0.82rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    padding: 16px 18px;
+    padding: 12px 16px;
+    border-bottom: 2px solid var(--psm-border);
+    background: #f8f9fa;
+    color: #333;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
     text-align: left;
 }
 
 #psmRoot .psm-table tbody td {
-    padding: 16px 18px;
-    border-bottom: 1px solid #edf1f7;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e9ecef;
     color: var(--psm-text);
+    font-size: 14px;
     vertical-align: middle;
 }
 
 #psmRoot .psm-table tbody tr:hover {
-    background: #f8fbff;
+    background: #f8f9fa;
 }
 
+/* ---------- Status pills ---------- */
 #psmRoot .psm-status {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 999px;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    padding: 7px 10px;
+    padding: 5px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0;
     white-space: nowrap;
 }
 
 #psmRoot .psm-status-active {
-    background: var(--psm-success-bg);
-    color: var(--psm-success-text);
+    background: var(--psm-success-soft);
+    color: var(--psm-success);
 }
 
 #psmRoot .psm-status-monitoring {
-    background: var(--psm-warning-bg);
-    color: var(--psm-warning-text);
+    background: var(--psm-warning-soft);
+    color: var(--psm-warning);
 }
 
 #psmRoot .psm-status-renewal {
-    background: var(--psm-neutral-bg);
-    color: var(--psm-neutral-text);
+    background: var(--psm-navy-soft);
+    color: var(--psm-navy);
 }
 
+/* ---------- Buttons ---------- */
 #psmRoot .psm-actions {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
 }
 
 #psmRoot .psm-btn {
     appearance: none;
-    border: none;
-    border-radius: 10px;
-    padding: 9px 14px;
-    font-size: 0.86rem;
-    font-weight: 600;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 500;
     cursor: pointer;
-    transition: transform 0.2s ease, opacity 0.2s ease;
+    transition: all 0.2s ease;
 }
 
 #psmRoot .psm-btn:hover {
-    transform: translateY(-1px);
+    transform: none;
 }
 
+/* "View" style button in table = EPM link button */
 #psmRoot .psm-btn-link {
-    background: var(--psm-primary-soft);
-    color: var(--psm-primary);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--psm-navy);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+#psmRoot .psm-btn-link:hover {
+    text-decoration: underline;
 }
 
 #psmRoot .psm-empty {
     text-align: center;
-    padding: 35px 18px;
+    padding: 28px 18px;
     color: var(--psm-muted);
 }
 
+/* ---------- Detail view ---------- */
 #psmRoot .psm-detail-view {
-    background: #fff;
-    border: 1px solid var(--psm-border);
-    border-radius: 18px;
+    background: var(--psm-card);
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
     box-shadow: var(--psm-shadow);
-    padding: 22px;
+    padding: 20px;
 }
 
 #psmRoot .psm-detail-header {
     display: flex;
     align-items: center;
-    gap: 18px;
-    margin-bottom: 18px;
+    gap: 16px;
+    margin-bottom: 20px;
 }
 
 #psmRoot .psm-back-button {
     padding: 10px 16px;
-    background: #f3f6ff;
-    color: var(--psm-primary);
-    border: 1px solid var(--psm-border);
-    border-radius: 10px;
-    font-weight: 700;
+    background: #fff;
+    color: var(--psm-text);
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
     cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#psmRoot .psm-back-button:hover {
+    background: #f8f9fa;
 }
 
 #psmRoot .psm-detail-kicker {
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--psm-muted);
     margin-bottom: 4px;
+    color: var(--psm-muted);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
 
 #psmRoot .psm-detail-header h2 {
     margin: 0;
-    font-size: clamp(1.5rem, 2vw, 2rem);
-    color: var(--psm-primary);
+    color: var(--psm-text);
+    font-size: 20px;
+    font-weight: 600;
 }
 
 #psmRoot .psm-detail-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(260px, 1fr));
-    gap: 18px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
 }
 
 #psmRoot .psm-card {
-    background: #f9fbff;
+    background: #fff;
     border: 1px solid var(--psm-border);
-    border-radius: 14px;
+    border-radius: 8px;
+    box-shadow: var(--psm-shadow);
     padding: 18px;
 }
 
 #psmRoot .psm-card h3 {
     margin: 0 0 14px;
-    color: var(--psm-primary);
-    font-size: 1.1rem;
+    color: var(--psm-text);
+    font-size: 18px;
 }
 
 #psmRoot .psm-info-list {
@@ -300,7 +339,7 @@
     grid-template-columns: 120px 1fr;
     gap: 10px;
     align-items: start;
-    border-bottom: 1px solid #eef2f8;
+    border-bottom: 1px solid #e9ecef;
     padding-bottom: 8px;
 }
 
@@ -312,31 +351,45 @@
 #psmRoot .psm-info-list dt {
     margin: 0;
     color: var(--psm-muted);
+    font-size: 14px;
     font-weight: 600;
 }
 
 #psmRoot .psm-info-list dd {
     margin: 0;
     color: var(--psm-text);
+    font-size: 14px;
     line-height: 1.5;
 }
 
 #psmRoot .psm-list {
     margin: 0;
     padding-left: 18px;
-    display: grid;
-    gap: 8px;
-    line-height: 1.6;
+    display: block;
     color: var(--psm-text);
+    font-size: 14px;
+    line-height: 1.8;
 }
 
 #psmRoot .psm-accomplishment-card {
     grid-column: 1 / -1;
 }
 
-@media (max-width: 900px) {
+/* ---------- Responsive ---------- */
+@media (min-width: 769px) and (max-width: 991px) {
     #psmRoot .psm-stats {
-        grid-template-columns: repeat(2, minmax(180px, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    #psmRoot .psm-header-card h1 {
+        font-size: 28px;
+    }
+
+    #psmRoot .psm-stats,
+    #psmRoot .psm-detail-grid {
+        grid-template-columns: 1fr;
     }
 
     #psmRoot .psm-toolbar {
@@ -349,13 +402,8 @@
         width: 100%;
     }
 
-    #psmRoot .psm-detail-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 560px) {
-    #psmRoot .psm-stats {
-        grid-template-columns: 1fr;
+    #psmRoot .psm-detail-header {
+        flex-direction: column;
+        align-items: flex-start;
     }
 }
