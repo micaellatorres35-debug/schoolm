@@ -1180,6 +1180,24 @@ body.um-modal-open {
     font-weight: 800;
 }
 
+.um-module-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.um-module-chip {
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(32, 0, 130, 0.08);
+    color: var(--color1);
+    font-size: 13px;
+    font-weight: 600;
+}
+
 @media (max-width: 1200px) {
     .um-filters {
         grid-template-columns: repeat(3, minmax(0, 1fr));

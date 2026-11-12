@@ -204,6 +204,26 @@ function umFindUser(id) {
     return null;
 }
 
+function umEnsureOption(select, value, label, departmentId) {
+    if (!select || value === '' || value === null || value === undefined) return;
+    const exists = Array.from(select.options).some(function (option) {
+        return option.value === String(value);
+    });
+    if (exists) return;
+    const option = document.createElement('option');
+    option.value = String(value);
+    option.textContent = label || String(value);
+    if (departmentId !== undefined && departmentId !== null && departmentId !== '') {
+        option.dataset.department = String(departmentId);
+    }
+    select.appendChild(option);
+}
+
+function umReloadDetails() {
+    if (!umDetailUserId) return Promise.resolve();
+    return umLoadDetail();
+}
+
 /* ── AJAX ───────────────────────────────────────── */
 
 async function umRequest(action, params, method) {
@@ -344,7 +364,7 @@ function umMenuHtml(r) {
 
 function umCardHtml(r) {
     const name = umFullName(r);
-    const subline = umNA(r.employee_code, 'No employee ID') + ' · ' + umNA(r.role_name, 'No role');
+    const subline = umNA(r.employee_id, 'No employee ID') + ' · ' + umNA(r.role_name, 'No role');
     const place = [r.department_name, r.unit_name].filter(function (x) { return x && String(x).trim() !== ''; }).join(' / ');
 
     return '' +
@@ -371,13 +391,12 @@ function umCardHtml(r) {
 
 function umRowHtml(r) {
     const name = umFullName(r);
-    const place = [r.department_name, r.unit_name].filter(function (x) { return x && String(x).trim() !== ''; }).join(' / ');
     return '' +
     '<tr data-user-id="' + umEsc(r.user_id) + '" data-um-action="view-details" data-user="' + umEsc(r.user_id) + '" tabindex="0" role="button" aria-label="Open ' + umEsc(name) + '">' +
+        '<td>' + umEsc(umNA(r.employee_id, 'No ID')) + '</td>' +
         '<td><div class="um-table-person"><span class="um-avatar um-avatar-small' + umAvatarClass(r) + '" aria-hidden="true">' + umEsc(umInitials(r)) + '</span>' +
-            '<span><strong>' + umEsc(name) + '</strong><small>' + umEsc(umNA(r.email, umNA(r.employee_code, 'No email'))) + '</small></span></div></td>' +
+            '<span><strong>' + umEsc(name) + '</strong><small>' + umEsc(umNA(r.email, umNA(r.employee_id, 'No email'))) + '</small></span></div></td>' +
         '<td><span class="um-role-pill">' + umEsc(umNA(r.role_name, 'No role')) + '</span></td>' +
-        '<td>' + umEsc(umNA(place, 'Not assigned')) + '</td>' +
         '<td>' + umStatusBadge(r) + '</td>' +
         '<td><div class="um-row-actions">' +
             '<button class="um-btn um-btn-quiet" type="button" data-um-action="view-details" data-user="' + umEsc(r.user_id) + '">View</button>' +
@@ -469,7 +488,7 @@ function umOnClick(e) {
         case 'toggle-status':  umOpenStatusFromButton(btn); break;
         case 'status-confirm': umConfirmStatus(); break;
         case 'unlock':         umUnlock(userId || umDetailUserId); break;
-        case 'tab':            umSelectTab(btn.dataset.tab, false); break;
+        case 'retry-detail':   umLoadDetail(); break;
         case 'activity-more':  umLoadActivity(false); break;
         case 'close-modal':    umCloseModal(btn.closest('.um-modal-backdrop').id); break;
         case 'toggle-password': umTogglePassword(btn.dataset.target, btn); break;
@@ -518,35 +537,6 @@ function umOnRootKeydown(e) {
         const next = e.key === 'ArrowDown' ? (i + 1) % items.length : (i - 1 + items.length) % items.length;
         items[next].focus();
         return;
-    }
-
-    // Arrow keys move between tabs
-    if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && e.target.classList && e.target.classList.contains('um-tab')) {
-        const tabs = Array.from(document.querySelectorAll('#umRoot .um-tab'));
-        const i = tabs.indexOf(e.target);
-        const next = e.key === 'ArrowRight' ? (i + 1) % tabs.length : (i - 1 + tabs.length) % tabs.length;
-        e.preventDefault();
-        umSelectTab(tabs[next].dataset.tab, true);
-    }
-}
-
-function umTrapTab(e) {
-    if (e.key !== 'Tab' || !umModalStack.length) return;
-    const top = umEl(umModalStack[umModalStack.length - 1]);
-    if (!top) return;
-    const items = Array.from(top.querySelectorAll(
-        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-    )).filter(function (el) { return el.offsetParent !== null; });
-    if (!items.length) return;
-
-    const first = items[0];
-    const last = items[items.length - 1];
-    if (e.shiftKey && (document.activeElement === first || document.activeElement === top.querySelector('.um-modal'))) {
-        e.preventDefault();
-        last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
     }
 }
 
@@ -626,10 +616,6 @@ function umCloseModal(id) {
     umModalStack = umModalStack.filter(function (x) { return x !== id; });
     umSyncBodyLock();
 
-    if (id === 'umDetailsModal') {
-        umDetailUserId = null;
-        umActivityReq++;
-    }
     if (id === 'umStatusModal') umStatusTarget = null;
 
     const back = umReturnFocus[id];
@@ -760,21 +746,19 @@ function umRenderDetail(d) {
     }
 
     const subline = umEl('umDetailSubline');
-    if (subline) subline.textContent = umNA(d.employee_code, 'No employee ID') + ' · ' + umNA(d.role_name, 'No role');
+    if (subline) subline.textContent = umNA(d.employee_id, 'No employee ID') + ' · ' + umNA(d.role_name, 'No role');
 
     umSet('umDetailLastLogin', umFormatWhen(d.last_login, 'No login recorded'));
     umSet('umDetailCreated', umFormatDate(d.account_created_at));
 
     umSet('umInfoName', name);
-    umSet('umInfoId', umNA(d.employee_code));
+    umSet('umInfoId', umNA(d.employee_id));
     umSet('umInfoEmail', umNA(d.email));
     umSet('umInfoContact', umNA(d.mobile_no || d.phone_no));
-    umSet('umInfoDepartment', umNA(d.department_name));
     umSet('umInfoPosition', umNA(d.position_name));
 
     umSet('umAccessRole', umNA(d.role_name, 'No role assigned'));
     umSet('umAccessStatus', off ? 'Inactive' : 'Active');
-    umSet('umAccessDepartment', umNA(d.department_name));
 
     const accessLock = umEl('umAccessLock');
     if (accessLock) accessLock.textContent = locked ? 'Locked until ' + umFormatWhen(d.locked_until) : 'Not locked';
@@ -796,6 +780,27 @@ function umRenderDetail(d) {
         statusBtn.textContent = off ? 'Reactivate' : 'Deactivate';
         statusBtn.dataset.mode = off ? 'reactivate' : 'deactivate';
         statusBtn.dataset.user = String(d.user_id);
+    }
+
+    const moduleList = umEl('umModulesList');
+    const emptyModules = umEl('umModulesEmpty');
+    if (moduleList) {
+        moduleList.innerHTML = '';
+        const modules = Array.isArray(d.managed_modules) ? d.managed_modules : [];
+        if (modules.length) {
+            modules.forEach(function (module) {
+                const label = module && module.label ? module.label : '';
+                if (!label) return;
+                const li = document.createElement('li');
+                li.className = 'um-module-chip';
+                li.textContent = String(label);
+                moduleList.appendChild(li);
+            });
+        }
+    }
+    if (emptyModules) {
+        const modules = Array.isArray(d.managed_modules) ? d.managed_modules : [];
+        emptyModules.hidden = modules.length > 0;
     }
 
     const detailState = umEl('umDetailState');
@@ -889,7 +894,7 @@ async function umOpenEdit(userId, focusId) {
         if (umModalStack.indexOf('umEditModal') === -1) return;
 
         umEl('umEditUserId').value = String(d.user_id);
-        umSet('umEditSubline', umFullName(d) + ' · ' + umNA(d.employee_code, 'No employee ID'));
+        umSet('umEditSubline', umFullName(d) + ' · ' + umNA(d.employee_id, 'No employee ID'));
 
         umEnsureOption(umEl('umEditRole'), d.role_id, d.role_name);
         umEnsureOption(umEl('umEditDept'), d.department_id, d.department_name);
@@ -1104,7 +1109,7 @@ async function umExportCsv() {
 
         data.rows.forEach(function (r) {
             lines.push([
-                r.employee_code, umFullName(r), r.email, r.role_name, r.department_name,
+                r.employee_id, umFullName(r), r.email, r.role_name, r.department_name,
                 r.unit_name, r.position_name, r.account_status, r.last_login
             ].map(umCsvCell).join(','));
         });

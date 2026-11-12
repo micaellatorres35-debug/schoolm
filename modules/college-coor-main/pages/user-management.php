@@ -121,9 +121,9 @@ $umUnitOptions = function (string $placeholder) use ($umOpts, $h) {
                 <table class="um-table">
                     <thead>
                         <tr>
+                            <th scope="col">Employee ID</th>
                             <th scope="col">Employee</th>
                             <th scope="col">Role</th>
-                            <th scope="col">Department / Unit</th>
                             <th scope="col">Status</th>
                             <th scope="col"><span class="um-sr-only">Actions</span></th>
                         </tr>
@@ -178,7 +178,6 @@ $umUnitOptions = function (string $placeholder) use ($umOpts, $h) {
                     <div><dt>Employee ID</dt><dd id="umInfoId"></dd></div>
                     <div><dt>Email address</dt><dd id="umInfoEmail"></dd></div>
                     <div><dt>Contact number</dt><dd id="umInfoContact"></dd></div>
-                    <div><dt>Department</dt><dd id="umInfoDepartment"></dd></div>
                     <div><dt>Position</dt><dd id="umInfoPosition"></dd></div>
                 </dl>
             </section>
@@ -188,7 +187,6 @@ $umUnitOptions = function (string $placeholder) use ($umOpts, $h) {
                 <dl class="um-info-grid">
                     <div><dt>Assigned role</dt><dd id="umAccessRole"></dd></div>
                     <div><dt>Account status</dt><dd id="umAccessStatus"></dd></div>
-                    <div><dt>Department scope</dt><dd id="umAccessDepartment"></dd></div>
                     <div><dt>Lock status</dt><dd id="umAccessLock"></dd></div>
                 </dl>
                 <div id="umAccessDeactWrap" hidden>
@@ -201,6 +199,12 @@ $umUnitOptions = function (string $placeholder) use ($umOpts, $h) {
                         </dl>
                     </div>
                 </div>
+            </section>
+
+            <section class="um-panel">
+                <h3 class="um-section-title">Managed modules</h3>
+                <p class="um-notice-text" id="umModulesEmpty" hidden>No managed modules for this role.</p>
+                <ul class="um-module-list" id="umModulesList"></ul>
             </section>
 
             <section class="um-panel">
@@ -253,7 +257,7 @@ $umUnitOptions = function (string $placeholder) use ($umOpts, $h) {
                                     <input type="password" name="password" id="umEditPassword" autocomplete="new-password" minlength="12" maxlength="72" placeholder="Leave blank to keep the current password">
                                     <button type="button" class="um-btn um-btn-quiet" data-um-action="toggle-password" data-target="umEditPassword">Show</button>
                                     <button type="button" class="um-btn um-btn-quiet" data-um-action="generate-password" data-target="umEditPassword">Generate</button>
-                                    <button type="button" class="um-btn um-btn-quiet" data-um_action="copy-password" data-target="umEditPassword">Copy</button>
+                                    <button type="button" class="um-btn um-btn-quiet" data-um-action="copy-password" data-target="umEditPassword">Copy</button>
                                 </div>
                                 <p class="um-field-hint">Setting a new password also clears any sign-in lock.</p>
                             </div>

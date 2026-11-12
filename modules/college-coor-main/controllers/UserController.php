@@ -108,6 +108,8 @@ try {
                 um_respond(['success' => false, 'message' => 'Account not found.'], 404);
             }
             $details['activity_total'] = $model->countActivity($userId);
+            $roleName = (string) ($details['role_name'] ?? '');
+            $details['managed_modules'] = $model->getManagedModulesForRole($roleName);
             um_respond(['success' => true, 'data' => $details]);
             break;
 

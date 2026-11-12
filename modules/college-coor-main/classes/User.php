@@ -93,6 +93,82 @@ class User {
         return ['roles' => $roles, 'departments' => $departments, 'units' => $units];
     }
 
+    public function getManagedModulesForRole($roleName) {
+        $roleName = (string) $roleName;
+        $roles = [
+            'Research Coordinator' => __DIR__ . '/../../research-coor/classes/Page.php',
+            'GenEd Coordinator' => __DIR__ . '/../../gened-coor/classes/Page.php',
+            'Community Extension Coordinator' => __DIR__ . '/../../community-coor/classes/Page.php',
+        ];
+
+        if (!isset($roles[$roleName])) {
+            return [];
+        }
+
+        return $this->sidebarModulesFromPageFile($roles[$roleName]);
+    }
+
+    private function sidebarModulesFromPageFile($pageFile) {
+        static $cache = [];
+        $hash = md5((string) $pageFile);
+        if (isset($cache[$hash])) {
+            return $cache[$hash];
+        }
+
+        $source = @file_get_contents($pageFile);
+        if ($source === false || trim($source) === '') {
+            $cache[$hash] = [];
+            return [];
+        }
+
+        $className = 'ManagedModulesPage_' . $hash;
+        if (!class_exists($className, false)) {
+            $renamed = preg_replace('/class\s+Page\b/', 'class ' . $className, $source, 1);
+            if ($renamed === null) {
+                $cache[$hash] = [];
+                return [];
+            }
+            eval('?>' . $renamed);
+        }
+
+        if (!class_exists($className, false)) {
+            $cache[$hash] = [];
+            return [];
+        }
+
+        $page = new $className();
+        $ref = new ReflectionClass($page);
+
+        $labels = [];
+        $sections = [];
+
+        if ($ref->hasProperty('labels')) {
+            $prop = $ref->getProperty('labels');
+            $prop->setAccessible(true);
+            $labels = $prop->getValue($page);
+        }
+        if ($ref->hasProperty('sections')) {
+            $prop = $ref->getProperty('sections');
+            $prop->setAccessible(true);
+            $sections = $prop->getValue($page);
+        }
+
+        $modules = [];
+        foreach (['top', 'academics', 'requests-and-reports'] as $section) {
+            foreach (($sections[$section] ?? []) as $pageKey) {
+                if ($pageKey === 'dashboard-overview') {
+                    continue;
+                }
+                if (isset($labels[$pageKey])) {
+                    $modules[] = ['label' => $labels[$pageKey], 'key' => $pageKey];
+                }
+            }
+        }
+
+        $cache[$hash] = $modules;
+        return $modules;
+    }
+
     /* ── Directory: list, count, stats ──────────────────────── */
 
     private function accountFrom() {

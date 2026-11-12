@@ -16,7 +16,6 @@ class Page {
         'report-submission-management' => 'Report Submission & Management',
         'concerns-issues-tracking' => 'Concern & Issue Tracking',
         'approval-decision-support' => 'Approval and Decision Support',
-        'department-unit-management' => 'Department & Unit Management', // wala na sa sidebar, pero puwede pa ring buksan via URL
     ];
 
     /*Section headings (ayon sa pagkakasunod sa sidebar)*/
@@ -32,7 +31,6 @@ class Page {
         'administration' => [
             'faculty-management',
             'user-management',
-            'department-unit-management', 
             'communications-announcements',
         ],
         'academic-affairs' => [
