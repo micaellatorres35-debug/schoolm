@@ -32,7 +32,10 @@ class FacultyManager {
                 ELSE 'Underloaded'
             END AS load_status
         FROM gc_faculty f
-        INNER JOIN em_employees e ON e.employee_id = f.employee_id
+        INNER JOIN em_employees e
+            ON e.employee_id = f.employee_id
+           AND e.is_archived = 0
+           AND e.employment_status = 'Active'
         LEFT JOIN em_departments d ON d.department_id = e.department_id
         LEFT JOIN (
             SELECT 

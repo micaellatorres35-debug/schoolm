@@ -1,124 +1,155 @@
-<?php
-$pageTitle = $gcActivityPageTitle ?? 'GenEd Activities';
-$activityDescription = $gcActivityPageDescription ?? 'Plan and track GenEd activities for each semester.';
-$defaultActivityCategory = $gcActivityDefaultCategory ?? '';
-?>
-<div class="module-header gc-activities-header">
+<?php $pageTitle = 'GenEd Activities'; ?>
+<div class="module-header gc-activities-header ge-curriculum-header">
     <div>
-        <h1><?= htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8') ?></h1>
-        <p><?= htmlspecialchars($activityDescription, ENT_QUOTES, 'UTF-8') ?></p>
+        <h1>GenEd Activities</h1>
+        <p>Create activities for assigned subjects, select eligible teachers, and track approval status.</p>
     </div>
-    <button type="button" class="btn btn-primary" id="gcAddActivityButton">
-        <i class="fas fa-plus"></i> Add Activity
+    <button type="button" class="btn btn-primary" id="gcActivityAddButton" hidden>
+        <i class="fas fa-plus" aria-hidden="true"></i> Add Activity
     </button>
 </div>
 
-<div class="gc-activities-page">
-<div class="module-content" id="gcAcademicActivities" data-default-category="<?= htmlspecialchars($defaultActivityCategory, ENT_QUOTES, 'UTF-8') ?>">
-    <div class="row g-3 mb-4 gc-activity-summary">
-        <div class="col-12 col-sm-6 col-xl-3"><div class="stat-card">
-            <h6>Total Activities</h6><h3 id="gcTotalActivities">0</h3>
-            <small class="text-muted">All activities this semester</small>
-        </div></div>
-        <div class="col-12 col-sm-6 col-xl-3"><div class="stat-card">
-            <h6>Pending Approval</h6><h3 id="gcPendingActivities">0</h3>
-            <small class="text-muted">Waiting for admin / college coordinator</small>
-        </div></div>
-        <div class="col-12 col-sm-6 col-xl-3"><div class="stat-card">
-            <h6>Upcoming</h6><h3 id="gcUpcomingActivities">0</h3>
-            <small class="text-muted">Approved activities with future dates</small>
-        </div></div>
-        <div class="col-12 col-sm-6 col-xl-3"><div class="stat-card">
-            <h6>Completed</h6><h3 id="gcCompletedActivities">0</h3>
-            <small class="text-muted">Activities marked complete</small>
-        </div></div>
+<section class="module-content academics-management-page gc-activities-page" id="gcAcademicActivities">
+    <div class="stats-grid gc-activity-summary" aria-label="GenEd activity totals">
+        <article class="stat-card gc-activity-stat">
+            <div><h6>Total Activities</h6><h3 id="gcActivityTotal">—</h3></div>
+            <span class="gc-activity-stat-icon"><i class="fas fa-calendar-check" aria-hidden="true"></i></span>
+        </article>
+        <article class="stat-card gc-activity-stat">
+            <div><h6>Pending Approval</h6><h3 id="gcActivityPending">—</h3></div>
+            <span class="gc-activity-stat-icon"><i class="fas fa-hourglass-half" aria-hidden="true"></i></span>
+        </article>
+        <article class="stat-card gc-activity-stat">
+            <div><h6>Approved</h6><h3 id="gcActivityApproved">—</h3></div>
+            <span class="gc-activity-stat-icon"><i class="fas fa-circle-check" aria-hidden="true"></i></span>
+        </article>
+        <article class="stat-card gc-activity-stat">
+            <div><h6>Completed</h6><h3 id="gcActivityCompleted">—</h3></div>
+            <span class="gc-activity-stat-icon"><i class="fas fa-flag-checkered" aria-hidden="true"></i></span>
+        </article>
     </div>
 
-    <div class="card mb-3">
-        <div class="card-body">
-            <div class="row g-3 align-items-end">
-                <div class="col-12 col-md-6">
-                    <label for="gcActivitySchoolYear" class="form-label">School Year</label>
-                    <select id="gcActivitySchoolYear" class="form-select"></select>
-                </div>
-                <div class="col-12 col-md-6">
-                    <label for="gcActivitySemester" class="form-label">Semester</label>
-                    <select id="gcActivitySemester" class="form-select"></select>
-                </div>
-            </div>
+    <p class="gc-activity-notice" id="gcActivityNotice" role="status" aria-live="polite">Loading GenEd activities...</p>
+
+    <div class="card compact-filter-card gc-activity-filter-card">
+        <div class="card-body gc-activity-filter-grid">
+            <label>
+                <span>Academic Year</span>
+                <select id="gcActivitySchoolYear" class="form-select"><option value="">Loading academic year...</option></select>
+            </label>
+            <label>
+                <span>Semester</span>
+                <select id="gcActivitySemester" class="form-select"><option value="">All Semesters</option></select>
+            </label>
+            <label>
+                <span>Department</span>
+                <select id="gcActivityDepartment" class="form-select"><option value="">All Departments</option></select>
+            </label>
+            <label>
+                <span>Section</span>
+                <select id="gcActivitySection" class="form-select"><option value="">All Sections</option></select>
+            </label>
+            <label>
+                <span>GenEd Subject</span>
+                <select id="gcActivitySubject" class="form-select"><option value="">All Subjects</option></select>
+            </label>
+            <label>
+                <span>Assigned Teacher</span>
+                <select id="gcActivityFaculty" class="form-select"><option value="">All Faculty</option></select>
+            </label>
+            <label>
+                <span>Category</span>
+                <select id="gcActivityCategoryFilter" class="form-select"><option value="">All Categories</option></select>
+            </label>
+            <label>
+                <span>Status</span>
+                <select id="gcActivityStatusFilter" class="form-select"><option value="">All Statuses</option></select>
+            </label>
+            <label class="gc-activity-search">
+                <span>Search</span>
+                <input type="search" id="gcActivitySearch" class="form-control" placeholder="Search activities, subjects, sections, or faculty">
+            </label>
         </div>
     </div>
 
-    <nav class="academics-tabs gc-activity-categories" aria-label="Activity categories">
-        <button type="button" class="academics-tab<?= $defaultActivityCategory === '' ? ' active' : '' ?>" data-activity-category="">All Activities</button>
-        <button type="button" class="academics-tab" data-activity-category="Common Exams">Common Exams</button>
-        <button type="button" class="academics-tab<?= $defaultActivityCategory === 'Book Reports' ? ' active' : '' ?>" data-activity-category="Book Reports">Book Reports</button>
-        <button type="button" class="academics-tab" data-activity-category="Quiz Bees &amp; Contests">Quiz Bees &amp; Contests</button>
-        <button type="button" class="academics-tab" data-activity-category="Research &amp; Paper Presentations">Research &amp; Paper Presentations</button>
-        <button type="button" class="academics-tab" data-activity-category="Orientation &amp; Curriculum Review">Orientation &amp; Curriculum Review</button>
-        <button type="button" class="academics-tab" data-activity-category="Meetings &amp; Training">Meetings &amp; Training</button>
-    </nav>
-
-    <div class="table-card">
+    <div class="gc-activity-table-heading">
+        <h2>Activities by Subject and Section</h2>
+        <span id="gcActivityResultCount">0 records</span>
+    </div>
+    <div class="table-card gc-activity-table-card">
         <div class="table-responsive">
             <table id="gcActivitiesTable">
-                <thead><tr>
-                    <th>Activity</th><th>Category</th><th>Date</th><th>Submitted By</th>
-                    <th>Status</th><th>Approval Notes</th><th>Actions</th>
-                </tr></thead>
-                <tbody><tr><td colspan="7" class="text-center text-muted">Loading activities...</td></tr></tbody>
+                <thead>
+                    <tr>
+                        <th>Activity</th>
+                        <th>GenEd Subject</th>
+                        <th>Department</th>
+                        <th>Section</th>
+                        <th>Assigned Teachers</th>
+                        <th>Category</th>
+                        <th>Activity Date</th>
+                        <th>Academic Period</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="10" class="gc-activity-empty">Loading activities...</td></tr>
+                </tbody>
             </table>
         </div>
     </div>
-    <div id="gcActivitiesMessage" class="mt-3" role="status" aria-live="polite"></div>
-</div>
-</div>
 
-<div class="modal" id="gcActivityModal">
-    <div class="modal-dialog" style="max-width: 680px;">
-        <div class="modal-header">
-            <h5 class="modal-title">Add Academic Activity</h5>
-            <button type="button" class="modal-close" aria-label="Close">&times;</button>
+    <div class="modal" id="gcActivityModal" aria-hidden="true">
+        <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="gcActivityModalTitle">
+            <div class="modal-header">
+                <h2 class="modal-title" id="gcActivityModalTitle">Add GenEd Activity</h2>
+                <button type="button" class="modal-close" data-close-activity aria-label="Close">&times;</button>
+            </div>
+            <form id="gcActivityForm">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="gcActivityTitle" class="form-label">Activity Title</label>
+                        <input type="text" id="gcActivityTitle" class="form-control" maxlength="200" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="gcActivityAssignment" class="form-label">Subject and Section</label>
+                        <select id="gcActivityAssignment" class="form-select" required>
+                            <option value="">Loading eligible subject assignments...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="gcActivityTeachers" class="form-label">Eligible Teachers</label>
+                        <select id="gcActivityTeachers" class="form-select" multiple size="5" required disabled></select>
+                        <small class="text-muted">Only active teachers assigned to this subject and section are listed. Hold Ctrl to select multiple teachers.</small>
+                    </div>
+                    <div class="gc-activity-form-grid">
+                        <div class="form-group">
+                            <label for="gcActivityCategory" class="form-label">Category</label>
+                            <select id="gcActivityCategory" class="form-select" required></select>
+                        </div>
+                        <div class="form-group" id="gcExamPeriodGroup" hidden>
+                            <label for="gcExamPeriod" class="form-label">Exam Period</label>
+                            <select id="gcExamPeriod" class="form-select">
+                                <option value="">Select exam period</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="gcActivityDate" class="form-label">Activity Date</label>
+                            <input type="date" id="gcActivityDate" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="gcActivityDescription" class="form-label">Description</label>
+                        <textarea id="gcActivityDescription" class="form-control" rows="3"></textarea>
+                    </div>
+                    <p class="gc-activity-form-message" id="gcActivityFormMessage" role="status" aria-live="polite"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-close-activity>Cancel</button>
+                    <button type="submit" class="btn btn-primary">Submit for Approval</button>
+                </div>
+            </form>
         </div>
-        <form id="gcActivityForm">
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="gcActivityTitle" class="form-label">Activity Title</label>
-                    <input type="text" id="gcActivityTitle" class="form-control" maxlength="200" required>
-                </div>
-                <div class="form-group">
-                    <label for="gcActivityCategory" class="form-label">Category</label>
-                    <select id="gcActivityCategory" class="form-select" required>
-                        <option value="">Select category</option>
-                        <option>Common Exams</option><option>Book Reports</option>
-                        <option>Quiz Bees &amp; Contests</option>
-                        <option>Research &amp; Paper Presentations</option>
-                        <option>Orientation &amp; Curriculum Review</option>
-                        <option>Meetings &amp; Training</option>
-                    </select>
-                </div>
-                <div class="form-group" id="gcExamPeriodGroup" hidden>
-                    <label for="gcExamPeriod" class="form-label">Common Exam / Item Analysis</label>
-                    <select id="gcExamPeriod" class="form-select">
-                        <option value="">Select exam type</option>
-                        <option>Prelim</option><option>Midterm</option>
-                        <option>Final</option><option>Item Analysis</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="gcActivityDate" class="form-label">Activity Date</label>
-                    <input type="date" id="gcActivityDate" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="gcActivityDescription" class="form-label">Details</label>
-                    <textarea id="gcActivityDescription" class="form-control" rows="3"></textarea>
-                </div>
-                <p class="text-muted mb-0">New activities will be submitted as Pending Approval.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary modal-close">Cancel</button>
-                <button type="submit" class="btn btn-primary" id="gcActivitySubmit">Submit Activity</button>
-            </div>
-        </form>
     </div>
-</div>
+</section>

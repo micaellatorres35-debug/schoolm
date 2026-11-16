@@ -187,10 +187,6 @@ function initGeCurriculumPage() {
     });
 
     document.getElementById('geAddSubjectBtn').addEventListener('click', () => openSubjectModal());
-    document.getElementById('geAssignFacultyBtn').addEventListener('click', () => {
-        setActiveTab('assignments');
-        document.getElementById('geFacultyAssignmentSearch').focus();
-    });
     document.getElementById('geSubjectSearch').addEventListener('input', renderSubjects);
     document.getElementById('geSubjectCategoryFilter').addEventListener('change', renderSubjects);
     document.getElementById('geSubjectStatusFilter').addEventListener('change', renderSubjects);
@@ -289,7 +285,9 @@ function initGeCurriculumPage() {
                 const cell = document.createElement('td');
                 cell.colSpan = 7;
                 cell.className = 'text-center text-muted';
-                cell.textContent = facultyLoads.length ? 'No faculty assignments match your filters.' : 'No faculty records available for assignment.';
+                cell.textContent = facultyLoads.length
+                    ? 'No faculty assignments match your filters.'
+                    : 'No active faculty available. Add eligible employees as faculty in Faculty Management first.';
                 row.appendChild(cell);
                 tbody.appendChild(row);
                 return;
@@ -364,6 +362,16 @@ function initGeCurriculumPage() {
                     tbody.firstElementChild.firstElementChild.classList.add('text-danger');
                 }
             }
+        }
+
+        const assignFacultyButton = document.getElementById('geAssignFacultyBtn');
+        if (assignFacultyButton && !assignFacultyButton.dataset.assignmentBound) {
+            assignFacultyButton.dataset.assignmentBound = 'true';
+            assignFacultyButton.addEventListener('click', async () => {
+                setActiveTab('assignments');
+                document.getElementById('geFacultyAssignmentSearch').focus();
+                await reloadFacultyAssignments();
+            });
         }
 
         async function openFacultyAssignments(button) {

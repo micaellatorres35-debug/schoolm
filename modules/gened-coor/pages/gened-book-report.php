@@ -1,12 +1,12 @@
 <?php $pageTitle = 'GenED Book Report'; ?>
-<div class="module-header gened-book-report-header">
+<div class="module-header gened-book-report-header ge-curriculum-header">
     <div>
-        <h1> GenEd Book Report</h1>
+        <h1>GenEd Book Report</h1>
         <p></p>
         <span class="gened-book-report-demo-note"></span>
     </div>
     <button type="button" class="btn btn-primary" id="genedBookReportAdd">
-        <i class="fas fa-plus" aria-hidden="true"></i> Book Assignment
+        <i class="fas fa-plus" aria-hidden="true"></i> Assign Books
     </button>
 </div>
 
@@ -35,11 +35,11 @@
         </label>
         <label class="gened-book-report-search">
             Search
-            <input type="search" id="genedBookReportSearch" class="form-control" placeholder="Search section, subject, book, or teacher">
+            <input type="search" id="genedBookReportSearch" class="form-control" placeholder="Search section, subject, book, or faculty">
         </label>
     </section>
 
-    <div class="gened-book-report-summary" aria-label="Dummy book report summary">
+    <div class="gened-book-report-summary" aria-label="Sample book report summary">
         <article class="gened-book-report-stat">
             <span>Copies Distributed</span>
             <strong id="genedBooksDistributed">—</strong>
@@ -62,7 +62,7 @@
         </article>
     </div>
 
-    <section class="gened-book-report-departments" aria-label="Students who paid or claimed books by department">
+    <section class="gened-book-report-departments" aria-label="Books paid for or collected by department">
     </section>
 
     <div class="gened-book-report-table-card">
@@ -74,11 +74,11 @@
                         <th>Section</th>
                         <th>Subject</th>
                         <th>Book Title</th>
-                        <th>Teacher</th>
-                        <th>Students</th>
+                        <th>Faculty</th>
+                        <th>Enrolled Students</th>
                         <th>Distributed</th>
-                        <th>Paid</th>
-                        <th>Not Collected</th>
+                        <th>Paid / Collected</th>
+                        <th>Not Collected (For Return)</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
@@ -95,7 +95,7 @@
 <div class="gened-book-report-modal" id="genedBookReportModal" aria-hidden="true">
     <section class="gened-book-report-dialog" role="dialog" aria-modal="true" aria-labelledby="genedBookReportModalTitle">
         <div class="gened-book-report-modal-header">
-            <h2 id="genedBookReportModalTitle">Assigned to Books</h2>
+            <h2 id="genedBookReportModalTitle">Assign Books</h2>
             <button type="button" class="gened-book-report-close" data-book-report-close aria-label="Close">&times;</button>
         </div>
         <form id="genedBookReportForm">
@@ -123,7 +123,7 @@
                 <label class="gened-book-report-form-wide">Book Title
                     <input name="book" required>
                 </label>
-                <label>Teacher
+                <label>Faculty
                     <select name="teacher" id="bookReportFormFaculty" required disabled>
                         <option value="">Select assigned faculty</option>
                     </select>
@@ -131,17 +131,17 @@
                 <label>Enrolled Students
                     <input name="students" id="bookReportFormStudents" type="number" min="0" step="1" readonly required>
                 </label>
-                <label>Distributed
+                <label>Copies Distributed
                     <input name="given" type="number" min="0" step="1" required>
                 </label>
-                <label>Colleted / Paid
+                <label>Paid / Collected
                     <input name="claimed" type="number" min="0" step="1" required>
                 </label>
             </div>
             <p class="gened-book-report-form-error" id="genedBookReportFormError" role="alert"></p>
             <div class="gened-book-report-modal-actions">
                 <button type="button" class="btn btn-outline-secondary" data-book-report-close>Cancel</button>
-                <button type="submit" class="btn btn-primary">I-save ang sample record</button>
+                <button type="submit" class="btn btn-primary">Save Book Assignment</button>
             </div>
         </form>
     </section>
@@ -150,7 +150,7 @@
 <div class="gened-book-report-modal" id="genedBookReportViewModal" aria-hidden="true">
     <section class="gened-book-report-dialog" role="dialog" aria-modal="true" aria-labelledby="genedBookReportViewTitle">
         <div class="gened-book-report-modal-header">
-            <h2 id="genedBookReportViewTitle">Detalye ng Book Assignment</h2>
+            <h2 id="genedBookReportViewTitle">Book Assignment Details</h2>
             <button type="button" class="gened-book-report-close" data-book-report-view-close aria-label="Close">&times;</button>
         </div>
         <div class="gened-book-report-view-details" id="genedBookReportViewDetails"></div>

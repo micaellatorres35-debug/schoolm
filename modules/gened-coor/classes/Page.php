@@ -22,7 +22,7 @@ class Page {
     /*Content Sections*/ 
     private $sections = [
         'top'             => ['dashboard-overview'],
-        'academics'  => ['faculty-management', 'general-education-curriculum', 'academic activities', 'class-scheduling', 'events-management', 'item-analysis', 'gened-book-report'],
+        'academics'  => ['faculty-management', 'general-education-curriculum', 'class-scheduling', 'academic activities', 'events-management', 'item-analysis', 'gened-book-report'],
         'requests-and-reports' => ['report-submission', 'concern-submission', 'approval-submission']
     ];
 

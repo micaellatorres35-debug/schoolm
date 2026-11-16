@@ -232,7 +232,7 @@
             const td = row.insertCell();
             td.colSpan = 11;
             td.className = 'gened-book-report-empty';
-            td.textContent = 'Walang records para sa napiling filters.';
+            td.textContent = 'No records match the selected filters.';
         } else {
             shown.forEach(item => {
                 const row = body.insertRow();
@@ -310,14 +310,14 @@
         const form = get('genedBookReportForm');
         if (!catalog.assignments.length) {
             const notice = get('genedBookReportCatalogNotice');
-            notice.textContent = 'Walang GenEd faculty-load assignment. Magtalaga muna ng GenEd faculty, section, at subject.';
+            notice.textContent = 'No GenEd faculty-load assignments are available. Assign GenEd faculty, sections, and subjects first.';
             notice.classList.add('is-error');
             return;
         }
         form.reset();
         get('genedBookReportFormError').textContent = '';
         editingId = item?.id ?? null;
-        get('genedBookReportModalTitle').textContent = item ? 'I-update ang Book Assignment' : 'Mag-assign ng Books';
+        get('genedBookReportModalTitle').textContent = item ? 'Update Book Assignment' : 'Assign Books';
         if (item) {
             form.elements.book.value = item.book;
             form.elements.given.value = item.given;
@@ -348,9 +348,9 @@
         container.replaceChildren();
         [
             ['Semester',item.semester],['Department',item.department],['Section',item.section],
-            ['Subject',`${item.subject} — ${item.subjectName}`],['Book Title',item.book],['Teacher',item.teacher],
-            ['Students',item.students],['Binigay',item.given],['Nagbayad / kumuha',item.claimed],
-            ['Di kinuha',Math.max(0,item.given-item.claimed)],['Status',item.status]
+            ['Subject',`${item.subject} — ${item.subjectName}`],['Book Title',item.book],['Faculty',item.teacher],
+            ['Enrolled Students',item.students],['Copies Distributed',item.given],['Paid / Collected',item.claimed],
+            ['Not Collected (For Return)',Math.max(0,item.given-item.claimed)],['Status',item.status]
         ].forEach(([label,value]) => {
             const box = document.createElement('div');
             const title = document.createElement('span');
@@ -387,14 +387,14 @@
             loadCatalogOptions();
             buildSampleAssignments();
             if (catalog.assignments.length) {
-                notice.textContent = 'Ang department, section, subject, faculty, at bilang ng enrolled students ay mula sa GenEd assignments. Pamagat ng libro at bilang ng kumuha ay sample data lamang.';
+                notice.textContent = 'Departments, sections, subjects, faculty, and enrolled student counts come from GenEd assignments. Book titles and paid/collected counts are sample data only.';
                 notice.classList.remove('is-error');
             } else {
-                notice.textContent = 'Walang available na GenEd faculty-load assignment. Hindi makakapili ng department, section, subject, o faculty hanggang may maitalagang GenEd load.';
+                notice.textContent = 'No GenEd faculty-load assignments are available. Departments, sections, subjects, and faculty cannot be selected until a GenEd load is assigned.';
                 notice.classList.add('is-error');
             }
         } catch (error) {
-            notice.textContent = error.message || 'Hindi ma-load ang GenEd assignment catalog.';
+            notice.textContent = error.message || 'Unable to load the GenEd assignment catalog.';
             notice.classList.add('is-error');
             get('genedBookReportAdd').disabled = true;
         }
@@ -448,13 +448,13 @@
             const assignment = selectedAssignment();
             const selectedPeriod = catalog.periods.find(period => periodKey(period) === values.period);
             if (!assignment || !selectedPeriod) {
-                error.textContent = 'Pumili ng valid na GenEd department, section, subject, faculty, at semester.';
+                error.textContent = 'Select a valid GenEd department, section, subject, faculty member, and semester.';
                 return;
             }
             if (claimed > given || given > students) {
                 error.textContent = claimed > given
-                    ? 'Hindi puwedeng mas mataas ang nagbayad/kumuha kaysa sa bilang ng binigay.'
-                    : 'Hindi puwedeng mas mataas ang bilang ng binigay kaysa sa bilang ng estudyante.';
+                    ? 'The number paid for or collected cannot exceed the number of copies distributed.'
+                    : 'The number of copies distributed cannot exceed the enrolled student count.';
                 return;
             }
             const item = {

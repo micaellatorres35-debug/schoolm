@@ -85,15 +85,12 @@ try {
                  faculty.last_name, faculty.first_name, faculty_load.id
     ")->fetchAll(PDO::FETCH_ASSOC);
 
-    $departments = [];
-    foreach ($assignments as $assignment) {
-        $departmentId = (int)$assignment['department_id'];
-        $departments[$departmentId] = [
-            'id' => $departmentId,
-            'code' => $assignment['department_code'],
-            'name' => $assignment['department_name'],
-        ];
-    }
+    $departments = $conn->query("
+        SELECT DISTINCT course.id, course.code, course.name
+        FROM gc_sections section
+        INNER JOIN rgr_courses course ON course.id = section.program_id
+        ORDER BY course.code, course.name
+    ")->fetchAll(PDO::FETCH_ASSOC);
 
     genedBookReportRespond(200, [
         'success' => true,

@@ -867,17 +867,17 @@ tbody tr:hover {
     max-width: none;
     padding: 20px;
     border-radius: 16px;
-    background: #f1f3f5;
+    background: transparent;
 }
 
 .gened-faculty-page .gened-faculty-header {
     display: flex;
     min-height: 0;
-    align-items: stretch;
+    align-items: flex-start;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
     margin-bottom: 18px;
-    padding: 24px 24px 20px;
+    padding: 24px;
     border: 1px solid #e5eaf2;
     border-radius: 14px;
     background: #fff;
@@ -897,20 +897,29 @@ tbody tr:hover {
 }
 
 .gened-faculty-page .gened-faculty-header .btn {
-    display: flex;
-    width: 100%;
-    min-height: 44px;
+    display: inline-flex;
+    width: auto;
+    min-width: 150px;
+    min-height: 42px;
     align-items: center;
     justify-content: center;
     gap: 10px;
-    padding: 10px 16px;
+    padding: 9px 16px;
     border-radius: 7px;
     background: #182b83;
     font-size: 14px;
+    white-space: nowrap;
+    align-self: flex-start;
 }
 
 .gened-faculty-page .gened-faculty-header .btn:hover {
        background: #14246f;
+}
+
+@media (max-width: 560px) {
+    .gened-faculty-page .gened-faculty-header {
+        gap: 12px;
+    }
 }
 
 .gened-faculty-page .gened-faculty-content {

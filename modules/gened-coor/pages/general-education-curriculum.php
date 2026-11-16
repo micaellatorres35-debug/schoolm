@@ -287,7 +287,7 @@
 </div>
 
 <div id="fmFacultyAssignmentsViewModal" class="modal">
-    <div class="modal-dialog" style="max-width: 1100px;">
+    <div class="modal-dialog">
         <div class="modal-header">
             <h5 class="modal-title">Faculty Assignments</h5>
             <button type="button" class="modal-close" aria-label="Close">&times;</button>
