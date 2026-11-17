@@ -897,3 +897,105 @@
         max-height: 180px;
     }
 }
+
+/* Coordinator audience selectors */
+.comm-role-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.7rem 1rem;
+    padding: 0.75rem 0.85rem;
+    border: 1px solid var(--color9);
+    border-radius: 8px;
+    background: rgba(32, 0, 130, 0.02);
+}
+
+.comm-role-option {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    color: var(--color2);
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+.comm-role-option input[type="checkbox"] {
+    accent-color: var(--color1);
+}
+
+#coord-role-group[hidden] {
+    display: none !important;
+}
+
+.comm-modal select {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    border: 1px solid var(--color9);
+    border-radius: 7px;
+    padding: 0.6rem 0.8rem;
+    font: inherit;
+    font-size: 0.85rem;
+    color: var(--color2);
+    background: var(--color3);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.comm-modal select:focus {
+    outline: none;
+    border-color: var(--color1);
+    box-shadow: 0 0 0 3px rgba(32, 0, 130, 0.08);
+}
+
+@media (max-width: 700px) {
+    .comm-role-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.comm-modal .form-group label.comm-role-option {
+    display:flex; align-items:center; gap:.55rem; min-width:0; margin:0;
+    font-size:.8rem; font-weight:500; color:var(--color2);
+}
+
+.comm-modal .form-group label.comm-role-option input[type="checkbox"] {
+    flex:0 0 auto; width:16px; height:16px; min-width:16px; margin:0; padding:0;
+}
+
+/* ============================================================
+   Announcement cards — badges for Type, Priority, Audience
+   Paste at the END of your announcements stylesheet.
+   ============================================================ */
+
+.announcement-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin: 0.7rem 0 0.8rem;
+}
+
+.ann-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid var(--color9);
+    background: rgba(32, 0, 130, 0.04);
+    color: var(--color2);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.ann-badge--type {
+    background: rgba(32, 0, 130, 0.06);
+}
+
+.ann-badge--priority {
+    background: rgba(255, 170, 0, 0.08);
+}
+
+.ann-badge--audience {
+    background: rgba(19, 145, 108, 0.08);
+}

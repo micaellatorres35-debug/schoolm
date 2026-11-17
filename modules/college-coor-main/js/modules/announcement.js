@@ -90,6 +90,31 @@ function initAnnouncementsModule() {
         });
         window.commSuccessBound = true;
     }
+
+    // ── Audience to coordinator sync ───────────────────────────────────────
+    const audienceSelect = document.getElementById('ann-audience');
+    const coordinatorGroup = document.getElementById('coord-role-group');
+    const coordinatorChecks = Array.from(document.querySelectorAll('input[name="coordinator_roles[]"]'));
+
+    const syncAudienceFields = () => {
+        const isCoordinatorScope = audienceSelect && audienceSelect.value === 'Coordinators';
+        if (coordinatorGroup) {
+            coordinatorGroup.hidden = !isCoordinatorScope;
+        }
+        if (coordinatorChecks.length) {
+            coordinatorChecks.forEach((box) => {
+                box.disabled = !isCoordinatorScope;
+                if (!isCoordinatorScope) {
+                    box.checked = false;
+                }
+            });
+        }
+    };
+
+    if (audienceSelect) {
+        audienceSelect.addEventListener('change', syncAudienceFields);
+        syncAudienceFields();
+    }
 }
 
 window.addEventListener('page:loaded', initAnnouncementsModule);
@@ -370,6 +395,15 @@ function annArchivedCardHtml(r) {
     var base = annEl('annRoot').dataset.imageBase || '';
     var label = annLabelFor(r);
     var hasTitle = (r.title || '').trim() !== '';
+    var annType = ((r.announcement_type || 'General Announcement').trim() || 'General Announcement');
+    var annPriority = ((r.priority || 'Normal').trim() || 'Normal');
+    var annScope = (r.audience_scope || 'Campus');
+    var annRoles = ((r.audience_roles || '').trim());
+    var annAudience = annScope === 'Campus'
+        ? 'Entire Campus'
+        : (annScope === 'Coordinators'
+            ? (annRoles !== '' ? 'Selected Coordinators: ' + annRoles : 'Selected Coordinators')
+            : (annScope === 'All Coordinators' ? 'All Coordinators' : 'Targeted Audience'));
 
     return '' +
     '<article class="announcement-card ann-archived-card" data-id="' + annEsc(r.announcement_id) + '">' +
@@ -383,6 +417,11 @@ function annArchivedCardHtml(r) {
                     (r.preview ? '<p class="ann-archived-preview">' + annEsc(r.preview) + '</p>' : '') +
                 '</div>' +
                 '<button type="button" class="ann-card-btn" data-ann-action="restore" data-id="' + annEsc(r.announcement_id) + '" data-label="' + annEsc(label) + '">Restore</button>' +
+            '</div>' +
+            '<div class="announcement-meta-row">' +
+                '<span class="ann-badge ann-badge--type">' + annEsc(annType) + '</span>' +
+                '<span class="ann-badge ann-badge--priority">' + annEsc(annPriority) + '</span>' +
+                '<span class="ann-badge ann-badge--audience">' + annEsc(annAudience) + '</span>' +
             '</div>' +
             '<dl class="ann-meta-grid">' +
                 '<div><dt>Published</dt><dd>' + annEsc(annFormatDate(r.publish_date, false)) + '</dd></div>' +
@@ -469,6 +508,7 @@ async function annRunConfirm() {
 
         if (c.kind === 'archive') {
             annRemoveActiveCard(c.id);
+            annRefreshActiveList();
             annEl('annTabArchived').focus();
         } else {
             annActiveStale = true;
@@ -488,11 +528,16 @@ async function annRunConfirm() {
 
 function annRemoveActiveCard(id) {
     var panel = annEl('annActivePanel');
-    var trigger = panel && panel.querySelector('[data-ann-action="archive"][data-id="' + id + '"]');
-    var card = trigger && trigger.closest('.announcement-card');
+    if (!panel) return;
+    var card = panel.querySelector('.announcement-card[data-id="' + id + '"]');
     if (card) card.remove();
-
-    if (panel && !panel.querySelector('.announcement-card') && !panel.querySelector('.muted')) {
+    // Also remove any orphaned image block left without a content sibling
+    panel.querySelectorAll('.announcement-image').forEach(function (img) {
+        if (!img.parentElement.querySelector('.announcement-content')) {
+            img.parentElement.remove();
+        }
+    });
+    if (!panel.querySelector('.announcement-card') && !panel.querySelector('.muted')) {
         panel.insertAdjacentHTML('beforeend', '<p class="muted">No announcements have been posted yet.</p>');
     }
 }

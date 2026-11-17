@@ -13,7 +13,14 @@ if (empty($_SESSION['ann_csrf'])) {
 }
 
 $announcement = new Announcement();
-$announcements = $announcement->getAnnouncement();
+
+$annViewer = [
+    'employee_id' => (int) ($_SESSION['employee_id'] ?? 0),
+    'department_id' => (int) ($_SESSION['department_id'] ?? 0),
+    'unit_id' => (int) ($_SESSION['unit_id'] ?? 0),
+    'role_name' => (string) ($_SESSION['role_name'] ?? ''),
+];
+$announcements = $announcement->getAnnouncement($annCanArchive ? null : $annViewer);
 
 // NOTE: this path is case-sensitive on Linux hosts. Match the real folder URL (/sms/ vs /SMS/).
 $annImageBase = '/schoolm/modules/college-coor-main/uploads/announcements/';
@@ -51,8 +58,15 @@ $annImageBase = '/schoolm/modules/college-coor-main/uploads/announcements/';
                 $annTitle = trim((string) ($ann['title'] ?? ''));
                 $annDate  = date('F j, Y', strtotime($ann['publish_date']));
                 $annLabel = $annTitle !== '' ? $annTitle : 'The announcement for ' . $annDate;
+                $annType     = trim((string) ($ann['announcement_type'] ?? '')) ?: 'General Announcement';
+                $annPriority = trim((string) ($ann['priority'] ?? '')) ?: 'Normal';
+                $annScope    = (string) ($ann['audience_scope'] ?? 'Campus');
+                $annRoles    = trim((string) ($ann['audience_roles'] ?? ''));
+                $annAudience = $annScope === 'Campus' ? 'Entire Campus'
+                    : ($annScope === 'Coordinators' ? ($annRoles !== '' ? 'Selected Coordinators: ' . $annRoles : 'Selected Coordinators')
+                    : ($annScope === 'All Coordinators' ? 'All Coordinators' : 'Targeted Audience'));
             ?>
-                <div class="announcement-card">
+                <div class="announcement-card" data-id="<?= (int) $ann['announcement_id'] ?>">
                     <?php if (!empty($ann['image_file'])): ?>
                         <div class="announcement-image">
                             <img src="<?= htmlspecialchars($annImageBase . $ann['image_file']) ?>" alt="<?= htmlspecialchars($annTitle) ?>">
@@ -70,27 +84,16 @@ $annImageBase = '/schoolm/modules/college-coor-main/uploads/announcements/';
                                     data-label="<?= htmlspecialchars($annLabel) ?>">Archive</button>
                             <?php endif; ?>
                         </div>
+                        <div class="announcement-meta-row">
+                            <span class="ann-badge ann-badge--type"><?= htmlspecialchars($annType) ?></span>
+                            <span class="ann-badge ann-badge--priority"><?= htmlspecialchars($annPriority) ?></span>
+                            <span class="ann-badge ann-badge--audience"><?= htmlspecialchars($annAudience) ?></span>
+                        </div>
                         <?php if ($annTitle !== ''): ?>
                             <h3 class="announcement-title"><?= htmlspecialchars($annTitle) ?></h3>
                         <?php endif; ?>
                         <?php if (trim((string) $ann['message']) !== ''): ?>
                             <p class="announcement-message"><?= nl2br(htmlspecialchars((string) $ann['message'])) ?></p>
-                        <?php endif; ?>
-
-                        <?php if (!empty($ann['attachments'])): ?>
-                            <div class="announcement-attachments" aria-label="Announcement attachments">
-                                <?php foreach ($ann['attachments'] as $attachment): ?>
-                                    <?php $fileName = trim((string) ($attachment['original_name'] ?? '')) ?: 'Attachment'; ?>
-                                    <?php $attachmentId = (int) ($attachment['attachment_id'] ?? 0); ?>
-                                    <?php if ($attachmentId > 0): ?>
-                                        <a class="announcement-attachment" href="controllers/AnnouncementController.php?action=file&id=<?= (int) $attachmentId ?>" target="_blank" rel="noopener noreferrer" title="<?= htmlspecialchars($fileName) ?>">
-                                            <?= htmlspecialchars($fileName) ?>
-                                        </a>
-                                    <?php else: ?>
-                                        <span class="announcement-attachment announcement-attachment--plain" title="<?= htmlspecialchars($fileName) ?>"><?= htmlspecialchars($fileName) ?></span>
-                                    <?php endif; ?>
-                                <?php endforeach; ?>
-                            </div>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -147,15 +150,55 @@ $annImageBase = '/schoolm/modules/college-coor-main/uploads/announcements/';
 
                     <div class="comm-form-grid">
                         <div class="form-group">
+                            <label for="ann-type">Type</label>
+                            <select id="ann-type" name="announcement_type">
+                                <option value="General Announcement">General Announcement</option>
+                                <option value="Official Memorandum">Official Memorandum</option>
+                                <option value="Urgent Notice">Urgent Notice</option>
+                                <option value="Administrative Advisory">Administrative Advisory</option>
+                                <option value="Academic Announcement">Academic Announcement</option>
+                                <option value="Event Announcement">Event Announcement</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="ann-priority">Priority</label>
+                            <select id="ann-priority" name="priority">
+                                <option value="Normal">Normal</option>
+                                <option value="Important">Important</option>
+                                <option value="Urgent">Urgent</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="comm-form-grid">
+                        <div class="form-group">
+                            <label for="ann-audience">Audience</label>
+                            <select id="ann-audience" name="audience_scope">
+                                <option value="Campus">Entire Campus</option>
+                                <option value="Coordinators">Selected Coordinators</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
                             <label for="ann-date">Publish Date</label>
                             <input id="ann-date" name="publish_date" type="date">
                             <span class="comm-hint">Leave blank to post today.</span>
                         </div>
-                        <div class="form-group">
-                            <label for="ann-image">Image <span class="comm-optional">(optional)</span></label>
-                            <input class="ann-image" id="ann-image" name="image" type="file" accept="image/jpeg,image/png,image/gif,image/webp">
-                            <span class="comm-hint">JPG, PNG, GIF or WebP, up to 5 MB.</span>
+                    </div>
+
+                    <div class="form-group" id="coord-role-group" hidden>
+                        <label>Coordinators</label>
+                        <div class="comm-role-grid">
+                            <label class="comm-role-option"><input type="checkbox" name="coordinator_roles[]" value="Research Coordinator"> Research Coordinator</label>
+                            <label class="comm-role-option"><input type="checkbox" name="coordinator_roles[]" value="GenEd Coordinator"> GenEd Coordinator</label>
+                            <label class="comm-role-option"><input type="checkbox" name="coordinator_roles[]" value="Community Extension Coordinator"> Community Extension Coordinator</label>
                         </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ann-image">Image <span class="comm-optional">(optional)</span></label>
+                        <input class="ann-image" id="ann-image" name="image" type="file"
+                               accept="image/jpeg,image/png,image/gif,image/webp">
+                        <span class="comm-hint">JPG, PNG, GIF or WebP, up to 5 MB.</span>
                     </div>
                 </div>
 

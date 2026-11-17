@@ -851,6 +851,11 @@ body.um-modal-open {
     overscroll-behavior: contain;
 }
 
+.um-modal-body,
+.um-modal-footer {
+    min-width: 0;
+}
+
 .um-notice-text {
     margin: 0 0 14px;
     color: var(--color5);
@@ -1276,4 +1281,107 @@ body.um-modal-open {
     .um-user-card {
         transition: none;
     }
+}
+
+.um-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.um-form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    color: var(--color2);
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.um-form-field input,
+.um-form-field select,
+.um-form-field textarea {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid var(--color9);
+    border-radius: 8px;
+    color: var(--color2);
+    background: var(--color3);
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.um-form-field input:focus,
+.um-form-field select:focus {
+    outline: none;
+    border-color: var(--color1);
+    box-shadow: 0 0 0 3px rgba(32, 0, 130, 0.08);
+}
+
+.um-status-reason {
+    margin-top: 14px;
+}
+
+.um-pw-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.um-pw-row input {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.um-field-hint {
+    margin: 6px 0 0;
+    color: var(--color5);
+    font-size: 0.75rem;
+}
+
+.um-form-message {
+    margin: 12px 0 0;
+    color: var(--color10);
+    font-size: 0.82rem;
+}
+
+.um-form-message:empty {
+    display: none;
+}
+
+.um-modal-footer {
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 14px 24px;
+    border-top: 1px solid var(--color9);
+    background: rgba(32, 0, 130, 0.025);
+}
+
+.um-modal-footer .um-btn {
+    min-height: 40px;
+}
+
+.um-toast {
+    position: fixed;
+    z-index: 1200;
+    right: 24px;
+    bottom: 24px;
+    max-width: min(420px, calc(100vw - 32px));
+    padding: 13px 16px;
+    border-radius: 10px;
+    color: #fff;
+    background: var(--color2);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+    font-size: 0.86rem;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 720px) {
+    .um-modal-footer { padding: 12px 18px; }
 }

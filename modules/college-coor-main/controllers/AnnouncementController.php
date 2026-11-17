@@ -49,6 +49,7 @@ function ann_viewer(): array {
         'employee_id'   => (int) ($_SESSION['employee_id'] ?? 0),
         'department_id' => (int) ($_SESSION['department_id'] ?? 0),
         'unit_id'       => (int) ($_SESSION['unit_id'] ?? 0),
+        'role_name'     => (string) ($_SESSION['role_name'] ?? ''),
     ];
 }
 
@@ -277,12 +278,26 @@ try {
             $imageFile = (isset($_FILES['image']) && ($_FILES['image']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE)
                 ? $_FILES['image'] : null;
 
+            $scope = trim((string) ($_POST['audience_scope'] ?? 'Campus'));
+            $selectedRoles = array_values(array_unique(array_map('trim', (array) ($_POST['coordinator_roles'] ?? []))));
+            $selectedRoles = array_values(array_filter($selectedRoles, fn($role) => $role !== ''));
+            if ($scope === 'Coordinators' && !$selectedRoles) {
+                ann_respond(['success' => false, 'message' => 'Select at least one coordinator role.'], 422);
+            }
+
+            $opts = [
+                'announcement_type' => trim((string) ($_POST['announcement_type'] ?? 'General Announcement')),
+                'priority' => trim((string) ($_POST['priority'] ?? 'Normal')),
+                'audience_scope' => in_array($scope, ['Campus', 'Targeted', 'Coordinators'], true) ? $scope : 'Campus',
+                'coordinator_roles' => $selectedRoles,
+            ];
+
             // The message is optional, but an announcement cannot be completely empty
             if ($title === '' && $message === '' && !$imageFile) {
                 ann_respond(['success' => false, 'message' => 'Add a title, a message or an image.'], 422);
             }
 
-            $result = $model->postAnnouncement($title, $message, date('Y-m-d H:i:s', $ts), $employeeId, $imageFile);
+            $result = $model->postAnnouncement($title, $message, date('Y-m-d H:i:s', $ts), $employeeId, $imageFile, $opts);
             if (is_array($result)) {
                 ann_respond(['success' => false, 'message' => $result['message'] ?? 'Could not post announcement.'], 422);
             }

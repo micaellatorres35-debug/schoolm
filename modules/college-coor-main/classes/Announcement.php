@@ -40,6 +40,12 @@ class Announcement {
     const EDITABLE        = ['Draft', 'Scheduled', 'Published'];
     const MAX_ATTACHMENTS = 10;
     const ATTACHMENT_DIR  = 'announcements/attachments';
+    const SCOPE_COORDINATORS = 'Coordinators';
+    const COORDINATOR_ROLES = [
+        'Research Coordinator',
+        'GenEd Coordinator',
+        'Community Extension Coordinator',
+    ];
 
     private $conn;
     private $uploadDir = __DIR__ . '/../uploads/announcements/'; // legacy header image
@@ -164,107 +170,58 @@ class Announcement {
        Visibility (audience enforcement lives here, in SQL)
        ══════════════════════════════════════════════════════════ */
 
-    // $viewer = ['employee_id' => int, 'department_id' => int, 'unit_id' => int]
+    // $viewer = ['employee_id' => int, 'department_id' => int, 'unit_id' => int, 'role_name' => string]
     private function visibilitySql(array $viewer) {
-        $sql = "(a.audience_scope = 'Campus' OR EXISTS (
-                    SELECT 1 FROM cc_announcement_audiences vau
-                    WHERE vau.announcement_id = a.announcement_id
-                      AND (vau.department_id = :v_dept OR vau.unit_id = :v_unit OR vau.employee_id = :v_emp)))";
-        return [$sql, [
+        $viewerRole = trim((string) ($viewer['role_name'] ?? ''));
+        $params = [
             ':v_dept' => (int) ($viewer['department_id'] ?? 0),
             ':v_unit' => (int) ($viewer['unit_id'] ?? 0),
             ':v_emp'  => (int) ($viewer['employee_id'] ?? 0),
-        ]];
+            ':v_role' => $viewerRole !== '' ? $viewerRole : '',
+        ];
+
+        $sql = "(
+            a.audience_scope = 'Campus'
+            OR EXISTS (
+                SELECT 1 FROM cc_announcement_roles vr
+                WHERE vr.announcement_id = a.announcement_id
+                  AND vr.role_name = :v_role
+            )
+            OR EXISTS (
+                SELECT 1 FROM cc_announcement_audiences vau
+                WHERE vau.announcement_id = a.announcement_id
+                  AND (vau.department_id = :v_dept OR vau.unit_id = :v_unit OR vau.employee_id = :v_emp)
+            )
+        )";
+
+        return [$sql, $params];
     }
 
-    private function isVisibleTo($id, array $viewer) {
-        list($vis, $vp) = $this->visibilitySql($viewer);
-        $stmt = $this->conn->prepare(
-            "SELECT 1 FROM cc_announcements a
-             WHERE a.announcement_id = :id
-               AND a.status = 'Published'
-               AND (a.expires_at IS NULL OR a.expires_at > :i_now)
-               AND $vis"
-        );
-        $stmt->execute([':id' => (int) $id, ':i_now' => $this->now()] + $vp);
-        return (bool) $stmt->fetchColumn();
-    }
+    public function getAnnouncement(?array $viewer = null) {
+        $viewer = $viewer ?? [];
+        $where = "a.status = 'Published' AND (a.expires_at IS NULL OR a.expires_at > :now)";
+        $params = [':now' => $this->now()];
 
-    /* ══════════════════════════════════════════════════════════
-       Legacy: simple post (old modal form) — publishes immediately
-       to the entire campus. Kept so the current page keeps working.
-       ══════════════════════════════════════════════════════════ */
-
-    public function postAnnouncement($title, $message, $publishDate, $createdBy, $imageFile = null) {
-        $imageFilename = null;
-
-        if ($imageFile && $imageFile['error'] === UPLOAD_ERR_OK) {
-            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-            $mimeType     = (new finfo(FILEINFO_MIME_TYPE))->file($imageFile['tmp_name']);
-
-            if (!in_array($mimeType, $allowedTypes, true)) {
-                return ['success' => false, 'message' => 'Invalid image type.'];
-            }
-            if ($imageFile['size'] > 5 * 1024 * 1024) {
-                return ['success' => false, 'message' => 'Image must be 5 MB or smaller.'];
-            }
-
-            $imageFilename = uniqid('ann_', true) . '.' . strtolower(pathinfo($imageFile['name'], PATHINFO_EXTENSION));
-            if (!move_uploaded_file($imageFile['tmp_name'], $this->uploadDir . $imageFilename)) {
-                return ['success' => false, 'message' => 'The image could not be saved. Check the uploads folder permissions.'];
-            }
+        if ($viewer) {
+            list($vis, $vp) = $this->visibilitySql($viewer);
+            $where .= ' AND ' . $vis;
+            $params = [':now' => $this->now()] + $vp;
         }
 
-        $now = $this->now();
-        $this->conn->beginTransaction();
-        try {
-            $stmt = $this->conn->prepare(
-                "INSERT INTO cc_announcements
-                    (title, message, publish_date, created_by, image_file, status, audience_scope, published_at)
-                 VALUES (:title, :message, :publish_date, :created_by, :image_file, 'Published', 'Campus', :published_at)"
-            );
-            $stmt->execute([
-                ':title'        => $title,
-                ':message'      => trim((string) $message) !== '' ? $message : null,
-                ':publish_date' => $publishDate,
-                ':created_by'   => $createdBy,
-                ':image_file'   => $imageFilename,
-                ':published_at' => $now,
-            ]);
-            $id = (int) $this->conn->lastInsertId();
-
-            $this->deliver($id);
-            $this->log($createdBy, 'published', 'Published "' . $this->titleOf($id) . '" to the entire campus.', $id);
-            $this->conn->commit();
-        } catch (\Throwable $e) {
-            if ($this->conn->inTransaction()) {
-                $this->conn->rollBack();
-            }
-            if ($imageFilename) {
-                @unlink($this->uploadDir . $imageFilename);
-            }
-            throw $e;
-        }
-
-        return $id;
-    }
-
-    /* ══════════════════════════════════════════════════════════
-       Reading: legacy active list, feed, manage list, detail
-       ══════════════════════════════════════════════════════════ */
-
-    // Legacy list used by the existing view: every live (published, unexpired) announcement.
-    public function getAnnouncement() {
         $stmt = $this->conn->prepare(
             "SELECT a.announcement_id, a.title, a.message, a.publish_date, a.image_file,
-                    a.announcement_type, a.priority, a.expires_at,
+                    a.announcement_type, a.priority, a.audience_scope,
+                    (SELECT GROUP_CONCAT(r.role_name ORDER BY r.role_name SEPARATOR ', ')
+                     FROM cc_announcement_roles r
+                     WHERE r.announcement_id = a.announcement_id) AS audience_roles,
+                    a.expires_at,
                     CONCAT(e.first_name, ' ', e.last_name) AS created_by
              FROM cc_announcements a
              LEFT JOIN em_employees e ON a.created_by = e.employee_id
-             WHERE a.status = 'Published' AND (a.expires_at IS NULL OR a.expires_at > :now)
+             WHERE $where
              ORDER BY a.publish_date DESC"
         );
-        $stmt->execute([':now' => $this->now()]);
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -613,8 +570,9 @@ class Announcement {
             $this->fail('Choose a valid priority.');
         }
 
-        $scope = ((string) ($in['audience_scope'] ?? 'Campus')) === 'Targeted' ? 'Targeted' : 'Campus';
+        $scope = ((string) ($in['audience_scope'] ?? 'Campus')) === 'Targeted' ? 'Targeted' : (((string) ($in['audience_scope'] ?? 'Campus')) === 'Coordinators' ? 'Coordinators' : 'Campus');
         $dept = $unit = $emp = [];
+        $coordNames = [];
 
         if ($scope === 'Targeted') {
             $dept = $this->cleanIds($in['department_ids'] ?? []);
@@ -635,6 +593,14 @@ class Announcement {
             }
         }
 
+        if ($scope === 'Coordinators') {
+            $coordNames = array_values(array_unique(array_map('trim', (array) ($in['coordinator_roles'] ?? []))));
+            $coordNames = array_values(array_filter($coordNames, fn($v) => $v !== ''));
+            if (!$coordNames) {
+                $this->fail('Select at least one coordinator role.');
+            }
+        }
+
         $issuing = (int) ($in['issuing_department_id'] ?? 0);
 
         return [
@@ -649,6 +615,7 @@ class Announcement {
             'publish_date' => $this->parseDate($in['publish_date'] ?? '', 'publication date'),
             'expires_at'   => $this->parseDate($in['expires_at'] ?? '', 'expiration date'),
             'issuing'      => $issuing > 0 ? $issuing : null,
+            'coordinator_roles' => $coordNames ?? [],
         ];
     }
 
@@ -663,6 +630,16 @@ class Announcement {
         $id  = (int) $id;
         $d   = $this->normalize($in);
         $now = $this->now();
+
+        if ($d['scope'] === 'Coordinators' && !empty($d['coordinator_roles'])) {
+            $hasCoordinatorMatch = $this->conn->prepare(
+                'SELECT COUNT(*) FROM cc_roles WHERE role_name IN (' . implode(',', array_fill(0, count($d['coordinator_roles']), '?')) . ') AND status = ' . $this->conn->quote('Active')
+            );
+            $hasCoordinatorMatch->execute($d['coordinator_roles']);
+            if ((int) $hasCoordinatorMatch->fetchColumn() !== count($d['coordinator_roles'])) {
+                $this->fail('One or more selected coordinator roles are invalid.');
+            }
+        }
 
         // Validate every upload before touching the database
         $valid = [];
@@ -766,6 +743,13 @@ class Announcement {
                 foreach ($d['emp'] as $x) {
                     $ins->execute([':a' => $id, ':ty' => 'Employee', ':d' => null, ':u' => null, ':e' => $x]);
                 }
+            } elseif ($d['scope'] === 'Coordinators') {
+                $ins = $this->conn->prepare(
+                    'INSERT INTO cc_announcement_roles (announcement_id, role_name) VALUES (:aid, :role_name)'
+                );
+                foreach ($d['coordinator_roles'] as $roleName) {
+                    $ins->execute([':aid' => $id, ':role_name' => $roleName]);
+                }
             }
 
             // Attachment removals (ids must belong to this announcement)
@@ -811,7 +795,7 @@ class Announcement {
             if ($this->conn->inTransaction()) {
                 $this->conn->rollBack();
             }
-            foreach ($stored as $rel) { // do not leave orphaned files behind
+            foreach ($stored as $rel) {
                 FileStorage::delete($rel);
             }
             throw $e;
@@ -1056,7 +1040,10 @@ class Announcement {
                     OR e.unit_id IN (SELECT au2.unit_id FROM cc_announcement_audiences au2
                                      WHERE au2.announcement_id = :aid_u AND au2.unit_id IS NOT NULL)
                     OR e.employee_id IN (SELECT au3.employee_id FROM cc_announcement_audiences au3
-                                         WHERE au3.announcement_id = :aid_e AND au3.employee_id IS NOT NULL))";
+                                         WHERE au3.announcement_id = :aid_e AND au3.employee_id IS NOT NULL)
+                    OR EXISTS (SELECT 1 FROM cc_roles ro
+                               JOIN cc_announcement_roles ar ON ar.role_name = ro.role_name
+                               WHERE ro.role_id = e.role_id AND ar.announcement_id = :aid_r))";
 
         $rp = [
             ':author' => (int) $a['created_by'],
@@ -1064,6 +1051,7 @@ class Announcement {
             ':aid_d'  => (int) $id,
             ':aid_u'  => (int) $id,
             ':aid_e'  => (int) $id,
+            ':aid_r'  => (int) $id,
         ];
 
         $title = trim((string) $a['title']);
@@ -1148,7 +1136,11 @@ class Announcement {
         list($where, $params) = $this->archivedWhere($search);
 
         $stmt = $this->conn->prepare(
-            "SELECT a.announcement_id, a.title, a.message, a.publish_date, a.image_file, a.archived_at,
+            "SELECT a.announcement_id, a.title, a.message, a.announcement_type, a.priority, a.audience_scope,
+                    (SELECT GROUP_CONCAT(r.role_name ORDER BY r.role_name SEPARATOR ', ')
+                     FROM cc_announcement_roles r
+                     WHERE r.announcement_id = a.announcement_id) AS audience_roles,
+                    a.publish_date, a.image_file, a.archived_at,
                     TRIM(CONCAT_WS(' ', c.first_name, c.last_name))   AS created_by_name,
                     TRIM(CONCAT_WS(' ', ab.first_name, ab.last_name)) AS archived_by_name
              FROM cc_announcements a
@@ -1172,5 +1164,114 @@ class Announcement {
         }
         unset($r);
         return $rows;
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       Legacy: simple post (old modal form) — publishes immediately
+       to the entire campus. Kept so the current page keeps working.
+       ══════════════════════════════════════════════════════════ */
+
+    public function postAnnouncement($title, $message, $publishDate, $createdBy, $imageFile = null, array $opts = []) {
+        $imageFilename = null;
+        $title = trim((string) $title);
+        $message = trim((string) $message);
+        $createdBy = (int) $createdBy;
+
+        if ($title === '' && $message === '' && (!$imageFile || !isset($imageFile['tmp_name']) || $imageFile['error'] === UPLOAD_ERR_NO_FILE)) {
+            return ['success' => false, 'message' => 'Add a title, a message or an image.'];
+        }
+
+        $announcementType = trim((string) ($opts['announcement_type'] ?? 'General Announcement'));
+        $priority = trim((string) ($opts['priority'] ?? 'Normal'));
+        $scope = trim((string) ($opts['audience_scope'] ?? 'Campus'));
+
+        if (!in_array($announcementType, self::TYPES, true)) {
+            return ['success' => false, 'message' => 'Choose a valid announcement type.'];
+        }
+        if (!in_array($priority, self::PRIORITIES, true)) {
+            return ['success' => false, 'message' => 'Choose a valid priority.'];
+        }
+        if (!in_array($scope, ['Campus', self::SCOPE_COORDINATORS], true)) {
+            return ['success' => false, 'message' => 'Choose a valid audience scope.'];
+        }
+
+        $selectedRoles = array_values(array_unique(array_map('trim', (array) ($opts['coordinator_roles'] ?? []))));
+        $selectedRoles = array_values(array_filter($selectedRoles, fn($role) => $role !== ''));
+
+        if ($scope === self::SCOPE_COORDINATORS) {
+            if (!$selectedRoles) {
+                return ['success' => false, 'message' => 'Select at least one coordinator role.'];
+            }
+            foreach ($selectedRoles as $role) {
+                if (!in_array($role, self::COORDINATOR_ROLES, true)) {
+                    return ['success' => false, 'message' => 'One or more selected coordinator roles are invalid.'];
+                }
+            }
+        }
+
+        if ($imageFile && (($imageFile['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK)) {
+            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            $mimeType = (new finfo(FILEINFO_MIME_TYPE))->file($imageFile['tmp_name']);
+
+            if (!in_array($mimeType, $allowedTypes, true)) {
+                return ['success' => false, 'message' => 'Invalid image type.'];
+            }
+            if ((int) $imageFile['size'] > 5 * 1024 * 1024) {
+                return ['success' => false, 'message' => 'Image must be 5 MB or smaller.'];
+            }
+
+            $imageFilename = uniqid('ann_', true) . '.' . strtolower(pathinfo($imageFile['name'], PATHINFO_EXTENSION));
+            if (!move_uploaded_file($imageFile['tmp_name'], $this->uploadDir . $imageFilename)) {
+                return ['success' => false, 'message' => 'The image could not be saved. Check the uploads folder permissions.'];
+            }
+        }
+
+        $now = $this->now();
+        $this->conn->beginTransaction();
+        try {
+            $stmt = $this->conn->prepare(
+                "INSERT INTO cc_announcements
+                    (title, message, publish_date, created_by, image_file, status, announcement_type, priority, audience_scope, published_at)
+                 VALUES (:title, :message, :publish_date, :created_by, :image_file, 'Published', :type, :priority, :scope, :published_at)"
+            );
+            $stmt->execute([
+                ':title'        => $title,
+                ':message'      => $message !== '' ? $message : null,
+                ':publish_date' => $publishDate,
+                ':created_by'   => $createdBy,
+                ':image_file'   => $imageFilename,
+                ':type'         => $announcementType,
+                ':priority'     => $priority,
+                ':scope'        => $scope,
+                ':published_at' => $now,
+            ]);
+            $id = (int) $this->conn->lastInsertId();
+
+            if ($scope === self::SCOPE_COORDINATORS) {
+                $roleStmt = $this->conn->prepare(
+                    'INSERT INTO cc_announcement_roles (announcement_id, role_name) VALUES (:aid, :role_name)'
+                );
+                foreach ($selectedRoles as $role) {
+                    $roleStmt->execute([':aid' => $id, ':role_name' => $role]);
+                }
+            }
+
+            $this->deliver($id);
+            $roleLabel = $scope === self::SCOPE_COORDINATORS
+                ? implode(', ', $selectedRoles)
+                : 'the entire campus';
+            $this->log($createdBy, 'published', 'Published "' . $this->titleOf($id) . '" to ' . $roleLabel . '.', $id);
+            $this->conn->commit();
+        } catch (\Throwable $e) {
+            if ($this->conn->inTransaction()) {
+                $this->conn->rollBack();
+            }
+            if ($imageFilename) {
+                @unlink($this->uploadDir . $imageFilename);
+            }
+            throw $e;
+        }
+
+        return $id;
     }
 }
